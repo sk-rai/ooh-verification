@@ -34,9 +34,11 @@ function startVerification() {
 
 async function initCamera() {
     try {
-        // Try to access camera
+        // Try to access rear camera (environment facing)
         stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: 'environment' } 
+            video: { 
+                facingMode: { exact: 'environment' }
+            } 
         });
         const video = document.getElementById('video');
         video.srcObject = stream;
