@@ -1,0 +1,72 @@
+Phase,Task ID,Task Name,Requirement ID,Requirement Description,Design Section,Implementation File,Status,Priority,Started Date,Completed Date,Notes
+Phase 1,Task 1,Project Setup,Req 20,Minimum SDK and Compatibility,Tech Stack,"requirements.txt, .env.example",Complete,Critical,2026-03-04,2026-03-04,Python 3.11+ FastAPI 0.109.0
+Phase 1,Task 2.1,Database Schema - Clients,Req 1.1,Client Registration,Client Management,models/client.py,Complete,Critical,2026-03-04,2026-03-04,Email password subscription
+Phase 1,Task 2.1,Database Schema - Subscriptions,Req 1.2,Subscription Tiers,Subscription Model,models/subscription.py,Complete,Critical,2026-03-04,2026-03-04,Free/Pro/Enterprise
+Phase 1,Task 2.1,Database Schema - Vendors,Req 1.1,Vendor Creation,Vendor Management,models/vendor.py,Complete,Critical,2026-03-04,2026-03-04,6-char alphanumeric ID
+Phase 1,Task 2.1,Database Schema - Vendors SMS,Req 1.3,SMS Delivery,Vendor Management,models/vendor.py,Complete,Critical,2026-03-04,2026-03-04,Phone number field
+Phase 1,Task 2.1,Database Schema - Public Key,Req 12.6,Public Key Storage,Crypto Security,models/vendor.py,Complete,Critical,2026-03-04,2026-03-04,RSA/ECDSA public key
+Phase 1,Task 2.1,Database Schema - Campaigns,Req 1.1,Campaign Creation,Campaign Management,models/campaign.py,Complete,Critical,2026-03-04,2026-03-04,Campaign codes
+Phase 1,Task 2.1,Database Schema - Campaign Dates,Req 1.4,Campaign Expiration,Campaign Management,models/campaign.py,Complete,Critical,2026-03-04,2026-03-04,Date range validation
+Phase 1,Task 2.1,Database Schema - Campaign Types,Req 18.1-18.5,Multi-Domain Campaigns,Campaign Types,models/campaign.py,Complete,Critical,2026-03-04,2026-03-04,6 industry types
+Phase 1,Task 2.1,Database Schema - GPS Precision,Req 3.1,GPS 7 Decimal Precision,Sensor Data,models/sensor_data.py,Complete,Critical,2026-03-04,2026-03-04,DECIMAL(10 7) = 7 decimals
+Phase 1,Task 2.1,Database Schema - GPS Metadata,Req 3.2,GPS Accuracy Tracking,Sensor Data,models/sensor_data.py,Complete,Critical,2026-03-04,2026-03-04,Accuracy altitude provider
+Phase 1,Task 2.1,Database Schema - WiFi,Req 4.1-4.8,WiFi Network Fingerprinting,Sensor Data,models/sensor_data.py,Complete,Critical,2026-03-04,2026-03-04,JSONB array SSID BSSID signal
+Phase 1,Task 2.1,Database Schema - Cell Towers,Req 5.1-5.7,Cell Tower Identification,Sensor Data,models/sensor_data.py,Complete,Critical,2026-03-04,2026-03-04,JSONB array Cell ID LAC MCC MNC
+Phase 1,Task 2.1,Database Schema - Triangulation,Req 6.1-6.6,Multi-Sensor Triangulation,Location Triangulator,models/sensor_data.py,Complete,Critical,2026-03-04,2026-03-04,Combined sensor data
+Phase 1,Task 2.1,Database Schema - Location Hash,Req 6.5,Location Hash Generation,Location Hash,models/sensor_data.py,Complete,Critical,2026-03-04,2026-03-04,SHA-256 hash
+Phase 1,Task 2.1,Database Schema - Location Profile,Req 7.1-7.8,Location Profile Matching,Location Profile,models/location_profile.py,Complete,Critical,2026-03-04,2026-03-04,Expected sensor patterns
+Phase 1,Task 2.1,Database Schema - Photo Signatures,Req 8.1-8.7,Cryptographic Photo Signing,Photo Signature,models/photo_signature.py,Complete,Critical,2026-03-04,2026-03-04,RSA/ECDSA signatures
+Phase 1,Task 2.1,Database Schema - Photos,Req 9.1,Photo Upload and Storage,Photo Storage,models/photo.py,Complete,Critical,2026-03-04,2026-03-04,S3 keys metadata
+Phase 1,Task 2.1,Database Schema - S3 Storage,Req 9.3,S3 Integration,Photo Storage,models/photo.py,Complete,Critical,2026-03-04,2026-03-04,S3 object paths thumbnails
+Phase 1,Task 2.1,Database Schema - Signature Verify,Req 27.1-27.6,Signature Verification,Verification Service,models/photo.py,Complete,Critical,2026-03-04,2026-03-04,Boolean verification field
+Phase 1,Task 2.1,Database Schema - GPS Accuracy,Req 30.1-30.6,GPS Accuracy Validation,GPS Sensor,models/sensor_data.py,Complete,Critical,2026-03-04,2026-03-04,Accuracy in meters
+Phase 1,Task 2.2,SQLAlchemy Models,All DB Reqs,ORM Models with Relationships,ORM Layer,models/*.py,Complete,Critical,2026-03-04,2026-03-04,9 models with async support
+Phase 1,Task 2.3,Property Tests - Config,Property 1,Round-Trip Config Parsing,Configuration Parser,tests/,Planned,High,,,parse(print(C)) == C
+Phase 1,Task 2.3,Property Tests - Sensor,Property 2,Round-Trip Sensor Serialization,Sensor Data,tests/,Planned,High,,,deserialize(serialize(S)) == S
+Phase 1,Task 2.3,Property Tests - GPS,Property 7,GPS Precision Preservation,GPS Sensor,tests/,Planned,High,,,7 decimal places preserved
+Phase 1,Task 2.4,Alembic Migration,All DB Reqs,Initial Database Migration,Database Schema,alembic/versions/20260304_initial_schema.py,Complete,Critical,2026-03-04,2026-03-04,All 9 tables 20 indexes
+Phase 1,Task 3.1,JWT Authentication,Req 1.1,Client Login with JWT,Authentication,api/auth.py,Complete,Critical,2026-03-04,2026-03-04,JWT token generation
+Phase 1,Task 3.2,Vendor Authentication,Req 1.4,Vendor Login with OTP,Vendor Auth,api/auth.py,Complete,Critical,2026-03-04,2026-03-04,Phone + Vendor ID + OTP
+Phase 1,Task 3.3,Auth Unit Tests,Req 1.1-1.4,Authentication Testing,Testing,tests/test_auth.py,Complete,High,2026-03-04,2026-03-04,Password JWT OTP tests
+Phase 1,Task 4.1,Client Registration API,Req 1.1,Client Registration Endpoint,Client Management,api/clients.py,Complete,Critical,2026-03-04,2026-03-04,POST /api/clients/register
+Phase 1,Task 4.2,Client Login API,Req 1.2,Client Login Endpoint,Client Management,api/clients.py,Complete,Critical,2026-03-04,2026-03-04,POST /api/clients/login
+Phase 1,Task 4,Client Profile Access,Req 1.1,Client Profile Management,Client Management,api/clients.py,Complete,Critical,2026-03-04,2026-03-04,GET /api/clients/me endpoint
+Phase 1,Task 4,Client Profile Update,Req 1.1,Client Profile Management,Client Management,api/clients.py,Complete,Critical,2026-03-04,2026-03-04,PATCH /api/clients/me endpoint
+Phase 1,Task 4,Subscription Information,Req 1.2,Subscription Management,Subscription Model,api/clients.py,Complete,Critical,2026-03-04,2026-03-04,GET /api/clients/me/subscription endpoint
+Phase 1,Task 6.1,Vendor CRUD API,Req 1.1-1.3,Vendor Management Endpoints,Vendor Management,api/vendors.py,Complete,Critical,2026-03-04,2026-03-04,Create list update deactivate
+Phase 1,Task 7.1,Campaign CRUD API,Req 1.1-1.4,Campaign Management Endpoints,Campaign Management,api/campaigns.py,Complete,Critical,2026-03-04,2026-03-04,Create list update with location profile
+Phase 1,Task 9.1,Photo Signature Verification,Req 8.1-8.7,Signature Verification Service,Crypto Verification,services/signature_verification.py,Complete,Critical,2026-03-04,2026-03-04,RSA/ECDSA verification
+Phase 1,Task 10.1,Location Profile Matching,Req 7.1-7.8,Location Matching Service,Location Matcher,services/location_profile_matcher.py,Complete,Critical,2026-03-04,2026-03-04,GPS WiFi Cell matching
+Phase 1,Task 12.1,Photo Upload API,Req 9.1-9.8,Photo Upload Endpoint,Photo Upload,api/photos.py,Complete,Critical,2026-03-04,2026-03-04,POST /api/photos/upload
+Phase 1,Task 13.1,Audit Logging,Req 10.1-10.7,PostgreSQL Audit Trail,Audit Logger,services/audit_logger.py,Complete,Critical,2026-03-05,2026-03-05,Immutable audit logs in PostgreSQL
+Phase 1,Task 15.1,Stripe Integration,Subscription,Payment Processing,Subscription Manager,services/stripe_service.py,Complete,High,2026-03-08,2026-03-08,Stripe API integration
+Phase 1,Task 15.2,Razorpay Integration,Subscription,Payment Processing India,Subscription Manager,services/razorpay_service.py,Complete,High,2026-03-08,2026-03-08,Razorpay API integration
+Phase 1,Task 15.3,Quota Enforcement,Subscription,Usage Quota Management,Quota Enforcer,services/quota_enforcer.py,Complete,High,2026-03-08,2026-03-08,Photo quota tracking
+Phase 1,Task 15.4,Subscription API,Subscription,Subscription Endpoints,Subscription API,api/subscriptions.py,Complete,High,2026-03-08,2026-03-08,Create upgrade cancel endpoints
+Phase 1,Task 15.5,Webhook Handlers,Subscription,Payment Webhooks,Webhook Handler,api/webhooks.py,Complete,High,2026-03-08,2026-03-08,Stripe and Razorpay webhooks
+Phase 1,Task 16.1,CSV Export,Req 3.1-3.4,CSV Report Generation,Report Generator,api/reports.py,Complete,Medium,2026-03-08,2026-03-08,GET /api/reports/campaigns/{code}/csv
+Phase 1,Task 16.2,GeoJSON Export,Req 3.1-3.4,GeoJSON Report Generation,Report Generator,api/reports.py,Complete,Medium,2026-03-08,2026-03-08,GET /api/reports/campaigns/{code}/geojson
+Phase 1,Task 16.3,Campaign Statistics,Req 10.1,Analytics and Statistics,Report Generator,api/reports.py,Complete,Medium,2026-03-08,2026-03-08,GET /api/reports/campaigns/{code}/statistics
+Phase 1,Task 16.4,Chart Generation,Req 10.1,Plotly Charts,Chart Generator,services/chart_generator.py,Complete,Medium,2026-03-08,2026-03-08,Verification confidence timeline charts
+Phase 1,Task 16.5,Dashboard Endpoint,Req 10.1,Complete Dashboard Data,Report Generator,api/reports.py,Complete,Medium,2026-03-08,2026-03-08,GET /api/reports/campaigns/{code}/dashboard
+Phase 2,Task 18,Web App Setup,Req 20,React Project Setup,Web Application,web/,Planned,High,,,React 18 + TypeScript + Vite
+Phase 2,Task 19,Auth UI,Req 1.1-1.2,Login/Registration UI,Authentication UI,web/src/pages/auth/,Planned,Critical,,,Login and registration forms
+Phase 2,Task 20,Subscription UI,Subscription,Subscription Selection UI,Subscription UI,web/src/pages/subscription/,Planned,High,,,Tier comparison and Stripe
+Phase 2,Task 22,Dashboard UI,Dashboard,Client Dashboard,Dashboard UI,web/src/pages/dashboard/,Planned,Critical,,,Overview cards and stats
+Phase 2,Task 23,Vendor Management UI,Req 1.1-1.3,Vendor Management Interface,Vendor UI,web/src/pages/vendors/,Planned,Critical,,,Vendor CRUD operations
+Phase 2,Task 25,Campaign Management UI,Req 1.1-1.4,Campaign Management Interface,Campaign UI,web/src/pages/campaigns/,Planned,Critical,,,Campaign wizard and list
+Phase 2,Task 26,Photo Gallery UI,Req 9.1,Photo Gallery Interface,Photo Gallery,web/src/pages/photos/,Planned,Critical,,,Grid view and photo details
+Phase 2,Task 28,Map Visualization,Req 3.1,Map with Photo Markers,Map Visualization,web/src/components/map/,Planned,High,,,Mapbox/Leaflet integration
+Phase 2,Task 29,Reports UI,Req 3.1-3.4,Reports and Analytics,Reports UI,web/src/pages/reports/,Planned,Medium,,,Charts and export buttons
+Phase 3,Task 34,Android Setup,Req 20,Android Project Setup,Android App,android/,Planned,Critical,,,Kotlin + Jetpack Compose
+Phase 3,Task 35,Permissions,Req 15.1-15.6,Permission Management,Permission Manager,android/app/src/main/,Planned,Critical,,,Camera location WiFi permissions
+Phase 3,Task 36,Android Keystore,Req 12.1-12.7,Keystore Integration,Crypto Signer,android/app/src/main/,Planned,Critical,,,Hardware-backed keys
+Phase 3,Task 38,Sensor Collection,Req 3.1-6.6,Multi-Sensor Data Collection,Sensor Layer,android/app/src/main/,Planned,Critical,,,GPS WiFi Cell Environmental
+Phase 3,Task 39,Triangulation,Req 6.1-6.6,Location Triangulation,Location Triangulator,android/app/src/main/,Planned,Critical,,,Combine sensor data
+Phase 3,Task 41,Photo Capture,Req 2.1-2.6,Camera Integration,Photo Capture,android/app/src/main/,Planned,Critical,,,CameraX rear camera only
+Phase 3,Task 42,Watermark,Req 11.1-11.7,Watermark Generation,Watermark Generator,android/app/src/main/,Planned,Critical,,,Burn GPS timestamp into pixels
+Phase 3,Task 43,Signing,Req 8.1-8.7,Cryptographic Signing,Crypto Signer,android/app/src/main/,Planned,Critical,,,RSA/ECDSA photo signing
+Phase 3,Task 45,Encryption,Req 13.1-13.7,Local Encryption,Encryption Manager,android/app/src/main/,Planned,Critical,,,AES-256-GCM encryption
+Phase 3,Task 46,Upload Manager,Req 9.1-9.8,Photo Upload,Upload Manager,android/app/src/main/,Planned,Critical,,,TLS 1.3 upload with retry
+Phase 3,Task 48,Campaign Validation,Req 1.1-1.6,Campaign Code Validation,Campaign Validator,android/app/src/main/,Planned,Critical,,,Validate campaign codes
+Phase 3,Task 51,UI Screens,UI Design,Jetpack Compose Screens,Android UI,android/app/src/main/,Planned,Critical,,,Login camera review upload screens

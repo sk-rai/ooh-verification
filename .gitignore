@@ -1,0 +1,128 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.pyc
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+*.bak
+*.swp
+
+# Documentation (keep only essential docs)
+*_SUMMARY.md
+*_STATUS.md
+*_COMPLETE.md
+*_RESULTS.md
+*_ANALYSIS.md
+*_AUTOMATION.md
+*_GUIDE.md
+*_ISSUES.md
+CHECKPOINT_*.md
+TASK*_PHASE*.md
+TASK*_CURRENT_*.md
+TASK*_API_*.md
+TASK*_SUBSCRIPTION_*.md
+TEST_RESULTS_*.md
+TRACEABILITY_UPDATE_*.md
+TRACEABILITY_MATRIX_UPDATED.md
+PRODUCTION_READINESS_ISSUES.md
+PROJECT_STATUS.md
+QUICK_START_TESTING.md
+HOW_TESTS_WORK_*.md
+STORAGE_SOLUTION_*.md
+SETUP_DYNAMODB*.md
+
+# Scripts (temporary/utility scripts)
+fix_*.py
+update_*.py
+complete_*.py
+reset_*.py
+run_checkpoint.py
+refactor_*.py
+setup_dynamodb.py
+check_*.py
+quick_*.py
+add_quota_*.py
+create_*.py
+test_*.py
+run_*.py
+
+# Shell scripts (temporary)
+setup_dynamodb_local.sh
+setup_postgres_test.sh
+quick_setup.sh
+
+# Kiro AI files
+.kiro/
+
+# Other
+wsl$/
+*.txt
+!requirements.txt
+app/services/__pycache__/
+
+# Keep these documentation files
+!README.md
+!QUICKSTART.md
+!DATABASE_SETUP_GUIDE.md
+!TRACEABILITY_MATRIX.csv
+!TRACEABILITY_MATRIX.md
+!INDEX.md
