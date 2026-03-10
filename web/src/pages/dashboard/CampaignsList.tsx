@@ -27,9 +27,10 @@ export default function CampaignsList() {
   const fetchCampaigns = async () => {
     try {
       const response = await api.get('/api/campaigns')
-      setCampaigns(response.data)
+      setCampaigns(response.data.campaigns || [])
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load campaigns')
+      console.error('Error fetching campaigns:', err)
     } finally {
       setLoading(false)
     }
@@ -170,7 +171,7 @@ export default function CampaignsList() {
                                     d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
                                   />
                                 </svg>
-                                {campaign.photos_count} photos
+                                {campaign.photos_count || 0} photos
                               </span>
                               <span>
                                 {new Date(campaign.start_date).toLocaleDateString()} -{' '}

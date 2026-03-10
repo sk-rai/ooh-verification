@@ -25,9 +25,10 @@ export default function VendorsList() {
   const fetchVendors = async () => {
     try {
       const response = await api.get('/api/vendors')
-      setVendors(response.data)
+      setVendors(response.data.vendors || [])
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load vendors')
+      console.error('Error fetching vendors:', err)
     } finally {
       setLoading(false)
     }
