@@ -74,6 +74,12 @@ async def register_client(
         status=SubscriptionStatus.ACTIVE,
         photos_quota=50,  # Free tier: 50 photos/month
         photos_used=0,
+        vendors_quota=5,  # Free tier: 5 vendors
+        vendors_used=0,
+        campaigns_quota=3,  # Free tier: 3 campaigns
+        campaigns_used=0,
+        storage_quota_mb=100,  # Free tier: 100 MB storage
+        storage_used_mb=0,
         current_period_start=datetime.utcnow(),
         current_period_end=datetime.utcnow() + timedelta(days=30),
         created_at=datetime.utcnow(),

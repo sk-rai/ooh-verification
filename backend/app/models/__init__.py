@@ -10,6 +10,7 @@ from app.core.database import Base
 from app.models.client import Client, SubscriptionTier, SubscriptionStatus
 from app.models.vendor import Vendor, VendorStatus
 from app.models.campaign import Campaign, CampaignType, CampaignStatus
+from app.models.campaign_location import CampaignLocation
 from app.models.location_profile import LocationProfile
 from app.models.campaign_vendor_assignment import CampaignVendorAssignment
 from app.models.photo import Photo, VerificationStatus
@@ -25,6 +26,7 @@ __all__ = [
     "Client",
     "Vendor",
     "Campaign",
+    "CampaignLocation",
     "LocationProfile",
     "CampaignVendorAssignment",
     "Photo",

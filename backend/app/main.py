@@ -1,11 +1,16 @@
 """
 TrustCapture Backend - Main FastAPI Application
 """
+from dotenv import load_dotenv
+load_dotenv()  # Load .env file before any other imports
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi import Request
 import os
 
-from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports
+from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations
 from app.core.database import close_db
 
 # Create FastAPI app
@@ -18,22 +23,41 @@ app = FastAPI(
     openapi_url="/api/openapi.json"
 )
 
-# Configure CORS
-origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
-
+# Configure CORS - MUST be before routers
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routers
+# Global exception handler to ensure CORS headers on errors
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch all exceptions and return JSON with CORS headers."""
+    import traceback
+    print(f"❌ Unhandled exception: {exc}")
+    print(traceback.format_exc())
+    
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": f"Internal server error: {str(exc)}",
+            "type": type(exc).__name__
+        }
+    )
+
+# Include routers AFTER middleware
 app.include_router(auth.router)
 app.include_router(clients.router)
 app.include_router(vendors.router)
 app.include_router(campaigns.router)
+app.include_router(campaign_locations.router)
 app.include_router(photos.router)
 app.include_router(subscriptions.router)
 app.include_router(webhooks.router)
@@ -49,8 +73,10 @@ async def startup_event():
     print(f"👤 Client management endpoints available at /api/clients")
     print(f"👥 Vendor management endpoints available at /api/vendors")
     print(f"📋 Campaign management endpoints available at /api/campaigns")
+    print(f"📍 Campaign locations endpoints available at /api/campaigns/:id/locations")
     print(f"📸 Photo upload endpoints available at /api/photos")
     print(f"📊 Reports endpoints available at /api/reports")
+    print(f"🌐 CORS: localhost:3000, 127.0.0.1:3000, localhost:5173")
 
 
 # Shutdown event

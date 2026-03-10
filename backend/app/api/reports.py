@@ -1,6 +1,6 @@
 """
 Reports API endpoints.
-Provides CSV, GeoJSON, charts, and analytics for campaigns.
+Provides CSV, GeoJSON, PDF, charts, and analytics for campaigns.
 """
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -36,10 +36,12 @@ async def download_csv_report(
     
     Returns CSV file with all photo data including:
     - Photo metadata
-    - GPS coordinates
+    - GPS coordinates with 7 decimal precision
     - Sensor data summary
     - Verification status
     - Audit flags
+    
+    Requirements: 3.1, 3.2, 3.3, 3.4, 7.1
     """
     try:
         csv_content = await report_gen.generate_csv_report(campaign_code)
@@ -68,6 +70,8 @@ async def download_geojson_report(
     
     Returns GeoJSON FeatureCollection with all photo locations.
     Can be used with mapping libraries like Mapbox, Leaflet, etc.
+    
+    Requirements: 3.1, 3.2, 3.3, 3.4
     """
     try:
         geojson_data = await report_gen.generate_geojson_report(campaign_code)
@@ -82,6 +86,68 @@ async def download_geojson_report(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating GeoJSON report: {str(e)}")
+
+
+@router.get("/campaigns/{campaign_code}/pdf")
+async def download_pdf_report(
+    campaign_code: str,
+    current_client: Client = Depends(get_current_client),
+    report_gen: ReportGenerator = Depends(get_report_generator)
+):
+    """
+    Download PDF report for a campaign.
+    
+    Returns comprehensive PDF report with:
+    - Campaign summary
+    - Statistics and metrics
+    - Verification status charts
+    - Photo timeline
+    - Vendor performance
+    
+    Requirements: 3.1, 3.2, 3.3, 3.4
+    """
+    try:
+        from app.services.pdf_generator import PDFGenerator
+        
+        # Get campaign statistics
+        stats = await report_gen.get_campaign_statistics(campaign_code)
+        campaign_data = stats['campaign']
+        
+        # Generate charts as PNG images
+        chart_images = {}
+        for chart_type in ['verification', 'confidence', 'timeline']:
+            try:
+                chart_images[chart_type] = await report_gen.generate_chart_data(
+                    campaign_code, chart_type, 'png'
+                )
+            except Exception as e:
+                print(f"Warning: Could not generate {chart_type} chart: {e}")
+                chart_images[chart_type] = None
+        
+        # Generate PDF
+        pdf_gen = PDFGenerator()
+        pdf_bytes = pdf_gen.generate_campaign_report(
+            campaign_data=campaign_data,
+            statistics=stats,
+            chart_images=chart_images
+        )
+        
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=campaign_{campaign_code}_report.pdf"
+            }
+        )
+    except ImportError as e:
+        raise HTTPException(
+            status_code=500,
+            detail="PDF generation not available. ReportLab library is not installed."
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating PDF report: {str(e)}")
 
 
 @router.get("/campaigns/{campaign_code}/statistics")

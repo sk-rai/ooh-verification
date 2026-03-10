@@ -38,7 +38,7 @@ class MapGenerator:
                 'verification_status': photo['verification_status'],
                 'match_confidence': photo.get('match_confidence'),
                 'vendor_id': photo['vendor_id'],
-                's3_url': photo.get('s3_url'),
+                's3_key': photo.get('s3_key'),
                 'gps_accuracy': photo.get('gps_accuracy'),
                 'audit_flags': photo.get('audit_flags', [])
             }

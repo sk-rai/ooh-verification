@@ -87,6 +87,11 @@ class Campaign(Base):
         uselist=False,
         cascade="all, delete-orphan"
     )
+    locations = relationship(
+        "CampaignLocation",
+        back_populates="campaign",
+        cascade="all, delete-orphan"
+    )
     photos = relationship("Photo", back_populates="campaign", cascade="all, delete-orphan")
     vendor_assignments = relationship(
         "CampaignVendorAssignment",
