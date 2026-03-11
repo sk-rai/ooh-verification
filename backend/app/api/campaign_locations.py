@@ -8,7 +8,7 @@ from typing import List
 import uuid
 
 from app.core.database import get_db
-from app.core.security import get_current_client
+from app.core.deps import get_current_client
 from app.models.client import Client
 from app.models.campaign import Campaign
 from app.models.campaign_location import CampaignLocation

@@ -25,6 +25,9 @@ class AuditLog(Base):
 
     # Primary Key
     audit_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # Multi-tenancy
+    tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     
     # Timestamp (ISO 8601 format)
     timestamp = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)

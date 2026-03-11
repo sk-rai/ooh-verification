@@ -11,7 +11,7 @@ import enum
 from app.core.database import Base
 
 
-class CampaignType(str, enum.Enum):
+class CampaignType(enum.Enum):
     """Campaign type enumeration for different industries."""
     OOH_ADVERTISING = "ooh"
     CONSTRUCTION = "construction"
@@ -21,7 +21,7 @@ class CampaignType(str, enum.Enum):
     PROPERTY_MANAGEMENT = "property_management"
 
 
-class CampaignStatus(str, enum.Enum):
+class CampaignStatus(enum.Enum):
     """Campaign status enumeration."""
     ACTIVE = "active"
     COMPLETED = "completed"
@@ -43,6 +43,9 @@ class Campaign(Base):
 
     # Primary Key
     campaign_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+
+    # Multi-tenancy
+    tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     
     # Campaign Identification
     campaign_code = Column(String(50), unique=True, nullable=False, index=True)
@@ -50,7 +53,7 @@ class Campaign(Base):
     
     # Campaign Type
     campaign_type = Column(
-        SQLEnum(CampaignType),
+        SQLEnum(CampaignType, name="campaigntype", native_enum=True, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         index=True
     )
@@ -69,9 +72,10 @@ class Campaign(Base):
     
     # Status
     status = Column(
-        SQLEnum(CampaignStatus),
+        SQLEnum(CampaignStatus, name="campaignstatus", native_enum=True, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=CampaignStatus.ACTIVE,
+        server_default="active",
         index=True
     )
     

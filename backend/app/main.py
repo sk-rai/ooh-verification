@@ -10,8 +10,9 @@ from fastapi.responses import JSONResponse
 from fastapi import Request
 import os
 
-from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations
+from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations, tenants
 from app.core.database import close_db
+from app.middleware.tenant_context import TenantContextMiddleware
 
 # Create FastAPI app
 app = FastAPI(
@@ -36,6 +37,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add tenant context middleware
+app.add_middleware(TenantContextMiddleware)
+
 # Global exception handler to ensure CORS headers on errors
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -54,6 +58,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Include routers AFTER middleware
 app.include_router(auth.router)
+app.include_router(tenants.router)
 app.include_router(clients.router)
 app.include_router(vendors.router)
 app.include_router(campaigns.router)

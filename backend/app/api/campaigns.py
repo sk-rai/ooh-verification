@@ -80,12 +80,12 @@ async def create_campaign(
     # Create campaign
     campaign = Campaign(
         campaign_code=campaign_code,
+        tenant_id=client.tenant_id,
         name=data.name,
-        campaign_type=CampaignType(data.campaign_type),
+        campaign_type=data.campaign_type.value if hasattr(data.campaign_type, "value") else data.campaign_type,
         client_id=client.client_id,
         start_date=data.start_date,
         end_date=data.end_date,
-        status=CampaignStatus.ACTIVE
     )
 
     db.add(campaign)

@@ -53,7 +53,7 @@ async def get_current_subscription(
 ):
     """
     Get current subscription details.
-    
+
     Returns:
         - Subscription tier
         - Status
@@ -61,12 +61,13 @@ async def get_current_subscription(
         - Payment gateway
         - Current period dates
         - Auto-renewal status
+        - Quota information
     """
     enforcer = get_quota_enforcer(db)
-    
+
     try:
         subscription = await enforcer._get_subscription(str(client.client_id))
-        
+
         return {
             "subscription_id": str(subscription.subscription_id),
             "tier": subscription.tier.value,
@@ -81,13 +82,20 @@ async def get_current_subscription(
             "trial_end_date": subscription.trial_end_date.isoformat() if subscription.trial_end_date else None,
             "cancellation_date": subscription.cancellation_date.isoformat() if subscription.cancellation_date else None,
             "created_at": subscription.created_at.isoformat(),
-            "updated_at": subscription.updated_at.isoformat()
+            "updated_at": subscription.updated_at.isoformat(),
+            # Add quota information from subscription
+            "photos_quota": subscription.photos_quota,
+            "vendors_quota": subscription.vendors_quota,
+            "campaigns_quota": subscription.campaigns_quota,
+            "storage_quota_mb": subscription.storage_quota_mb
         }
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve subscription: {str(e)}"
         )
+
+
 
 
 @router.post("/sync-usage")

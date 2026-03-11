@@ -38,6 +38,9 @@ class Client(Base):
 
     # Primary Key
     client_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+
+    # Multi-tenancy
+    tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     
     # Authentication
     email = Column(String(255), unique=True, nullable=False, index=True)

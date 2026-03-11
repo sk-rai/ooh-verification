@@ -74,10 +74,10 @@ async def create_vendor(
     # Create vendor
     vendor = Vendor(
         vendor_id=vendor_id,
+        tenant_id=client.tenant_id,
         name=data.name,
         phone_number=data.phone_number,
         email=data.email,
-        status=VendorStatus.ACTIVE,
         created_by_client_id=client.client_id
     )
     

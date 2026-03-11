@@ -3,7 +3,7 @@ Authentication API endpoints.
 
 Provides client and vendor authentication, registration, and token management.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime, timedelta
@@ -22,6 +22,7 @@ from app.schemas.auth import (
     ClientRegister, ClientLogin, VendorLogin, VendorVerifyOTP,
     VendorRegisterDevice, Token, ClientResponse, VendorResponse, OTPResponse
 )
+from app.middleware.tenant_context import get_current_tenant
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -29,6 +30,7 @@ router = APIRouter(prefix="/api/auth", tags=["authentication"])
 @router.post("/register", response_model=ClientResponse, status_code=status.HTTP_201_CREATED)
 async def register_client(
     data: ClientRegister,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -38,9 +40,11 @@ async def register_client(
         - Req 1.1: Client registration with email/password
         - Req 1.2: Subscription tier management
     """
+    tenant_id = get_current_tenant(request)
+    
     # Check if email already exists
     result = await db.execute(
-        select(Client).where(Client.email == data.email)
+        select(Client).where(Client.email == data.email, Client.tenant_id == tenant_id)
     )
     existing_client = result.scalar_one_or_none()
     
@@ -53,6 +57,7 @@ async def register_client(
     # Create new client
     client = Client(
         client_id=uuid.uuid4(),
+        tenant_id=tenant_id,
         email=data.email,
         password_hash=hash_password(data.password),
         company_name=data.company_name,
@@ -70,6 +75,7 @@ async def register_client(
     subscription = Subscription(
         subscription_id=uuid.uuid4(),
         client_id=client.client_id,
+        tenant_id=tenant_id,
         tier=SubscriptionTier.FREE,
         status=SubscriptionStatus.ACTIVE,
         photos_quota=50,  # Free tier: 50 photos/month
@@ -98,6 +104,7 @@ async def register_client(
 @router.post("/login", response_model=Token)
 async def login_client(
     data: ClientLogin,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -107,9 +114,11 @@ async def login_client(
         - Req 1.1: Client login with JWT
         - Req 1.2: Token-based authentication
     """
+    tenant_id = get_current_tenant(request)
+    
     # Get client by email
     result = await db.execute(
-        select(Client).where(Client.email == data.email)
+        select(Client).where(Client.email == data.email, Client.tenant_id == tenant_id)
     )
     client = result.scalar_one_or_none()
     
@@ -147,6 +156,7 @@ async def login_client(
 @router.post("/vendor/request-otp", response_model=OTPResponse)
 async def vendor_request_otp(
     data: VendorLogin,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -156,10 +166,13 @@ async def vendor_request_otp(
         - Req 1.4: Vendor login with OTP
         - Req 1.3: SMS delivery
     """
+    tenant_id = get_current_tenant(request)
+    
     # Verify vendor exists and phone number matches
     result = await db.execute(
         select(Vendor).where(
             Vendor.vendor_id == data.vendor_id,
+            Vendor.tenant_id == tenant_id,
             Vendor.phone_number == data.phone_number
         )
     )
@@ -194,6 +207,7 @@ async def vendor_request_otp(
 @router.post("/vendor/verify-otp", response_model=Token)
 async def vendor_verify_otp(
     data: VendorVerifyOTP,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -203,6 +217,8 @@ async def vendor_verify_otp(
         - Req 1.4: Vendor OTP verification
         - Req 12.6: Device registration
     """
+    tenant_id = get_current_tenant(request)
+    
     # Verify OTP
     if not otp_manager.verify(data.phone_number, data.otp):
         raise HTTPException(
@@ -214,6 +230,7 @@ async def vendor_verify_otp(
     result = await db.execute(
         select(Vendor).where(
             Vendor.vendor_id == data.vendor_id,
+            Vendor.tenant_id == tenant_id,
             Vendor.phone_number == data.phone_number
         )
     )
@@ -252,6 +269,7 @@ async def vendor_verify_otp(
 @router.post("/vendor/register-device", response_model=VendorResponse)
 async def register_vendor_device(
     data: VendorRegisterDevice,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -260,9 +278,11 @@ async def register_vendor_device(
     Requirements:
         - Req 12.6: Public key storage for signature verification
     """
+    tenant_id = get_current_tenant(request)
+    
     # Get vendor by device ID
     result = await db.execute(
-        select(Vendor).where(Vendor.device_id == data.device_id)
+        select(Vendor).where(Vendor.device_id == data.device_id, Vendor.tenant_id == tenant_id)
     )
     vendor = result.scalar_one_or_none()
     

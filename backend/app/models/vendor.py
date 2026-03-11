@@ -10,7 +10,7 @@ import enum
 from app.core.database import Base
 
 
-class VendorStatus(str, enum.Enum):
+class VendorStatus(enum.Enum):
     """Vendor status enumeration."""
     ACTIVE = "active"
     INACTIVE = "inactive"
@@ -31,6 +31,9 @@ class Vendor(Base):
     # Primary Key - 6-character alphanumeric ID (e.g., "A3X9K2")
     vendor_id = Column(String(6), primary_key=True, index=True)
 
+    # Multi-tenancy
+    tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+
     # Vendor Information
     name = Column(String(255), nullable=False)
     phone_number = Column(String(20), nullable=False, index=True)
@@ -38,9 +41,10 @@ class Vendor(Base):
 
     # Status
     status = Column(
-        SQLEnum(VendorStatus),
+        SQLEnum(VendorStatus, name="vendorstatus", native_enum=True, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=VendorStatus.ACTIVE,
+        server_default="active",
         index=True
     )
 
