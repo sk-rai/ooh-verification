@@ -102,8 +102,8 @@ check_*.py
 quick_*.py
 add_quota_*.py
 create_*.py
-test_*.py
-run_*.py
+/test_*.py
+/run_*.py
 
 # Shell scripts (temporary)
 setup_dynamodb_local.sh
