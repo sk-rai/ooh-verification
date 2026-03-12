@@ -12,6 +12,8 @@ import CreateVendor from './pages/dashboard/CreateVendor'
 import PhotoGallery from './pages/dashboard/PhotoGallery'
 import Reports from './pages/dashboard/Reports'
 import MapView from './pages/dashboard/MapView'
+import MapViewEnhanced from './pages/dashboard/MapViewEnhanced'
+import Analytics from './pages/dashboard/Analytics'
 import ProtectedRoute from './components/ProtectedRoute'
 
 const queryClient = new QueryClient({
@@ -100,6 +102,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MapView />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/map-enhanced"
+              element={
+                <ProtectedRoute>
+                  <MapViewEnhanced />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/analytics/:campaignCode"
+              element={
+                <ProtectedRoute>
+                  <Analytics />
                 </ProtectedRoute>
               }
             />

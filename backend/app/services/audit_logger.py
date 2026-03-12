@@ -109,6 +109,7 @@ class AuditLogger:
         sensor_data: Dict[str, Any],
         signature: Dict[str, Any],
         device_info: Dict[str, Any],
+        tenant_id: Optional[uuid.UUID] = None,
         flags: Optional[List[str]] = None
     ) -> Optional[str]:
         """
@@ -121,6 +122,7 @@ class AuditLogger:
             sensor_data: Sensor data dictionary (GPS, WiFi, cell towers, etc.)
             signature: Photo signature dictionary (signature, algorithm, timestamp)
             device_info: Device information (model, os_version, app_version)
+            tenant_id: Optional tenant ID for multi-tenancy
             flags: Optional list of audit flags
 
         Returns:
@@ -169,6 +171,7 @@ class AuditLogger:
             # Create AuditLog model instance
             audit_log = AuditLog(
                 audit_id=audit_id,
+                tenant_id=tenant_id,
                 timestamp=timestamp,
                 vendor_id=vendor_id,
                 photo_id=uuid.UUID(photo_id) if isinstance(photo_id, str) else photo_id,

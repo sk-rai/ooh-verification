@@ -1,3 +1,1 @@
-"""
-Test suite for TrustCapture backend.
-"""
+"""TrustCapture test suite."""

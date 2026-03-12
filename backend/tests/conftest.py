@@ -1,100 +1,277 @@
-# Pytest configuration - Using PostgreSQL
-import pytest, asyncio, uuid
-from typing import AsyncGenerator, Generator
-from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.pool import NullPool
-from datetime import datetime, timedelta
+"""
+Stable Test Configuration and Fixtures for TrustCapture Backend Tests
 
-from app.main import app
-from app.core.database import get_db, Base
-from app.models import Client, Vendor, Subscription
-from app.models.client import SubscriptionTier, SubscriptionStatus
-from app.models.vendor import VendorStatus
-from app.core.security import hash_password
-
-# Set environment variable to use mock storage (no external dependencies)
+This conftest provides fixtures for all test suites with proper async handling,
+database isolation, and multi-tenancy support.
+"""
+import asyncio
 import os
-os.environ['USE_MOCK_STORAGE'] = 'true'
-os.environ['TESTING'] = 'true'
+import uuid
+from datetime import datetime, timedelta
+from typing import AsyncGenerator, Generator
+
+import pytest
+import pytest_asyncio
+from faker import Faker
+from httpx import AsyncClient
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+
+from app.core.config import settings
+from app.core.database import Base, get_db
+from app.core.security import create_access_token, hash_password
+from app.main import app
+from app.models.client import Client
+from app.models.vendor import Vendor
+from app.models.campaign import Campaign, CampaignType, CampaignStatus
+from app.models.subscription import Subscription
+from app.models.tenant_config import TenantConfig
+from app.models.audit_log import AuditLog
+from app.models.photo import Photo
+from app.models.location_profile import LocationProfile
+
+# Test database URL
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql+asyncpg://trustcapture:dev_password_123@localhost:5432/trustcapture_test"
+)
 
 
-TEST_DATABASE_URL = 'postgresql+asyncpg://test:test@localhost:5432/test_trustcapture'
-test_engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool, echo=False)
-TestSessionLocal = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
-
-@pytest.fixture(scope='session')
-def event_loop() -> Generator:
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-@pytest.fixture(scope='function')
-async def db_session() -> AsyncGenerator[AsyncSession, None]:
-    async with test_engine.begin() as conn:
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def setup_test_database():
+    """Create all tables before running tests and drop them after."""
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False, future=True)
+    async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    async with TestSessionLocal() as session:
-        yield session
-    async with test_engine.begin() as conn:
+    yield
+    async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
 
-@pytest.fixture(scope='function')
-async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
-    async def override_get_db():
-        yield db_session
-    app.dependency_overrides[get_db] = override_get_db
-    async with AsyncClient(app=app, base_url='http://test') as ac:
-        yield ac
-    app.dependency_overrides.clear()
 
-@pytest.fixture
-async def test_client(db_session: AsyncSession) -> Client:
+@pytest_asyncio.fixture(scope="function")
+async def db_session() -> AsyncGenerator[AsyncSession, None]:
+    """Create a fresh database session for each test with proper cleanup."""
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False, future=True, poolclass=None)
+    SessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    
+    async with SessionLocal() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+    
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def test_tenant(db_session: AsyncSession) -> TenantConfig:
+    """Create or retrieve test tenant configuration."""
+    tenant_id = uuid.UUID("e27c6c7a-7f5b-43df-bdc4-abd76ebb99aa")
+    
+    # Check if tenant already exists
+    stmt = text("SELECT * FROM tenant_config WHERE tenant_id = :tenant_id")
+    result = await db_session.execute(stmt, {"tenant_id": str(tenant_id)})
+    existing = result.first()
+    
+    if existing:
+        # Return existing tenant
+        from sqlalchemy import select
+        stmt = select(TenantConfig).where(TenantConfig.tenant_id == tenant_id)
+        result = await db_session.execute(stmt)
+        return result.scalar_one()
+    
+    # Create new tenant
+    tenant = TenantConfig(
+        tenant_id=tenant_id,
+        tenant_name="Test Tenant",
+        subdomain="test",
+        custom_domain=None,
+        logo_url=None,
+        primary_color="#007bff",
+        secondary_color="#6c757d",
+        email_from_address="noreply@test.trustcapture.com",
+        email_from_name="TrustCapture Test",
+        is_active=True,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+    db_session.add(tenant)
+    await db_session.commit()
+    await db_session.refresh(tenant)
+    return tenant
+
+
+@pytest_asyncio.fixture(scope="function")
+async def test_client_user(db_session: AsyncSession, test_tenant: TenantConfig) -> Client:
+    """Create a test client user."""
+    # Check if client already exists
+    from sqlalchemy import select
+    stmt = select(Client).where(Client.email == "test@example.com")
+    result = await db_session.execute(stmt)
+    existing = result.scalar_one_or_none()
+    
+    if existing:
+        return existing
+    
     client = Client(
-        client_id=uuid.uuid4(), email='test@example.com',
-        password_hash=hash_password('TestPass123'), company_name='Test Company',
-        phone_number='+1234567890', subscription_tier=SubscriptionTier.FREE,
-        subscription_status=SubscriptionStatus.ACTIVE,
-        created_at=datetime.utcnow(), updated_at=datetime.utcnow()
+        client_id=uuid.uuid4(),
+        tenant_id=test_tenant.tenant_id,
+        email="test@example.com",
+        password_hash=hash_password("Test123!@#"),
+        company_name="Test Company",
+        phone_number="+1234567890",
+        subscription_tier="free",
+        subscription_status="active",
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
     )
     db_session.add(client)
-    subscription = Subscription(
-        subscription_id=uuid.uuid4(), client_id=client.client_id,
-        tier=SubscriptionTier.FREE, status=SubscriptionStatus.ACTIVE,
-        photos_quota=50, photos_used=0,
-        current_period_start=datetime.utcnow(),
-        current_period_end=datetime.utcnow() + timedelta(days=30),
-        created_at=datetime.utcnow(), updated_at=datetime.utcnow()
-    )
-    db_session.add(subscription)
     await db_session.commit()
     await db_session.refresh(client)
     return client
 
-@pytest.fixture
-async def test_vendor(db_session: AsyncSession, test_client: Client) -> Vendor:
+
+@pytest_asyncio.fixture(scope="function")
+async def test_client(test_client_user: Client) -> Client:
+    """Alias for test_client_user for backward compatibility."""
+    return test_client_user
+
+
+@pytest_asyncio.fixture(scope="function")
+async def test_subscription(
+    db_session: AsyncSession, 
+    test_client_user: Client, 
+    test_tenant: TenantConfig
+) -> Subscription:
+    """Create a test subscription."""
+    subscription = Subscription(
+        subscription_id=uuid.uuid4(),
+        tenant_id=test_tenant.tenant_id,
+        created_by_client_id=test_client_user.client_id,
+        tier="free",
+        status="active",
+        start_date=datetime.utcnow(),
+        end_date=datetime.utcnow() + timedelta(days=30),
+        campaigns_quota=5,
+        campaigns_used=0,
+        vendors_quota=10,
+        vendors_used=0,
+        photos_quota=100,
+        photos_used=0,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+    db_session.add(subscription)
+    await db_session.commit()
+    await db_session.refresh(subscription)
+    return subscription
+
+
+@pytest_asyncio.fixture(scope="function")
+async def test_vendor(
+    db_session: AsyncSession, 
+    test_client_user: Client, 
+    test_tenant: TenantConfig
+) -> Vendor:
+    """Create a test vendor."""
     vendor = Vendor(
-        vendor_id='TEST01', created_by_client_id=test_client.client_id,
-        name='Test Vendor', phone_number='+1987654321',
-        email='vendor@example.com', status=VendorStatus.ACTIVE,
-        device_id='test-device-123',
-        created_at=datetime.utcnow(), updated_at=datetime.utcnow()
+        vendor_id=f"VND{uuid.uuid4().hex[:3].upper()}",
+        tenant_id=test_tenant.tenant_id,
+        created_by_client_id=test_client_user.client_id,
+        name="Test Vendor",
+        phone_number="+1234567890",
+        email="vendor@example.com",
+        status="active",
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
     )
     db_session.add(vendor)
     await db_session.commit()
     await db_session.refresh(vendor)
     return vendor
 
-@pytest.fixture
-async def client_token(client: AsyncClient, test_client: Client) -> str:
-    response = await client.post('/api/auth/login', json={'email': 'test@example.com', 'password': 'TestPass123'})
-    assert response.status_code == 200
-    return response.json()['access_token']
 
-@pytest.fixture
-def auth_headers(client_token: str) -> dict:
-    return {'Authorization': f'Bearer {client_token}'}
+@pytest_asyncio.fixture(scope="function")
+async def test_campaign(
+    db_session: AsyncSession, 
+    test_client_user: Client, 
+    test_tenant: TenantConfig
+) -> Campaign:
+    """Create a test campaign."""
+    campaign = Campaign(
+        campaign_id=uuid.uuid4(),
+        tenant_id=test_tenant.tenant_id,
+        created_by_client_id=test_client_user.client_id,
+        campaign_code=f"CAMP{uuid.uuid4().hex[:6].upper()}",
+        name="Test Campaign",
+        campaign_type=CampaignType.OOH_ADVERTISING,
+        start_date=datetime.utcnow(),
+        end_date=datetime.utcnow() + timedelta(days=30),
+        status=CampaignStatus.ACTIVE,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+    db_session.add(campaign)
+    await db_session.commit()
+    await db_session.refresh(campaign)
+    return campaign
 
-# Alias for test_client (used by photo upload tests)
-@pytest.fixture
-async def test_client_user(test_client: Client) -> Client:
-    return test_client
+
+@pytest_asyncio.fixture(scope="function")
+async def auth_headers(test_client_user: Client, test_tenant: TenantConfig) -> dict:
+    """Create authentication headers with JWT token."""
+    access_token = create_access_token(
+        data={"sub": str(test_client_user.client_id), "type": "client"}
+    )
+    return {
+        "Authorization": f"Bearer {access_token}",
+        "X-Tenant-ID": str(test_tenant.tenant_id)
+    }
+
+
+@pytest_asyncio.fixture(scope="function")
+async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+    """Create an async HTTP client for testing (named 'client')."""
+    async def override_get_db():
+        yield db_session
+    
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        yield ac
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+    """Create an async HTTP client for testing (named 'async_client')."""
+    async def override_get_db():
+        yield db_session
+    
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        yield ac
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def client_token(
+    client: AsyncClient, 
+    test_client_user: Client, 
+    test_tenant: TenantConfig
+) -> str:
+    """Get authentication token for test client."""
+    access_token = create_access_token(
+        data={"sub": str(test_client_user.client_id), "type": "client"}
+    )
+    return access_token
+
+
+@pytest.fixture(scope="session")
+def faker() -> Faker:
+    """Create a Faker instance for generating test data."""
+    return Faker()
