@@ -1,6 +1,5 @@
-"""
-Pydantic schemas for TrustCapture API.
-"""
+"""Pydantic schemas for TrustCapture API."""
+
 from app.schemas.auth import (
     ClientRegister,
     ClientLogin,
@@ -13,15 +12,33 @@ from app.schemas.auth import (
     VendorResponse,
     OTPResponse
 )
+
 from app.schemas.client import (
     ClientProfileUpdate,
     SubscriptionResponse
 )
+
 from app.schemas.vendor import (
     VendorCreate,
     VendorUpdate,
     VendorResponse as VendorDetailResponse,
     VendorListResponse
+)
+
+from app.schemas.assignment import (
+    LocationAssignment,
+    VendorAssignmentCreate,
+    VendorAssignmentResponse,
+    VendorAssignmentBatchResponse,
+    BulkOperationRow,
+    BulkOperationResponse,
+    BulkCampaignRow,
+    BulkVendorRow,
+    BulkAssignmentRow,
+    CSVTemplateResponse,
+    AssignmentListResponse,
+    CampaignVendorsResponse,
+    VendorCampaignsResponse
 )
 
 __all__ = [
@@ -41,4 +58,18 @@ __all__ = [
     "VendorUpdate",
     "VendorDetailResponse",
     "VendorListResponse",
+    # Assignment and bulk operation schemas
+    "LocationAssignment",
+    "VendorAssignmentCreate",
+    "VendorAssignmentResponse",
+    "VendorAssignmentBatchResponse",
+    "BulkOperationRow",
+    "BulkOperationResponse",
+    "BulkCampaignRow",
+    "BulkVendorRow",
+    "BulkAssignmentRow",
+    "CSVTemplateResponse",
+    "AssignmentListResponse",
+    "CampaignVendorsResponse",
+    "VendorCampaignsResponse",
 ]

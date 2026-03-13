@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi import Request
 import os
 
-from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations, tenants
+from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations, tenants, assignments, bulk
 from app.core.database import close_db
 from app.middleware.tenant_context import TenantContextMiddleware
 
@@ -63,6 +63,8 @@ app.include_router(clients.router)
 app.include_router(vendors.router)
 app.include_router(campaigns.router)
 app.include_router(campaign_locations.router)
+app.include_router(assignments.router)  # Campaign-vendor assignments
+app.include_router(bulk.router)  # Bulk operations
 app.include_router(photos.router)
 app.include_router(subscriptions.router)
 app.include_router(webhooks.router)

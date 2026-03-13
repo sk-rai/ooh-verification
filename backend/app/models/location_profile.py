@@ -1,6 +1,5 @@
-"""
-Location Profile model - defines expected sensor patterns for verification.
-"""
+"""Location Profile model - defines expected sensor patterns for verification."""
+
 from sqlalchemy import Column, Float, ForeignKey, DateTime, ARRAY, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -23,18 +22,19 @@ class LocationProfile(Base):
     - Property 7: GPS coordinate precision preservation
     """
     __tablename__ = "location_profiles"
-
+    
     # Primary Key
-    profile_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    profile_id = Column(UUID(as_uuid=True), 
+                       primary_key=True, 
+                       default=uuid.uuid4, 
+                       index=True)
     
     # Campaign Association
-    campaign_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("campaigns.campaign_id", ondelete="CASCADE"),
-        nullable=False,
-        unique=True,  # One profile per campaign
-        index=True
-    )
+    campaign_id = Column(UUID(as_uuid=True), 
+                        ForeignKey("campaigns.campaign_id", ondelete="CASCADE"),
+                        nullable=False,
+                        unique=True,  # One profile per campaign
+                        index=True)
     
     # GPS Expected Location (7 decimal precision = ~1.1cm accuracy)
     expected_latitude = Column(Float(precision=10), nullable=False)  # DECIMAL(10,7) equivalent
@@ -53,15 +53,14 @@ class LocationProfile(Base):
     expected_light_min = Column(Float, nullable=True)     # lux
     expected_light_max = Column(Float, nullable=True)
     
-    # Timestamp
+    # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Relationships
     campaign = relationship("Campaign", back_populates="location_profile")
-
+    
     def __repr__(self):
-        return (
-            f"<LocationProfile(profile_id={self.profile_id}, "
-            f"lat={self.expected_latitude:.7f}, lon={self.expected_longitude:.7f}, "
-            f"tolerance={self.tolerance_meters}m)>"
-        )
+        return (f"<LocationProfile(profile_id={self.profile_id}, "
+                f"lat={self.expected_latitude:.7f}, lon={self.expected_longitude:.7f}, "
+                f"tolerance={self.tolerance_meters}m)>")

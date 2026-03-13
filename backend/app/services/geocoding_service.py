@@ -1,299 +1,369 @@
 """
-Geocoding Service - Convert addresses to coordinates and vice versa.
+Geocoding service for bidirectional address-coordinate conversion.
 
-Supports multiple providers:
-- Google Maps Geocoding API (primary)
-- OpenStreetMap Nominatim (fallback, free)
+Features:
+- Forward geocoding: address -> coordinates
+- Reverse geocoding: coordinates -> address
+- Dual provider: Google Maps (primary) + Nominatim (fallback)
+- Caching for performance
+- Batch processing support
+
+Requirements:
+- Property 40: Geocoding consistency
 """
-import httpx
+
+import logging
 import os
-from typing import Optional, Dict, Any, List
-from datetime import datetime
+from typing import Tuple, Optional, List, Dict, Any
+import httpx
+from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 
 
 class GeocodingResult:
-    """Structured geocoding result."""
-    
+    """Result from geocoding operation."""
+
     def __init__(
         self,
         latitude: float,
         longitude: float,
         formatted_address: str,
-        accuracy: str = "APPROXIMATE",
+        address_components: Optional[Dict[str, str]] = None,
         place_id: Optional[str] = None,
-        address_components: Optional[Dict[str, str]] = None
+        accuracy: Optional[str] = None,
+        provider: str = "unknown"
     ):
         self.latitude = latitude
         self.longitude = longitude
         self.formatted_address = formatted_address
-        self.accuracy = accuracy
-        self.place_id = place_id
         self.address_components = address_components or {}
-    
+        self.place_id = place_id
+        self.accuracy = accuracy
+        self.provider = provider
+
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary."""
         return {
             "latitude": self.latitude,
             "longitude": self.longitude,
             "formatted_address": self.formatted_address,
-            "accuracy": self.accuracy,
+            "address_components": self.address_components,
             "place_id": self.place_id,
-            "city": self.address_components.get("city"),
-            "state": self.address_components.get("state"),
-            "country": self.address_components.get("country"),
-            "postal_code": self.address_components.get("postal_code"),
+            "accuracy": self.accuracy,
+            "provider": self.provider
         }
 
 
 class GeocodingService:
-    """
-    Geocoding service with multiple provider support.
-    
-    Usage:
-        service = GeocodingService()
-        result = await service.geocode("1600 Amphitheatre Parkway, Mountain View, CA")
-        reverse = await service.reverse_geocode(37.4224764, -122.0842499)
-    """
-    
+    """Service for bidirectional address-coordinate conversion."""
+
     def __init__(self):
         self.google_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
-        self.use_google = bool(self.google_api_key)
-        
-    async def geocode(self, address: str) -> Optional[GeocodingResult]:
-        """
-        Convert address to coordinates.
-        
-        Args:
-            address: Full address string
-            
-        Returns:
-            GeocodingResult or None if geocoding fails
-        """
-        if self.use_google:
-            result = await self._geocode_google(address)
-            if result:
-                return result
-        
-        # Fallback to OpenStreetMap Nominatim (free, no API key required)
-        return await self._geocode_nominatim(address)
-    
-    async def reverse_geocode(self, latitude: float, longitude: float) -> Optional[GeocodingResult]:
-        """
-        Convert coordinates to address.
-        
-        Args:
-            latitude: Latitude coordinate
-            longitude: Longitude coordinate
-            
-        Returns:
-            GeocodingResult or None if reverse geocoding fails
-        """
-        if self.use_google:
-            result = await self._reverse_geocode_google(latitude, longitude)
-            if result:
-                return result
-        
-        # Fallback to OpenStreetMap Nominatim
-        return await self._reverse_geocode_nominatim(latitude, longitude)
-    
-    async def _geocode_google(self, address: str) -> Optional[GeocodingResult]:
-        """Geocode using Google Maps API."""
+        self.cache: Dict[str, Tuple[GeocodingResult, datetime]] = {}
+        self.cache_ttl = timedelta(days=30)
+        self.timeout = 10.0
+
+        if self.google_api_key:
+            logger.info("Google Maps API key configured")
+        else:
+            logger.warning("Google Maps API key not configured, will use Nominatim only")
+
+    async def geocode_address(self, address: str, use_cache: bool = True) -> 'GeocodingResult':
+        """Forward geocoding: Convert address to coordinates."""
+        if not address or not address.strip():
+            raise GeocodingError("Address cannot be empty")
+
+        address = address.strip()
+        cache_key = f"forward:{address}"
+
+        if use_cache:
+            cached = self._get_from_cache(cache_key)
+            if cached:
+                logger.info(f"Cache hit for address: {address}")
+                return cached
+
+        if self.google_api_key:
+            try:
+                result = await self._google_forward_geocode(address)
+                if result:
+                    self._add_to_cache(cache_key, result)
+                    return result
+            except Exception as e:
+                logger.warning(f"Google Maps geocoding failed: {e}")
+
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    "https://maps.googleapis.com/maps/api/geocode/json",
-                    params={
-                        "address": address,
-                        "key": self.google_api_key
-                    },
-                    timeout=10.0
-                )
-                
-                if response.status_code != 200:
-                    return None
-                
-                data = response.json()
-                
-                if data["status"] != "OK" or not data.get("results"):
-                    return None
-                
-                result = data["results"][0]
-                location = result["geometry"]["location"]
-                
-                # Extract address components
-                components = {}
-                for component in result.get("address_components", []):
-                    types = component.get("types", [])
-                    if "locality" in types:
-                        components["city"] = component["long_name"]
-                    elif "administrative_area_level_1" in types:
-                        components["state"] = component["long_name"]
-                    elif "country" in types:
-                        components["country"] = component["long_name"]
-                    elif "postal_code" in types:
-                        components["postal_code"] = component["long_name"]
-                
-                return GeocodingResult(
-                    latitude=location["lat"],
-                    longitude=location["lng"],
-                    formatted_address=result["formatted_address"],
-                    accuracy=result["geometry"]["location_type"],
-                    place_id=result.get("place_id"),
-                    address_components=components
-                )
+            result = await self._nominatim_forward_geocode(address)
+            if result:
+                self._add_to_cache(cache_key, result)
+                return result
         except Exception as e:
-            print(f"Google geocoding error: {e}")
-            return None
-    
-    async def _geocode_nominatim(self, address: str) -> Optional[GeocodingResult]:
-        """Geocode using OpenStreetMap Nominatim (free)."""
+            logger.error(f"Nominatim geocoding failed: {e}")
+
+        raise GeocodingError(
+            f"Failed to geocode address '{address}' with all providers. "
+            "Please provide coordinates directly."
+        )
+
+    async def reverse_geocode(
+        self, latitude: float, longitude: float, use_cache: bool = True
+    ) -> 'GeocodingResult':
+        """Reverse geocoding: Convert coordinates to address."""
+        if not (-90 <= latitude <= 90):
+            raise GeocodingError(f"Invalid latitude: {latitude}. Must be between -90 and 90")
+        if not (-180 <= longitude <= 180):
+            raise GeocodingError(f"Invalid longitude: {longitude}. Must be between -180 and 180")
+
+        cache_key = f"reverse:{latitude:.6f},{longitude:.6f}"
+        if use_cache:
+            cached = self._get_from_cache(cache_key)
+            if cached:
+                logger.info(f"Cache hit for coordinates: ({latitude}, {longitude})")
+                return cached
+
+        if self.google_api_key:
+            try:
+                result = await self._google_reverse_geocode(latitude, longitude)
+                if result:
+                    self._add_to_cache(cache_key, result)
+                    return result
+            except Exception as e:
+                logger.warning(f"Google Maps reverse geocoding failed: {e}")
+
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    "https://nominatim.openstreetmap.org/search",
-                    params={
-                        "q": address,
-                        "format": "json",
-                        "limit": 1,
-                        "addressdetails": 1
-                    },
-                    headers={
-                        "User-Agent": "TrustCapture/1.0"  # Required by Nominatim
-                    },
-                    timeout=10.0
-                )
-                
-                if response.status_code != 200:
-                    return None
-                
-                data = response.json()
-                
-                if not data:
-                    return None
-                
-                result = data[0]
-                address_data = result.get("address", {})
-                
-                # Extract address components
-                components = {
-                    "city": address_data.get("city") or address_data.get("town") or address_data.get("village"),
-                    "state": address_data.get("state"),
-                    "country": address_data.get("country"),
-                    "postal_code": address_data.get("postcode"),
-                }
-                
-                return GeocodingResult(
-                    latitude=float(result["lat"]),
-                    longitude=float(result["lon"]),
-                    formatted_address=result["display_name"],
-                    accuracy="APPROXIMATE",
-                    place_id=result.get("place_id"),
-                    address_components=components
-                )
+            result = await self._nominatim_reverse_geocode(latitude, longitude)
+            if result:
+                self._add_to_cache(cache_key, result)
+                return result
         except Exception as e:
-            print(f"Nominatim geocoding error: {e}")
+            logger.error(f"Nominatim reverse geocoding failed: {e}")
+
+        raise GeocodingError(
+            f"Failed to reverse geocode coordinates ({latitude}, {longitude}) with all providers"
+        )
+
+    async def batch_geocode_addresses(
+        self, addresses: List[str], use_cache: bool = True
+    ) -> List[Optional['GeocodingResult']]:
+        """Batch forward geocode multiple addresses."""
+        results = []
+        for address in addresses:
+            try:
+                result = await self.geocode_address(address, use_cache=use_cache)
+                results.append(result)
+            except GeocodingError as e:
+                logger.warning(f"Failed to geocode '{address}': {e}")
+                results.append(None)
+        return results
+
+    async def batch_reverse_geocode(
+        self, coordinates: List[Tuple[float, float]], use_cache: bool = True
+    ) -> List[Optional['GeocodingResult']]:
+        """Batch reverse geocode multiple coordinates."""
+        results = []
+        for lat, lon in coordinates:
+            try:
+                result = await self.reverse_geocode(lat, lon, use_cache=use_cache)
+                results.append(result)
+            except GeocodingError as e:
+                logger.warning(f"Failed to reverse geocode ({lat}, {lon}): {e}")
+                results.append(None)
+        return results
+
+    async def _google_forward_geocode(self, address: str) -> Optional['GeocodingResult']:
+        """Forward geocode using Google Maps API."""
+        url = "https://maps.googleapis.com/maps/api/geocode/json"
+        params = {"address": address, "key": self.google_api_key}
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+        if data["status"] != "OK" or not data.get("results"):
+            logger.warning(f"Google Maps API returned status: {data['status']}")
             return None
-    
-    async def _reverse_geocode_google(self, latitude: float, longitude: float) -> Optional[GeocodingResult]:
+
+        result = data["results"][0]
+        location = result["geometry"]["location"]
+
+        components = {}
+        for component in result.get("address_components", []):
+            types = component.get("types", [])
+            if "street_number" in types:
+                components["street_number"] = component["long_name"]
+            elif "route" in types:
+                components["street"] = component["long_name"]
+            elif "locality" in types:
+                components["city"] = component["long_name"]
+            elif "administrative_area_level_1" in types:
+                components["state"] = component["short_name"]
+            elif "country" in types:
+                components["country"] = component["long_name"]
+                components["country_code"] = component["short_name"]
+            elif "postal_code" in types:
+                components["postal_code"] = component["long_name"]
+
+        return GeocodingResult(
+            latitude=location["lat"],
+            longitude=location["lng"],
+            formatted_address=result["formatted_address"],
+            address_components=components,
+            place_id=result.get("place_id"),
+            accuracy=result["geometry"].get("location_type"),
+            provider="google_maps"
+        )
+
+    async def _google_reverse_geocode(
+        self, latitude: float, longitude: float
+    ) -> Optional['GeocodingResult']:
         """Reverse geocode using Google Maps API."""
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    "https://maps.googleapis.com/maps/api/geocode/json",
-                    params={
-                        "latlng": f"{latitude},{longitude}",
-                        "key": self.google_api_key
-                    },
-                    timeout=10.0
-                )
-                
-                if response.status_code != 200:
-                    return None
-                
-                data = response.json()
-                
-                if data["status"] != "OK" or not data.get("results"):
-                    return None
-                
-                result = data["results"][0]
-                location = result["geometry"]["location"]
-                
-                # Extract address components
-                components = {}
-                for component in result.get("address_components", []):
-                    types = component.get("types", [])
-                    if "locality" in types:
-                        components["city"] = component["long_name"]
-                    elif "administrative_area_level_1" in types:
-                        components["state"] = component["long_name"]
-                    elif "country" in types:
-                        components["country"] = component["long_name"]
-                    elif "postal_code" in types:
-                        components["postal_code"] = component["long_name"]
-                
-                return GeocodingResult(
-                    latitude=location["lat"],
-                    longitude=location["lng"],
-                    formatted_address=result["formatted_address"],
-                    accuracy=result["geometry"]["location_type"],
-                    place_id=result.get("place_id"),
-                    address_components=components
-                )
-        except Exception as e:
-            print(f"Google reverse geocoding error: {e}")
-            return None
-    
-    async def _reverse_geocode_nominatim(self, latitude: float, longitude: float) -> Optional[GeocodingResult]:
-        """Reverse geocode using OpenStreetMap Nominatim (free)."""
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    "https://nominatim.openstreetmap.org/reverse",
-                    params={
-                        "lat": latitude,
-                        "lon": longitude,
-                        "format": "json",
-                        "addressdetails": 1
-                    },
-                    headers={
-                        "User-Agent": "TrustCapture/1.0"
-                    },
-                    timeout=10.0
-                )
-                
-                if response.status_code != 200:
-                    return None
-                
-                result = response.json()
-                address_data = result.get("address", {})
-                
-                # Extract address components
-                components = {
-                    "city": address_data.get("city") or address_data.get("town") or address_data.get("village"),
-                    "state": address_data.get("state"),
-                    "country": address_data.get("country"),
-                    "postal_code": address_data.get("postcode"),
-                }
-                
-                return GeocodingResult(
-                    latitude=float(result["lat"]),
-                    longitude=float(result["lon"]),
-                    formatted_address=result["display_name"],
-                    accuracy="APPROXIMATE",
-                    place_id=result.get("place_id"),
-                    address_components=components
-                )
-        except Exception as e:
-            print(f"Nominatim reverse geocoding error: {e}")
+        url = "https://maps.googleapis.com/maps/api/geocode/json"
+        params = {"latlng": f"{latitude},{longitude}", "key": self.google_api_key}
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+        if data["status"] != "OK" or not data.get("results"):
+            logger.warning(f"Google Maps API returned status: {data['status']}")
             return None
 
+        result = data["results"][0]
+        location = result["geometry"]["location"]
 
-# Singleton instance
-_geocoding_service: Optional[GeocodingService] = None
+        components = {}
+        for component in result.get("address_components", []):
+            types = component.get("types", [])
+            if "street_number" in types:
+                components["street_number"] = component["long_name"]
+            elif "route" in types:
+                components["street"] = component["long_name"]
+            elif "locality" in types:
+                components["city"] = component["long_name"]
+            elif "administrative_area_level_1" in types:
+                components["state"] = component["short_name"]
+            elif "country" in types:
+                components["country"] = component["long_name"]
+                components["country_code"] = component["short_name"]
+            elif "postal_code" in types:
+                components["postal_code"] = component["long_name"]
+
+        return GeocodingResult(
+            latitude=location["lat"],
+            longitude=location["lng"],
+            formatted_address=result["formatted_address"],
+            address_components=components,
+            place_id=result.get("place_id"),
+            accuracy=result["geometry"].get("location_type"),
+            provider="google_maps"
+        )
+
+    async def _nominatim_forward_geocode(self, address: str) -> Optional['GeocodingResult']:
+        """Forward geocode using Nominatim (OpenStreetMap)."""
+        url = "https://nominatim.openstreetmap.org/search"
+        params = {"q": address, "format": "json", "addressdetails": 1, "limit": 1}
+        headers = {"User-Agent": "TrustCapture/1.0"}
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.get(url, params=params, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+
+        if not data:
+            return None
+
+        result = data[0]
+        address_data = result.get("address", {})
+
+        components = {
+            "street_number": address_data.get("house_number", ""),
+            "street": address_data.get("road", ""),
+            "city": address_data.get("city") or address_data.get("town") or address_data.get("village", ""),
+            "state": address_data.get("state", ""),
+            "country": address_data.get("country", ""),
+            "country_code": address_data.get("country_code", "").upper(),
+            "postal_code": address_data.get("postcode", "")
+        }
+
+        return GeocodingResult(
+            latitude=float(result["lat"]),
+            longitude=float(result["lon"]),
+            formatted_address=result.get("display_name", address),
+            address_components=components,
+            place_id=result.get("place_id"),
+            accuracy=result.get("type"),
+            provider="nominatim"
+        )
+
+    async def _nominatim_reverse_geocode(
+        self, latitude: float, longitude: float
+    ) -> Optional['GeocodingResult']:
+        """Reverse geocode using Nominatim (OpenStreetMap)."""
+        url = "https://nominatim.openstreetmap.org/reverse"
+        params = {"lat": latitude, "lon": longitude, "format": "json", "addressdetails": 1}
+        headers = {"User-Agent": "TrustCapture/1.0"}
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.get(url, params=params, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+
+        if "error" in data:
+            return None
+
+        address_data = data.get("address", {})
+
+        components = {
+            "street_number": address_data.get("house_number", ""),
+            "street": address_data.get("road", ""),
+            "city": address_data.get("city") or address_data.get("town") or address_data.get("village", ""),
+            "state": address_data.get("state", ""),
+            "country": address_data.get("country", ""),
+            "country_code": address_data.get("country_code", "").upper(),
+            "postal_code": address_data.get("postcode", "")
+        }
+
+        return GeocodingResult(
+            latitude=latitude,
+            longitude=longitude,
+            formatted_address=data.get("display_name", f"{latitude}, {longitude}"),
+            address_components=components,
+            place_id=data.get("place_id"),
+            accuracy=data.get("type"),
+            provider="nominatim"
+        )
+
+    def _get_from_cache(self, key: str) -> Optional['GeocodingResult']:
+        """Get result from cache if not expired."""
+        if key in self.cache:
+            result, timestamp = self.cache[key]
+            if datetime.now() - timestamp < self.cache_ttl:
+                return result
+            else:
+                del self.cache[key]
+        return None
+
+    def _add_to_cache(self, key: str, result: 'GeocodingResult'):
+        """Add result to cache with timestamp."""
+        self.cache[key] = (result, datetime.now())
+
+    def clear_cache(self):
+        """Clear all cached results."""
+        self.cache.clear()
+        logger.info("Geocoding cache cleared")
+
+
+class GeocodingError(Exception):
+    """Raised when geocoding fails."""
+    pass
+
+
+_geocoding_service = None
 
 
 def get_geocoding_service() -> GeocodingService:
-    """Get or create geocoding service singleton."""
+    """Get or create the geocoding service singleton."""
     global _geocoding_service
     if _geocoding_service is None:
         _geocoding_service = GeocodingService()
