@@ -20,8 +20,8 @@ class TenantConfig(Base):
     email_from_address = Column(String(255), nullable=True)
     email_templates = Column(JSONB, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True, index=True)
-    created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     def __repr__(self):
         return f"<TenantConfig(tenant_id={self.tenant_id}, tenant_name='{self.tenant_name}', subdomain='{self.subdomain}')>"

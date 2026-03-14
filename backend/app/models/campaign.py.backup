@@ -11,7 +11,7 @@ import enum
 from app.core.database import Base
 
 
-class CampaignType(enum.Enum):
+class CampaignType(str, enum.Enum):
     """Campaign type enumeration for different industries."""
     OOH_ADVERTISING = "ooh"
     CONSTRUCTION = "construction"
@@ -21,7 +21,7 @@ class CampaignType(enum.Enum):
     PROPERTY_MANAGEMENT = "property_management"
 
 
-class CampaignStatus(enum.Enum):
+class CampaignStatus(str, enum.Enum):
     """Campaign status enumeration."""
     ACTIVE = "active"
     COMPLETED = "completed"
@@ -53,7 +53,7 @@ class Campaign(Base):
     
     # Campaign Type
     campaign_type = Column(
-        SQLEnum(CampaignType, name="campaigntype", native_enum=True, values_callable=lambda x: [e.value for e in x]),
+        SQLEnum(CampaignType),
         nullable=False,
         index=True
     )
@@ -67,21 +67,20 @@ class Campaign(Base):
     )
     
     # Campaign Duration
-    start_date = Column(DateTime(timezone=True), nullable=False, index=True)
-    end_date = Column(DateTime(timezone=True), nullable=False, index=True)
+    start_date = Column(DateTime, nullable=False, index=True)
+    end_date = Column(DateTime, nullable=False, index=True)
     
     # Status
     status = Column(
-        SQLEnum(CampaignStatus, name="campaignstatus", native_enum=True, values_callable=lambda x: [e.value for e in x]),
+        SQLEnum(CampaignStatus),
         nullable=False,
         default=CampaignStatus.ACTIVE,
-        server_default="active",
         index=True
     )
     
     # Timestamps
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=__import__("datetime").timezone.utc), nullable=False)
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=__import__("datetime").timezone.utc), onupdate=lambda: datetime.now(tz=__import__("datetime").timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Relationships
     client = relationship("Client", back_populates="campaigns")

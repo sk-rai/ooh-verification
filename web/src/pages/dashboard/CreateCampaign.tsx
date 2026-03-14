@@ -19,6 +19,7 @@ export default function CreateCampaign() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    campaign_type: 'ooh',
     start_date: '',
     end_date: '',
   })
@@ -92,19 +93,26 @@ export default function CreateCampaign() {
       
       await api.post('/api/campaigns', {
         name: formData.name,
-        description: formData.description,
-        start_date: formData.start_date,
-        end_date: formData.end_date,
-        target_location: {
-          latitude: parseFloat(firstLocation.latitude),
-          longitude: parseFloat(firstLocation.longitude),
+        campaign_type: formData.campaign_type,
+        start_date: new Date(formData.start_date).toISOString(),
+        end_date: new Date(formData.end_date).toISOString(),
+        location_profile: {
+          expected_latitude: parseFloat(firstLocation.latitude),
+          expected_longitude: parseFloat(firstLocation.longitude),
+          tolerance_meters: parseFloat(firstLocation.radius_meters),
         },
-        radius_meters: parseInt(firstLocation.radius_meters),
       })
 
       navigate('/campaigns')
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create campaign')
+      const detail = err.response?.data?.detail
+      if (Array.isArray(detail)) {
+        setError(detail.map((e: any) => e.msg || e.message || JSON.stringify(e)).join(', '))
+      } else if (typeof detail === 'string') {
+        setError(detail)
+      } else {
+        setError('Failed to create campaign')
+      }
     } finally {
       setLoading(false)
     }

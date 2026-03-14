@@ -66,10 +66,10 @@ class Subscription(Base):
     auto_renew = Column(Integer, nullable=False, default=1)  # Boolean: 1=true, 0=false
 
     # Billing Period
-    current_period_start = Column(DateTime, nullable=True)
-    current_period_end = Column(DateTime, nullable=True)
-    trial_end_date = Column(DateTime, nullable=True)
-    cancellation_date = Column(DateTime, nullable=True)
+    current_period_start = Column(DateTime(timezone=True), nullable=True)
+    current_period_end = Column(DateTime(timezone=True), nullable=True)
+    trial_end_date = Column(DateTime(timezone=True), nullable=True)
+    cancellation_date = Column(DateTime(timezone=True), nullable=True)
 
     # Usage Quotas
     photos_quota = Column(Integer, nullable=False)  # Monthly photo limit
@@ -82,8 +82,8 @@ class Subscription(Base):
     storage_used_mb = Column(Integer, nullable=False, default=0)  # Storage used in MB
 
     # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=__import__("datetime").timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=__import__("datetime").timezone.utc), onupdate=lambda: datetime.now(tz=__import__("datetime").timezone.utc), nullable=False)
 
     # Relationships
     client = relationship("Client", back_populates="subscription")

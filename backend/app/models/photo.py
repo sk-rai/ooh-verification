@@ -52,8 +52,8 @@ class Photo(Base):
     )
     
     # Timestamps
-    capture_timestamp = Column(DateTime, nullable=False, index=True)
-    upload_timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    capture_timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+    upload_timestamp = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=__import__("datetime").timezone.utc), nullable=False)
     
     # S3 Storage
     s3_key = Column(String(500), nullable=False)  # Full-size photo path
@@ -71,7 +71,7 @@ class Photo(Base):
     distance_from_expected = Column(Float, nullable=True)  # Meters from expected location
     
     # Timestamp
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=__import__("datetime").timezone.utc), nullable=False)
     
     # Relationships
     campaign = relationship("Campaign", back_populates="photos")

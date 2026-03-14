@@ -79,7 +79,7 @@ class SensorData(Base):
     schema_version = Column(String(10), nullable=False, default="2.0")
     
     # Timestamp
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=__import__("datetime").timezone.utc), nullable=False)
     
     # Relationships
     photo = relationship("Photo", back_populates="sensor_data")

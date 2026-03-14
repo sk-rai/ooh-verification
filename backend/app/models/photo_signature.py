@@ -45,11 +45,11 @@ class PhotoSignature(Base):
     device_id = Column(String(255), nullable=False)  # Android device identifier
     
     # Signature Metadata
-    timestamp = Column(DateTime, nullable=False)  # When signature was generated
+    timestamp = Column(DateTime(timezone=True), nullable=False)  # When signature was generated
     location_hash = Column(String(64), nullable=False)  # SHA-256 hash of sensor data
     
     # Timestamp
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=__import__("datetime").timezone.utc), nullable=False)
     
     # Relationships
     photo = relationship("Photo", back_populates="signature")

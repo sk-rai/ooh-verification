@@ -55,9 +55,9 @@ class CampaignVendorAssignment(Base):
     assignment_location_name = Column(String(255), nullable=True)
     
     # Timestamps
-    assigned_at = Column(DateTime, default=datetime.utcnow, nullable=False)  # Kept for backward compatibility
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    assigned_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=__import__("datetime").timezone.utc), nullable=False)  # Kept for backward compatibility
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=__import__("datetime").timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=__import__("datetime").timezone.utc), onupdate=lambda: datetime.now(tz=__import__("datetime").timezone.utc), nullable=False)
     
     # Relationships
     campaign = relationship("Campaign", back_populates="vendor_assignments")
