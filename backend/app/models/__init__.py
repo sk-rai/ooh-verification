@@ -18,6 +18,7 @@ from app.models.sensor_data import SensorData
 from app.models.photo_signature import PhotoSignature
 from app.models.subscription import Subscription
 from app.models.audit_log import AuditLog
+from app.models.admin_user import AdminUser
 
 # Export all models and enums
 __all__ = [
@@ -34,6 +35,7 @@ __all__ = [
     "PhotoSignature",
     "Subscription",
     "AuditLog",
+    "AdminUser",
     # Enums
     "SubscriptionTier",
     "SubscriptionStatus",

@@ -12,6 +12,7 @@ Requirements:
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, and_
 from typing import List
 from uuid import UUID
@@ -32,6 +33,7 @@ from app.schemas.assignment import (
     LocationAssignment
 )
 from app.services.geocoding_service import get_geocoding_service, GeocodingError
+from app.core.error_codes import ErrorCode
 import logging
 
 logger = logging.getLogger(__name__)
@@ -173,9 +175,20 @@ async def assign_vendors_to_campaign(
         except Exception as e:
             errors.append(f"Error assigning vendor {vendor_id}: {str(e)}")
     
-    # Commit all successful assignments
+    # Commit all successful assignments with rollback safety
     if assignments:
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError as e:
+            await db.rollback()
+            logger.error(f"Database integrity error during assignment: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "message": "A constraint violation occurred. Some assignments may already exist.",
+                    "code": ErrorCode.DB_CONSTRAINT_VIOLATION
+                }
+            )
     
     return VendorAssignmentBatchResponse(
         assignments=assignments,
@@ -234,8 +247,16 @@ async def unassign_vendor_from_campaign(
             detail=f"Assignment not found for campaign {campaign_id} and vendor {vendor_id}"
         )
     
-    await db.delete(assignment)
-    await db.commit()
+    try:
+        await db.delete(assignment)
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error deleting assignment: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"message": "Failed to delete assignment", "code": ErrorCode.INTERNAL_ERROR}
+        )
 
 
 @router.get(

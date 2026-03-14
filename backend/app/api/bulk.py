@@ -9,6 +9,7 @@ Requirements:
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
 from typing import List
 from datetime import datetime
@@ -23,6 +24,7 @@ from app.models.vendor import Vendor, VendorStatus
 from app.models.campaign_vendor_assignment import CampaignVendorAssignment
 from app.schemas.assignment import BulkOperationResponse, BulkOperationRow
 from app.services.csv_processor import CSVProcessor
+from app.core.error_codes import ErrorCode
 from app.core.sms import sms_service
 from app.services.geocoding_service import get_geocoding_service, GeocodingError
 
@@ -52,6 +54,14 @@ async def bulk_create_campaigns(
     - Property 6: Bulk import correctness
     """
     csv_processor = CSVProcessor()
+    
+    # Validate file type
+    is_valid, error = csv_processor.validate_file_type(file)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"message": error, "code": ErrorCode.CSV_INVALID_FILE_TYPE}
+        )
     
     # Validate CSV structure
     is_valid, error, rows = await csv_processor.validate_csv_structure(
@@ -169,6 +179,7 @@ async def bulk_create_campaigns(
             
             # Create campaign
             campaign = Campaign(
+                tenant_id=current_client.tenant_id,
                 client_id=current_client.client_id,
                 name=data['name'],
                 campaign_code=campaign_code,
@@ -203,9 +214,27 @@ async def bulk_create_campaigns(
             ))
             failed += 1
     
-    # Commit all successful operations
+    # Commit all successful operations with rollback safety
     if successful > 0:
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError as e:
+            await db.rollback()
+            logger.error(f"Database integrity error during bulk campaign commit: {e}")
+            return BulkOperationResponse(
+                total_rows=len(rows),
+                successful=0,
+                failed=len(rows),
+                results=[],
+                errors=[f"Database error: A constraint violation occurred. Some campaigns may have duplicate names. ({ErrorCode.DB_CONSTRAINT_VIOLATION})"]
+            )
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Unexpected error during bulk campaign commit: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={"message": "Failed to save campaigns", "code": ErrorCode.INTERNAL_ERROR}
+            )
     
     return BulkOperationResponse(
         total_rows=len(rows),
@@ -266,6 +295,14 @@ async def bulk_create_vendors(
     - Property 15: Email format validation
     """
     csv_processor = CSVProcessor()
+    
+    # Validate file type
+    is_valid, error = csv_processor.validate_file_type(file)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"message": error, "code": ErrorCode.CSV_INVALID_FILE_TYPE}
+        )
     
     # Validate CSV structure
     is_valid, error, rows = await csv_processor.validate_csv_structure(
@@ -385,6 +422,7 @@ async def bulk_create_vendors(
             # Create vendor
             vendor = Vendor(
                 vendor_id=vendor_id,
+                tenant_id=current_client.tenant_id,
                 name=data['name'].strip(),
                 phone_number=phone,
                 email=email,
@@ -429,9 +467,27 @@ async def bulk_create_vendors(
             ))
             failed += 1
     
-    # Commit all successful operations
+    # Commit all successful operations with rollback safety
     if successful > 0:
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError as e:
+            await db.rollback()
+            logger.error(f"Database integrity error during bulk vendor commit: {e}")
+            return BulkOperationResponse(
+                total_rows=len(rows),
+                successful=0,
+                failed=len(rows),
+                results=[],
+                errors=[f"Database error: A constraint violation occurred. Some vendors may have duplicate phone numbers. ({ErrorCode.DB_CONSTRAINT_VIOLATION})"]
+            )
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Unexpected error during bulk vendor commit: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={"message": "Failed to save vendors", "code": ErrorCode.INTERNAL_ERROR}
+            )
     
     # Add SMS failures to global errors (informational only)
     global_errors = []
@@ -494,6 +550,14 @@ async def bulk_create_assignments(
     - Property 39: Location data validation
     """
     csv_processor = CSVProcessor()
+    
+    # Validate file type
+    is_valid, error = csv_processor.validate_file_type(file)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"message": error, "code": ErrorCode.CSV_INVALID_FILE_TYPE}
+        )
     
     # Validate CSV structure
     is_valid, error, rows = await csv_processor.validate_csv_structure(
@@ -667,9 +731,27 @@ async def bulk_create_assignments(
             ))
             failed += 1
     
-    # Commit all successful operations
+    # Commit all successful operations with rollback safety
     if successful > 0:
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError as e:
+            await db.rollback()
+            logger.error(f"Database integrity error during bulk assignment commit: {e}")
+            return BulkOperationResponse(
+                total_rows=len(rows),
+                successful=0,
+                failed=len(rows),
+                results=[],
+                errors=[f"Database error: A constraint violation occurred. Some assignments may be duplicates. ({ErrorCode.DB_CONSTRAINT_VIOLATION})"]
+            )
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Unexpected error during bulk assignment commit: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={"message": "Failed to save assignments", "code": ErrorCode.INTERNAL_ERROR}
+            )
     
     # Add duplicate count to global errors if any
     global_errors = []

@@ -15,6 +15,8 @@ import MapView from './pages/dashboard/MapView'
 import MapViewEnhanced from './pages/dashboard/MapViewEnhanced'
 import Analytics from './pages/dashboard/Analytics'
 import ProtectedRoute from './components/ProtectedRoute'
+import AdminLogin from './pages/admin/AdminLogin'
+import AdminDashboard from './pages/admin/AdminDashboard'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -121,6 +123,9 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Router>

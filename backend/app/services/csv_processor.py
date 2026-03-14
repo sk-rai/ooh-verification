@@ -38,6 +38,37 @@ class CSVProcessor:
     MAX_ROWS_VENDORS = 10000
     MAX_ROWS_ASSIGNMENTS = 50000
     
+
+    def validate_file_type(self, file: UploadFile) -> tuple:
+        """
+        Validate that uploaded file is a CSV.
+        
+        Requirements:
+        - Phase 4: File type validation
+        
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        # Check content type
+        allowed_types = [
+            'text/csv',
+            'application/csv',
+            'text/plain',
+            'application/vnd.ms-excel',
+            'application/octet-stream',  # Some browsers send this
+        ]
+        
+        # Check file extension
+        filename = file.filename or ""
+        if not filename.lower().endswith('.csv'):
+            return False, f"Invalid file type. Expected .csv file, got '{filename}'"
+        
+        # Content type check (lenient - browsers are inconsistent)
+        if file.content_type and file.content_type not in allowed_types:
+            return False, f"Invalid content type: {file.content_type}. Expected CSV file"
+        
+        return True, None
+
     async def validate_csv_structure(
         self,
         file: UploadFile,
@@ -205,13 +236,15 @@ class CSVProcessor:
     def create_error_row(
         self,
         row_number: int,
-        error_message: str
+        error_message: str,
+        error_code: str = None
     ) -> BulkOperationRow:
-        """Create an error result row."""
+        """Create an error result row with optional machine-readable error code."""
         return BulkOperationRow(
             row=row_number,
             status="error",
-            error=error_message
+            error=error_message,
+            error_code=error_code
         )
     
     def create_success_row(
