@@ -36,3 +36,42 @@ api.interceptors.response.use(
 )
 
 export default api
+
+
+// Bulk Operations API
+export const bulkOperations = {
+  // Download CSV templates
+  downloadCampaignsTemplate: () =>
+    api.get('/api/bulk/campaigns/template', { responseType: 'blob' }),
+  
+  downloadVendorsTemplate: () =>
+    api.get('/api/bulk/vendors/template', { responseType: 'blob' }),
+  
+  downloadAssignmentsTemplate: () =>
+    api.get('/api/bulk/assignments/template', { responseType: 'blob' }),
+
+  // Upload CSV files
+  uploadCampaigns: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/api/bulk/campaigns', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  uploadVendors: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/api/bulk/vendors', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  uploadAssignments: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/api/bulk/assignments', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+}

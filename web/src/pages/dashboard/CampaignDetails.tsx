@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import Navigation from '../../components/Navigation'
-import api from '../../services/api'
+import BulkUploadTab from '../../components/BulkUploadTab'
+import UpgradePrompt from '../../components/UpgradePrompt'
+import { useAuth } from '../../contexts/AuthContext'
+import api, { bulkOperations } from '../../services/api'
+import { BulkOperationResponse } from '../../types'
 
 interface Campaign {
   campaign_id: string
@@ -38,6 +42,7 @@ interface Photo {
 }
 
 export default function CampaignDetails() {
+  const { user } = useAuth()
   const { id } = useParams()
   const navigate = useNavigate()
   const [campaign, setCampaign] = useState<Campaign | null>(null)
@@ -46,27 +51,54 @@ export default function CampaignDetails() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<'overview' | 'vendors' | 'photos'>('overview')
+  const [vendorSubTab, setVendorSubTab] = useState<'list' | 'bulk'>('list')
+
+  const isPaidTier = user?.subscription_tier === 'pro' || user?.subscription_tier === 'enterprise'
 
   useEffect(() => {
-    fetchCampaignDetails()
+    if (id) {
+      fetchCampaignDetails()
+      fetchVendors()
+      fetchPhotos()
+    }
   }, [id])
 
   const fetchCampaignDetails = async () => {
     try {
-      const [campaignRes, vendorsRes, photosRes] = await Promise.all([
-        api.get(`/api/campaigns/${id}`),
-        api.get(`/api/campaigns/${id}/vendors`).catch(() => ({ data: [] })),
-        api.get(`/api/campaigns/${id}/photos`).catch(() => ({ data: [] })),
-      ])
-
-      setCampaign(campaignRes.data)
-      setVendors(vendorsRes.data)
-      setPhotos(photosRes.data)
+      const response = await api.get(`/api/campaigns/${id}`)
+      setCampaign(response.data)
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load campaign details')
+      setError(err.response?.data?.detail || 'Failed to load campaign')
+      console.error('Error fetching campaign:', err)
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchVendors = async () => {
+    try {
+      const response = await api.get(`/api/campaigns/${id}/vendors`)
+      setVendors(response.data.vendors || [])
+    } catch (err: any) {
+      console.error('Error fetching vendors:', err)
+    }
+  }
+
+  const fetchPhotos = async () => {
+    try {
+      const response = await api.get(`/api/campaigns/${id}/photos`)
+      setPhotos(response.data.photos || [])
+    } catch (err: any) {
+      console.error('Error fetching photos:', err)
+    }
+  }
+
+  const handleBulkAssignment = async (file: File): Promise<BulkOperationResponse> => {
+    const response = await bulkOperations.uploadAssignments(file)
+    if (response.data.created.length > 0) {
+      fetchVendors()
+    }
+    return response.data
   }
 
   const getStatusColor = (status: string) => {
@@ -77,6 +109,10 @@ export default function CampaignDetails() {
         return 'bg-gray-100 text-gray-800'
       case 'draft':
         return 'bg-yellow-100 text-yellow-800'
+      case 'inactive':
+        return 'bg-gray-100 text-gray-800'
+      case 'suspended':
+        return 'bg-red-100 text-red-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }
@@ -86,10 +122,10 @@ export default function CampaignDetails() {
     switch (status) {
       case 'verified':
         return 'bg-green-100 text-green-800'
-      case 'failed':
-        return 'bg-red-100 text-red-800'
       case 'pending':
         return 'bg-yellow-100 text-yellow-800'
+      case 'failed':
+        return 'bg-red-100 text-red-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }
@@ -220,7 +256,7 @@ export default function CampaignDetails() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Verification Radius</dt>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Target Radius</dt>
                       <dd className="text-lg font-medium text-gray-900">{campaign.radius_meters}m</dd>
                     </dl>
                   </div>
@@ -276,46 +312,18 @@ export default function CampaignDetails() {
                       <p className="text-sm text-gray-600">{campaign.description}</p>
                     </div>
                   )}
-
                   <div>
                     <h3 className="text-sm font-medium text-gray-900 mb-2">Target Location</h3>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <dl className="grid grid-cols-2 gap-4">
-                        <div>
-                          <dt className="text-xs font-medium text-gray-500">Latitude</dt>
-                          <dd className="text-sm text-gray-900">{campaign.target_location.latitude}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs font-medium text-gray-500">Longitude</dt>
-                          <dd className="text-sm text-gray-900">{campaign.target_location.longitude}</dd>
-                        </div>
-                      </dl>
-                      <a
-                        href={`https://www.google.com/maps?q=${campaign.target_location.latitude},${campaign.target_location.longitude}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-3 inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
-                      >
-                        View on Google Maps
-                        <svg className="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </a>
-                    </div>
+                    <p className="text-sm text-gray-600">
+                      Latitude: {campaign.target_location.latitude}, Longitude: {campaign.target_location.longitude}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">Radius: {campaign.radius_meters} meters</p>
                   </div>
-
                   <div>
-                    <h3 className="text-sm font-medium text-gray-900 mb-2">Campaign Details</h3>
-                    <dl className="grid grid-cols-2 gap-4">
-                      <div>
-                        <dt className="text-xs font-medium text-gray-500">Created</dt>
-                        <dd className="text-sm text-gray-900">{new Date(campaign.created_at).toLocaleString()}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs font-medium text-gray-500">Status</dt>
-                        <dd className="text-sm text-gray-900 capitalize">{campaign.status}</dd>
-                      </div>
-                    </dl>
+                    <h3 className="text-sm font-medium text-gray-900 mb-2">Campaign Period</h3>
+                    <p className="text-sm text-gray-600">
+                      {new Date(campaign.start_date).toLocaleDateString()} - {new Date(campaign.end_date).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               )}
@@ -323,21 +331,83 @@ export default function CampaignDetails() {
               {/* Vendors Tab */}
               {activeTab === 'vendors' && (
                 <div>
-                  {vendors.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">No vendors assigned to this campaign yet.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {vendors.map((vendor) => (
-                        <div key={vendor.vendor_id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                          <div>
-                            <p className="font-medium text-gray-900">{vendor.name}</p>
-                            <p className="text-sm text-gray-500">{vendor.phone_number}</p>
-                          </div>
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(vendor.status)}`}>
-                            {vendor.status}
-                          </span>
+                  {/* Vendor Sub-tabs */}
+                  <div className="border-b border-gray-200 mb-6">
+                    <nav className="flex -mb-px space-x-8">
+                      <button
+                        onClick={() => setVendorSubTab('list')}
+                        className={`py-2 px-1 text-sm font-medium border-b-2 ${
+                          vendorSubTab === 'list'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        Assigned Vendors
+                      </button>
+                      <button
+                        onClick={() => setVendorSubTab('bulk')}
+                        className={`py-2 px-1 text-sm font-medium border-b-2 flex items-center ${
+                          vendorSubTab === 'bulk'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        } ${!isPaidTier ? 'opacity-50' : ''}`}
+                        disabled={!isPaidTier}
+                      >
+                        Bulk Assign
+                        {!isPaidTier && (
+                          <svg className="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                        )}
+                      </button>
+                    </nav>
+                  </div>
+
+                  {/* Vendor List Sub-tab */}
+                  {vendorSubTab === 'list' && (
+                    <div>
+                      {vendors.length === 0 ? (
+                        <p className="text-gray-500 text-center py-8">No vendors assigned to this campaign yet.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {vendors.map((vendor) => (
+                            <div
+                              key={vendor.vendor_id}
+                              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                            >
+                              <div>
+                                <p className="font-medium text-gray-900">{vendor.name}</p>
+                                <p className="text-sm text-gray-500">{vendor.phone_number}</p>
+                              </div>
+                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(vendor.status)}`}>
+                                {vendor.status}
+                              </span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
+                    </div>
+                  )}
+
+                  {/* Bulk Assign Sub-tab */}
+                  {vendorSubTab === 'bulk' && (
+                    <div>
+                      {isPaidTier ? (
+                        <BulkUploadTab
+                          templateType="assignments"
+                          onUpload={handleBulkAssignment}
+                          title="Bulk Vendor Assignment"
+                          description={`Assign multiple vendors to ${campaign.name} at once`}
+                          instructions={[
+                            'Download the CSV template below',
+                            `Fill in vendor assignments for campaign code: ${campaign.campaign_code}`,
+                            'Optionally include location data for each assignment',
+                            'Upload the completed CSV file',
+                          ]}
+                        />
+                      ) : (
+                        <UpgradePrompt feature="Bulk Vendor Assignment" />
+                      )}
                     </div>
                   )}
                 </div>
@@ -361,7 +431,12 @@ export default function CampaignDetails() {
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <svg className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
                               </svg>
                             </div>
                           )}

@@ -64,3 +64,15 @@ export interface CampaignStatistics {
     timestamps: string[]
   }
 }
+
+
+// Bulk Operations Types
+export interface BulkOperationRow {
+  row: number
+  error: string
+}
+
+export interface BulkOperationResponse {
+  created: any[]
+  errors: BulkOperationRow[]
+}
