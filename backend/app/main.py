@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi import Request
 import os
 
-from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations, tenants, assignments, bulk, admin
+from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations, tenants, assignments, bulk, admin, vendor_campaigns
 from app.core.database import close_db
 from app.middleware.tenant_context import TenantContextMiddleware
 
@@ -45,6 +45,7 @@ app.add_middleware(TenantContextMiddleware)
 async def global_exception_handler(request: Request, exc: Exception):
     """Catch all exceptions and return JSON with CORS headers."""
     import traceback
+
     print(f"❌ Unhandled exception: {exc}")
     print(traceback.format_exc())
     
@@ -61,11 +62,12 @@ app.include_router(auth.router)
 app.include_router(tenants.router)
 app.include_router(clients.router)
 app.include_router(vendors.router)
+app.include_router(vendor_campaigns.router)  # Vendor-facing campaign endpoints
 app.include_router(campaigns.router)
 app.include_router(campaign_locations.router)
-app.include_router(assignments.router)  # Campaign-vendor assignments
+app.include_router(assignments.router)
 app.include_router(bulk.router)
-app.include_router(admin.router)  # Super admin dashboard  # Bulk operations
+app.include_router(admin.router)
 app.include_router(photos.router)
 app.include_router(subscriptions.router)
 app.include_router(webhooks.router)
