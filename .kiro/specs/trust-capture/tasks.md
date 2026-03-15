@@ -11,7 +11,7 @@ The plan follows an incremental approach where each task builds on previous work
 
 ## Phase 1: Backend Foundation
 
-- [x] 1. Set up backend project structure and core infrastructure
+- [ ] 1. Set up backend project structure and core infrastructure
   - Initialize FastAPI project with Python 3.11+
   - Configure SQLAlchemy 2.0 with async support
   - Set up Alembic for database migrations
@@ -20,7 +20,7 @@ The plan follows an incremental approach where each task builds on previous work
   - Set up pytest with async support and coverage reporting
   - _Requirements: 20_
 
-- [x] 2. Implement database schema and models
+- [ ] 2. Implement database schema and models
   - [ ] 2.1 Create PostgreSQL database schema
     - Create clients table with subscription fields
     - Create vendors table with device registration fields
@@ -52,7 +52,7 @@ The plan follows an incremental approach where each task builds on previous work
     - Add seed data for development
     - _Requirements: 20_
 
-- [x] 3. Implement authentication and authorization
+- [ ] 3. Implement authentication and authorization
   - [ ] 3.1 Create JWT authentication for web clients
     - Implement password hashing with bcrypt
     - Create login endpoint with JWT token generation
@@ -74,7 +74,7 @@ The plan follows an incremental approach where each task builds on previous work
     - Test invalid credentials handling
     - _Requirements: 1.1, 1.2, 1.4_
 
-- [x] 4. Implement client management API
+- [ ] 4. Implement client management API
   - [ ] 4.1 Create client registration endpoint
     - Implement POST /api/clients/register
     - Validate email format and password strength
@@ -97,10 +97,10 @@ The plan follows an incremental approach where each task builds on previous work
     - Test JWT token validation
     - _Requirements: 1.1, 1.2_
 
-- [x] 5. Checkpoint - Ensure all tests pass
+- [ ] 5. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [x] 6. Implement vendor management API
+- [ ] 6. Implement vendor management API
   - [ ] 6.1 Create vendor CRUD endpoints
     - Implement POST /api/vendors (create vendor with ID generation)
     - Implement GET /api/vendors (list vendors for client)
@@ -123,7 +123,7 @@ The plan follows an incremental approach where each task builds on previous work
     - Test authorization (client can only access their vendors)
     - _Requirements: 1.1, 1.2, 1.3_
 
-- [x] 7. Implement campaign management API
+- [ ] 7. Implement campaign management API
   - [ ] 7.1 Create campaign CRUD endpoints
     - Implement POST /api/campaigns (create campaign)
     - Implement GET /api/campaigns (list campaigns)
@@ -156,11 +156,11 @@ The plan follows an incremental approach where each task builds on previous work
     - Test campaign listing and filtering
     - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-- [x] 8. Checkpoint - Ensure all tests pass
+- [ ] 8. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [x] 9. Implement cryptographic verification services
-  - [x] 9.1 Create photo signature verification service
+- [ ] 9. Implement cryptographic verification services
+  - [ ] 9.1 Create photo signature verification service
     - Implement signature verification using RSA/ECDSA
     - Validate signature matches photo hash
     - Validate timestamp within 5-minute window
@@ -176,7 +176,7 @@ The plan follows an incremental approach where each task builds on previous work
     - **Property 13: Photo Signature Tamper Detection**
     - **Validates: Requirements 8.1, 8.7, 27.3**
 
-  - [x] 9.4 Create location hash validation service
+  - [ ] 9.4 Create location hash validation service
     - Implement SHA-256 hash generation from sensor data
     - Include GPS, WiFi BSSIDs, cell tower IDs in hash
     - Use cryptographic salt from device key
@@ -190,8 +190,8 @@ The plan follows an incremental approach where each task builds on previous work
     - **Property 5: Location Hash Uniqueness**
     - **Validates: Requirements 28.4, 28.5**
 
-- [x] 10. Implement location profile matching service
-  - [x] 10.1 Create location profile matcher
+- [ ] 10. Implement location profile matching service
+  - [ ] 10.1 Create location profile matcher
     - Compare captured GPS against expected coordinates
     - Calculate distance using Haversine formula
     - Match WiFi BSSIDs (require at least 3 matches)
@@ -212,11 +212,11 @@ The plan follows an incremental approach where each task builds on previous work
     - Test edge cases (missing sensors, partial matches)
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
 
-- [x] 11. Checkpoint - Ensure all tests pass
+- [ ] 11. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [x] 12. Implement photo upload and storage API
-  - [x] 12.1 Create photo upload endpoint
+- [ ] 12. Implement photo upload and storage API
+  - [ ] 12.1 Create photo upload endpoint
     - Implement POST /api/photos/upload
     - Accept multipart form data with photo and metadata
     - Validate photo format (JPEG) and size (max 5MB)
@@ -225,7 +225,7 @@ The plan follows an incremental approach where each task builds on previous work
     - Verify signature before accepting upload
     - _Requirements: 9.1, 9.2, 9.7, 21.1, 21.5_
 
-  - [x] 12.2 Integrate AWS S3 for photo storage
+  - [ ] 12.2 Integrate AWS S3 for photo storage
     - Configure boto3 S3 client
     - Upload photos to S3 with unique keys
     - Generate thumbnail images (200x200)
@@ -233,7 +233,7 @@ The plan follows an incremental approach where each task builds on previous work
     - Enable S3 versioning for tamper protection
     - _Requirements: 9.1, 9.3_
 
-  - [x] 12.3 Create photo metadata storage
+  - [ ] 12.3 Create photo metadata storage
     - Store photo record in PostgreSQL
     - Store sensor data in sensor_data table
     - Store signature in photo_signatures table
@@ -241,7 +241,7 @@ The plan follows an incremental approach where each task builds on previous work
     - Set initial verification status to 'pending'
     - _Requirements: 9.1, 9.7, 9.8_
 
-  - [x] 12.4 Implement photo verification workflow
+  - [ ] 12.4 Implement photo verification workflow
     - Verify signature validity
     - Match location profile if defined
     - Calculate distance from expected location
@@ -256,14 +256,14 @@ The plan follows an incremental approach where each task builds on previous work
     - Test S3 storage and thumbnail generation
     - _Requirements: 9.1, 9.2, 9.7, 9.8_
 
-- [x] 13. Implement audit logging system
-  - [x] 13.1 Create DynamoDB audit log table
+- [ ] 13. Implement audit logging system
+  - [ ] 13.1 Create DynamoDB audit log table
     - Configure DynamoDB table with append-only permissions
     - Define audit record schema
     - Implement hash chaining for immutability
     - _Requirements: 10.1, 10.2, 10.3, 10.5, 10.6_
 
-  - [x] 13.2 Create audit logger service
+  - [ ] 13.2 Create audit logger service
     - Log photo capture events to DynamoDB
     - Include vendor ID, photo ID, timestamp, sensor data
     - Include signature and device info
@@ -279,10 +279,10 @@ The plan follows an incremental approach where each task builds on previous work
     - **Property 8: Timestamp Ordering Invariant**
     - **Validates: Requirements 10.7**
 
-- [x] 14. Checkpoint - Ensure all tests pass
+- [ ] 14. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [x] 15. Implement subscription and payment integration
+- [ ] 15. Implement subscription and payment integration
   - [ ] 15.1 Create Stripe integration
     - Configure Stripe API with secret key
     - Implement POST /api/subscriptions/create-checkout
@@ -311,8 +311,8 @@ The plan follows an incremental approach where each task builds on previous work
     - Test tier upgrades and downgrades
     - _Requirements: 1.1, 1.2_
 
-- [x] 16. Implement report generation API
-  - [x] 16.1 Create CSV export endpoint
+- [ ] 16. Implement report generation API
+  - [ ] 16.1 Create CSV export endpoint
     - Implement GET /api/campaigns/{campaign_id}/export/csv
     - Query photos with sensor data for campaign
     - Generate CSV with all photo metadata
@@ -321,7 +321,7 @@ The plan follows an incremental approach where each task builds on previous work
     - Return CSV file with proper headers
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 7.1_
 
-  - [x] 16.2 Create GeoJSON export endpoint
+  - [ ] 16.2 Create GeoJSON export endpoint
     - Implement GET /api/campaigns/{campaign_id}/export/geojson
     - Generate GeoJSON FeatureCollection
     - Create Point features for each photo
@@ -329,7 +329,7 @@ The plan follows an incremental approach where each task builds on previous work
     - Return GeoJSON with proper MIME type
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-  - [x] 16.3 Create PDF report generation
+  - [ ] 16.3 Create PDF report generation
     - Integrate ReportLab or WeasyPrint
     - Generate campaign summary report
     - Include statistics, map visualization, photo grid
@@ -342,58 +342,7 @@ The plan follows an incremental approach where each task builds on previous work
     - Test PDF generation
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-- [x] 17. Checkpoint - Ensure all tests pass
-  - Ensure all tests pass, ask the user if questions arise.
-
-- [x] 19. Implement Campaign Locations & Geocoding
-  - [x] 19.1 Create campaign locations model
-    - Implement CampaignLocation model with location data
-    - Support multiple locations per campaign (unlimited)
-    - Store address, coordinates, verification radius
-    - Add foreign key relationship to campaigns
-    - Create database migration 004_campaign_locations
-    - _Requirements: 1.5, 17.1, 17.2_
-
-  - [x] 19.2 Implement geocoding service
-    - Integrate Google Maps Geocoding API
-    - Implement OpenStreetMap Nominatim as fallback
-    - Forward geocoding: address → coordinates
-    - Reverse geocoding: coordinates → address
-    - Extract address components (city, state, country, postal code)
-    - Handle API errors and rate limiting
-    - _Requirements: 17.3, 17.4, 18.1, 18.2_
-
-  - [x] 19.3 Create location verification service
-    - Implement Haversine distance calculation
-    - Verify photo location against campaign locations
-    - Find nearest location to photo coordinates
-    - Check if photo is within verification radius
-    - Configurable radius per location (10m - 10km)
-    - Return verification result with distance
-    - _Requirements: 17.1, 17.2, 17.3_
-
-  - [x] 19.4 Create campaign locations API endpoints
-    - Implement POST /api/campaigns/{id}/locations (add location)
-    - Implement GET /api/campaigns/{id}/locations (list locations)
-    - Implement GET /api/campaigns/{id}/locations/{loc_id} (get location)
-    - Implement PATCH /api/campaigns/{id}/locations/{loc_id} (update location)
-    - Implement DELETE /api/campaigns/{id}/locations/{loc_id} (delete location)
-    - Implement POST /api/geocoding/forward (address → coordinates)
-    - Implement POST /api/geocoding/reverse (coordinates → address)
-    - Implement POST /api/geocoding/verify (verify photo location)
-    - Implement GET /api/geocoding/nearest (find nearest location)
-    - Implement GET /api/geocoding/distance (calculate distance)
-    - _Requirements: 17.1, 17.2, 17.3, 17.4, 18.1, 18.2_
-
-  - [x]* 19.5 Write integration tests for campaign locations
-    - Test location CRUD operations
-    - Test geocoding forward and reverse
-    - Test location verification
-    - Test distance calculations
-    - Test nearest location detection
-    - _Requirements: 17.1, 17.2, 17.3, 17.4_
-
-- [x] 20. Checkpoint - Ensure all tests pass
+- [ ] 17. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 2: Web Application (Client Portal)
@@ -703,150 +652,41 @@ The plan follows an incremental approach where each task builds on previous work
 - [ ] 33. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-
-## Phase 2.5: Multi-Tenancy and White-Label Architecture
-
-- [ ] 20. Implement multi-tenancy and white-label architecture
-  - **Spec Location**: `.kiro/specs/multi-tenant-whitelabel/`
-  - **Requirements**: 27 requirements (Req 20.1-20.27)
-  - **Correctness Properties**: 39 properties
-  - **Duration**: 10 weeks (4 phases)
-  - **Priority**: High - Prerequisite for Android development
-  
-  **Overview**: Add multi-tenancy and white-labeling capabilities to enable verification agencies to use TrustCapture under their own brand. Supports both SaaS multi-tenant (shared infrastructure) and dedicated instance (isolated) deployment models.
-  
-  **Business Value**: 
-  - Enable white-label partnerships with verification agencies
-  - Create recurring revenue stream ($500-5,000/month per client)
-  - Position TrustCapture as a platform, not just a product
-  - Scale to multiple clients without proportional infrastructure costs
-  
-  **Implementation Phases**:
-  
-  - [ ] 20.1 Phase 1: Backend Multi-Tenancy (Weeks 1-3)
-    - Create tenant_config database table
-    - Implement tenant context middleware
-    - Build branding API endpoints (GET, PUT, POST)
-    - Create email template system with tenant branding
-    - Implement rate limiting per tenant
-    - Enhance audit logging with tenant context
-    - Verify data isolation between tenants
-    - _Requirements: 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7, 20.8_
-    - _Properties: 1-25_
-    - _Deliverables: Database migration, branding API, tenant middleware, tests passing_
-  
-  - [ ] 20.2 Phase 2: Frontend Dynamic Theming (Weeks 4-5)
-    - Create Theme Context Provider (React)
-    - Implement branding API integration
-    - Add CSS custom properties for dynamic theming
-    - Replace hardcoded branding with dynamic values
-    - Implement custom domain support
-    - Add theme caching in browser storage
-    - _Requirements: 20.9, 20.10_
-    - _Properties: 26-29_
-    - _Deliverables: Dynamic theming working, custom domains supported, tests passing_
-  
-  - [ ] 20.3 Phase 3: Android White-Label (Weeks 6-8)
-    - Setup Gradle product flavors (build variants)
-    - Create flavor directory structure
-    - Add flavor-specific resources (colors, icons, strings)
-    - Implement dynamic theme loading from API
-    - Configure separate package names per flavor
-    - Create build automation scripts
-    - Setup CI/CD for multiple flavors
-    - _Requirements: 20.11, 20.12, 20.13, 20.14_
-    - _Properties: 31-32_
-    - _Deliverables: Multiple APKs buildable, dynamic theming functional, automation complete_
-  
-  - [ ] 20.4 Phase 4: Deployment & Automation (Weeks 9-10)
-    - Create Docker Compose configurations (multi-tenant and dedicated)
-    - Develop Terraform modules for both deployment models
-    - Setup monitoring (Prometheus + Grafana)
-    - Create tenant onboarding CLI tool
-    - Update CI/CD pipeline for tenant deployments
-    - Write deployment documentation
-    - _Requirements: 20.15, 20.16, 20.17, 20.18, 20.19, 20.22, 20.23, 20.24, 20.25, 20.26_
-    - _Properties: 30, 33-39_
-    - _Deliverables: Deployment automation complete, monitoring configured, documentation finished_
-  
-  - [ ] 20.5 Checkpoint - Multi-tenancy complete
-    - Verify all 19 tasks complete (see `.kiro/specs/multi-tenant-whitelabel/tasks.md`)
-    - Verify all 39 correctness properties passing
-    - Verify can onboard new tenant in 1-2 weeks
-    - Verify each tenant sees their own branding
-    - Verify data isolation through automated tests
-    - Verify no performance degradation with 10+ tenants
-    - Verify documentation complete
-    - Ask the user if questions arise before proceeding to Android development
-
-  **Success Criteria**:
-  - Can onboard new white-label client in 1-2 weeks
-  - Each tenant sees their own branding throughout the app
-  - Data isolation verified through automated tests
-  - Single codebase serves all tenants
-  - Android app can be built with different branding per client
-  - No performance degradation with 10+ tenants
-  - Deployment automation works for both SaaS and dedicated models
-
-  **Files Created**:
-  - `.kiro/specs/multi-tenant-whitelabel/requirements.md` (27 requirements)
-  - `.kiro/specs/multi-tenant-whitelabel/design.md` (1,899 lines, 39 properties)
-  - `.kiro/specs/multi-tenant-whitelabel/tasks.md` (19 tasks, 70+ sub-tasks)
-
-  **Reference Documents**:
-  - `WHITELABEL_ARCHITECTURE_ANALYSIS.md` - Feasibility analysis
-  - `TASK20_COMPLETE_SPEC_SUMMARY.md` - Complete spec summary
-
-  **Note**: Phase 1 (Backend Multi-Tenancy) must complete before starting Android development (Phase 3) to ensure Android is built with white-label support from day 1.
-
 ## Phase 3: Android Application (Vendor App)
 
-- [ ] 34. Set up Android project structure
+- [x] 34. Set up Android project structure
   - Initialize Android project with Kotlin and Jetpack Compose
   - Configure Gradle with Kotlin DSL
-  - Set minimum SDK to API 26 (Android 8.0)
+  - Set minimum SDK to API 24 (Android 7.0)
   - Set target SDK to API 34 (Android 14)
   - Configure Hilt for dependency injection
-  - Set up Room database with SQLCipher encryption
+  - Set up Room database
   - Configure Retrofit and OkHttp for networking
-  - Set up JUnit 5 and Mockk for testing
-  - Configure Kotest for property-based testing
+  - Configure DataStore for preferences
+  - Set up CameraX, Coil, Play Services Location dependencies
+  - Created MVVM architecture with navigation graph
+  - Built Login, OTP, Campaigns, Camera screens with real backend integration
+  - Session persistence (auto-login if token saved)
   - _Requirements: 20.1, 20.2, 20.3, 20.4, 20.5_
 
-- [ ] 35. Implement permission management
-  - [ ] 35.1 Create permission request flow
-    - Request camera permission with rationale dialog
-    - Request location permission (fine and coarse)
-    - Request WiFi scanning permission (ACCESS_FINE_LOCATION)
-    - Request phone state permission for cell tower data
-    - Implement permission denied handling
+- [x] 35. Implement permission management
+  - [x] 35.1 Create permission request flow
+    - Camera and fine location permissions requested at point of use (camera screen)
+    - Permission denied handling with fallback UI
     - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5, 15.6_
+    - NOTE: WiFi scanning and phone state permissions deferred to Task 38.3/38.4
 
   - [ ] 35.2 Create permission rationale dialogs
-    - Explain camera permission for photo capture
-    - Explain location permission for GPS verification
-    - Explain WiFi permission for network fingerprinting
-    - Explain phone state permission for cell tower data
-    - _Requirements: 15.1, 15.2, 15.6_
-
   - [ ]* 35.3 Write property test for permission request idempotence
-    - **Property 18: Permission Request Idempotence**
-    - **Validates: Requirements 15.1, 15.2, 15.3, 15.4**
-
   - [ ]* 35.4 Write unit tests for permission handling
-    - Test permission request flow
-    - Test rationale display logic
-    - Test permission denied handling
-    - _Requirements: 15.1, 15.2, 15.3, 15.4_
 
-- [ ] 36. Implement Android Keystore integration
-  - [ ] 36.1 Create cryptographic key management
-    - Generate RSA-2048 or ECDSA P-256 key pair on first launch
-    - Store keys in Android Keystore with hardware backing
-    - Configure StrongBox security when available
-    - Set key usage restrictions to signing only
-    - Require user authentication for key usage (if biometric available)
-    - Export public key for server registration
+- [x] 36. Implement Android Keystore integration
+  - [x] 36.1 Create cryptographic key management
+    - ECDSA P-256 key pair generated on first login
+    - Stored in Android Keystore with StrongBox fallback to TEE
+    - Key usage restricted to signing only
+    - Public key exported in PEM format
+    - Device registered with backend via POST /api/auth/vendor/register-device
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7_
 
   - [ ]* 36.2 Write property test for key uniqueness
@@ -863,42 +703,48 @@ The plan follows an incremental approach where each task builds on previous work
 - [ ] 37. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 38. Implement sensor data collection layer
-  - [ ] 38.1 Create GPS sensor implementation
-    - Implement LocationProvider interface using FusedLocationProviderClient
-    - Request location with high accuracy mode
-    - Capture latitude, longitude with 7 decimal precision
-    - Capture altitude, accuracy, provider type, satellite count
-    - Wait up to 30 seconds for GPS lock
-    - Display warning if accuracy > 50 meters
+- [x] 38. Implement sensor data collection layer
+  - [x] 38.1 Create GPS sensor implementation
+    - FusedLocationProviderClient with high accuracy mode
+    - Latitude, longitude with 7 decimal precision
+    - Altitude, accuracy captured
+    - Real-time GPS status display on camera screen
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 30.1, 30.2, 30.3, 30.4, 30.5, 30.6_
 
   - [ ]* 38.2 Write property test for GPS precision preservation
     - **Property 7: GPS Coordinate Precision Preservation**
     - **Validates: Requirements 3.1, 3.7, 30.1, 30.2**
 
-  - [ ] 38.3 Create WiFi scanner implementation
-    - Implement WiFiScanner interface using WifiManager
-    - Scan for nearby WiFi networks
-    - Capture SSID, BSSID, signal strength (dBm), frequency
-    - Capture at least 5 networks when available
-    - Handle hidden networks (BSSID only)
-    - Complete scanning within 3 seconds
+  - [x] 38.3 Create WiFi scanner implementation
+    - WifiScanner class with Hilt injection
+    - Scans using WifiManager + BroadcastReceiver
+    - Captures SSID, BSSID, signal strength (dBm), frequency, channel width
+    - Returns up to 10 strongest networks sorted by signal
+    - getLastResults() fallback for throttled scans
+    - Graceful handling on emulator (empty results expected)
+    - WiFi permissions added to AndroidManifest
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8_
 
-  - [ ] 38.4 Create cell tower scanner implementation
-    - Implement CellTowerScanner interface using TelephonyManager
-    - Capture Cell ID, LAC, MCC, MNC
-    - Capture signal strength and network type (LTE, 5G, etc.)
-    - Complete data retrieval within 2 seconds
-    - Handle unavailable data gracefully
+  - [x] 38.4 Create cell tower scanner implementation
+    - CellTowerScanner class with Hilt injection
+    - Uses TelephonyManager.allCellInfo to read visible towers
+    - Parses LTE, WCDMA, GSM, and 5G NR cell info
+    - Captures Cell ID, LAC/TAC, MCC, MNC, signal dBm, network type
+    - Sorted by signal strength, graceful handling on emulator
+    - READ_PHONE_STATE permission added to AndroidManifest
+    - Wired into CameraViewModel and SensorDataSnapshot for upload
+    - Cell tower count shown on camera preview and review screen
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7_
 
-  - [ ] 38.5 Create environmental sensor implementations
-    - Implement BarometerSensor for pressure and altitude
-    - Implement AmbientLightSensor for illuminance (lux)
-    - Implement MagnetometerSensor for magnetic field (x, y, z, magnitude)
-    - Implement MotionSensor for hand tremor detection (8-12Hz)
+  - [x] 38.5 Create environmental sensor implementations
+    - EnvironmentalSensors class with Hilt injection, callbackFlow-based
+    - Barometer: pressure (hPa) + derived altitude
+    - Ambient light: illuminance (lux)
+    - Magnetometer: magnetic field x/y/z + magnitude (µT)
+    - Accelerometer: hand tremor detection (>1.5 m/s² deviation from gravity)
+    - Sensors registered on subscribe, unregistered on cancel (battery-friendly)
+    - Real-time display on camera preview + review screen
+    - SensorDataSnapshot aggregates all sensor data as JSON for upload
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
   - [ ]* 38.6 Write unit tests for sensor implementations
@@ -909,21 +755,24 @@ The plan follows an incremental approach where each task builds on previous work
     - Test error handling for unavailable sensors
     - _Requirements: 3.1, 3.2, 3.3, 4.1, 4.2, 5.1, 5.2_
 
-- [ ] 39. Implement location triangulation service
-  - [ ] 39.1 Create sensor data aggregation
-    - Implement LocationTriangulator interface
-    - Collect GPS, WiFi, cell tower, environmental sensor data
-    - Combine into SensorDataPackage
-    - Calculate location confidence score based on sensor agreement
-    - Flag discrepancies (e.g., GPS outdoor but WiFi indoor)
-    - Preserve raw sensor data for forensic analysis
+- [x] 39. Implement location triangulation service
+  - [x] 39.1 Create sensor data aggregation
+    - LocationTriangulator class with Hilt injection
+    - Aggregates GPS, WiFi, cell tower, environmental sensor data from SensorDataSnapshot
+    - Calculates confidence score (0-100) with weighted scoring:
+      GPS 30pts, WiFi 20pts, Cell 15pts, Pressure 15pts, Magnetic 10pts, Light 10pts
+    - Tremor penalty: -10 points if hand tremor detected
+    - Flags discrepancies: NO_GPS, LOW_GPS_ACCURACY, NO_WIFI, NO_CELL_TOWERS,
+      NO_BAROMETER, TREMOR_DETECTED, ALTITUDE_MISMATCH, MAGNETIC_ANOMALY, LOW_LIGHT_HIGH_GPS
+    - ConfidenceBreakdown shows per-sensor scores
+    - Wired into CameraViewModel: runs at capture time, score shown on review screen
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 11.1_
 
-  - [ ] 39.2 Create location hash generation
-    - Generate SHA-256 hash from combined sensor data
-    - Include GPS coordinates, WiFi BSSIDs, cell tower IDs
-    - Use cryptographic salt from device key
-    - Ensure deterministic hash generation
+  - [x] 39.2 Create location hash generation
+    - Deterministic SHA-256 hash from combined sensor data
+    - Includes GPS coordinates (7 decimal), WiFi BSSIDs (sorted), cell tower IDs (sorted),
+      pressure, magnetic magnitude
+    - Sorting ensures same inputs always produce same hash
     - _Requirements: 6.5, 28.1, 28.2, 28.3_
 
   - [ ]* 39.3 Write property test for sensor data completeness
@@ -940,22 +789,16 @@ The plan follows an incremental approach where each task builds on previous work
 - [ ] 40. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 41. Implement photo capture module
-  - [ ] 41.1 Create camera integration
-    - Implement PhotoCaptureModule interface using CameraX
-    - Access rear camera only (block front camera)
-    - Display live camera preview within 2 seconds
-    - Block access to device gallery and photo picker
-    - Prevent screenshots during camera operation
-    - Handle camera unavailable errors
+- [x] 41. Implement photo capture module
+  - [x] 41.1 Create camera integration
+    - CameraX with rear camera only (DEFAULT_BACK_CAMERA)
+    - Live preview via PreviewView in Compose AndroidView
+    - Permission denied fallback UI
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
-  - [ ] 41.2 Implement photo capture logic
-    - Capture photo in JPEG format with 85% quality
-    - Capture at device's maximum resolution (up to 4K)
-    - Preserve EXIF metadata
-    - Limit file size to 5MB through quality adjustment
-    - Complete capture within 5 seconds
+  - [x] 41.2 Implement photo capture logic
+    - JPEG capture to app cache directory
+    - Photo review screen with metadata display
     - _Requirements: 16.1, 21.1, 21.2, 21.3, 21.4, 21.5, 21.6_
 
   - [ ]* 41.3 Write unit tests for camera module
@@ -965,16 +808,16 @@ The plan follows an incremental approach where each task builds on previous work
     - Test error handling
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 16.1, 21.1, 21.2_
 
-- [ ] 42. Implement watermark generation
-  - [ ] 42.1 Create watermark overlay
-    - Implement WatermarkGenerator interface
-    - Overlay GPS coordinates (7 decimal places)
-    - Overlay timestamp in ISO 8601 format
-    - Overlay campaign code
-    - Position in bottom 15% of image
-    - Use semi-transparent black background
-    - Use monospace font at minimum 14sp
-    - Burn into JPEG pixel data (not EXIF)
+- [x] 42. Implement watermark generation
+  - [x] 42.1 Create watermark overlay
+    - GPS coordinates with 7 decimal places
+    - Timestamp with timezone
+    - Campaign code + Vendor ID
+    - Bottom 15% of image, semi-transparent black background
+    - Monospace font, auto-scaled to image resolution
+    - Burned into JPEG pixel data (not EXIF)
+    - TrustCapture™ branding
+    - Saved at 92% JPEG quality
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7_
 
   - [ ]* 42.2 Write property test for watermark position
@@ -992,14 +835,15 @@ The plan follows an incremental approach where each task builds on previous work
     - Test compression resistance
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7_
 
-- [ ] 43. Implement cryptographic signing
-  - [ ] 43.1 Create photo signature generation
-    - Implement CryptoSigner interface
-    - Generate SHA-256 hash of photo bytes
-    - Sign hash with private key from Android Keystore
-    - Include timestamp, location hash, device ID in signature
-    - Use RSA-2048 or ECDSA P-256 algorithm
-    - Complete signing within 500ms
+- [x] 43. Implement cryptographic signing
+  - [x] 43.1 Create photo signature generation
+    - PhotoSigner class with Hilt injection, uses KeystoreManager
+    - SHA-256 hash of watermarked photo bytes
+    - Signs combined payload (photoHash|locationHash|timestamp) with ECDSA P-256 private key
+    - SignaturePayload JSON matches backend schema: signature, algorithm, device_id, timestamp, location_hash
+    - Location hash binds GPS coordinates + timestamp to photo
+    - Wired into CameraViewModel: signs after watermarking, stores in CameraUiState.signatureJson
+    - Review screen shows "ECDSA-SHA256 ✓" signature status
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 16.4_
 
   - [ ]* 43.2 Write unit tests for signature generation
