@@ -22,7 +22,7 @@ class VerificationStatus(str, enum.Enum):
 class Photo(Base):
     """
     Photo model - captured photo metadata and verification results.
-    
+
     Requirements:
     - Req 9.1: Photo upload and storage
     - Req 9.3: S3 storage with thumbnails
@@ -36,7 +36,7 @@ class Photo(Base):
 
     # Multi-tenancy
     tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    
+
     # Associations
     campaign_id = Column(
         UUID(as_uuid=True),
@@ -44,35 +44,36 @@ class Photo(Base):
         nullable=False,
         index=True
     )
+
     vendor_id = Column(
         String(6),
         ForeignKey("vendors.vendor_id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
-    
+
     # Timestamps
     capture_timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
     upload_timestamp = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=__import__("datetime").timezone.utc), nullable=False)
-    
+
     # S3 Storage
-    s3_key = Column(String(500), nullable=False)  # Full-size photo path
-    thumbnail_s3_key = Column(String(500), nullable=True)  # Thumbnail path
-    
-    # Verification Results
+    s3_key = Column(String(500), nullable=False)
+    thumbnail_s3_key = Column(String(500), nullable=True)
+
+    # Verification Results — FIX: values_callable to send lowercase enum values to PostgreSQL
     verification_status = Column(
-        SQLEnum(VerificationStatus),
+        SQLEnum(VerificationStatus, name="verificationstatus", native_enum=True, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=VerificationStatus.PENDING,
         index=True
     )
-    signature_valid = Column(Boolean, nullable=True)  # Cryptographic signature check
-    location_match_score = Column(Float, nullable=True)  # 0-100 confidence score
-    distance_from_expected = Column(Float, nullable=True)  # Meters from expected location
-    
+    signature_valid = Column(Boolean, nullable=True)
+    location_match_score = Column(Float, nullable=True)
+    distance_from_expected = Column(Float, nullable=True)
+
     # Timestamp
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=__import__("datetime").timezone.utc), nullable=False)
-    
+
     # Relationships
     campaign = relationship("Campaign", back_populates="photos")
     vendor = relationship("Vendor", back_populates="photos")
