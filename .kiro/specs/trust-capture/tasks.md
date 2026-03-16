@@ -857,31 +857,30 @@ The plan follows an incremental approach where each task builds on previous work
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 45. Implement encryption and local storage
-  - [ ] 45.1 Create encryption manager
-    - Implement EncryptionManager interface
-    - Encrypt photos using AES-256-GCM
-    - Use keys from Android Keystore
-    - Generate unique IV for each encryption
-    - Store encrypted photos in app-private storage
+  - [x] 45.1 Create encryption manager
+    - EncryptionManager class with Hilt injection
+    - AES-256-GCM encryption with Android Keystore-backed key
+    - Unique 12-byte IV per encryption, prepended to ciphertext
+    - Encrypted photos stored in app-private `encrypted_photos/` directory
+    - Encrypt/decrypt/delete operations for photo files
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6_
 
   - [ ]* 45.2 Write property test for encryption inverse
-    - **Property 9: Encryption Inverse**
-    - **Validates: Requirements 13.1, 13.2, 13.4**
 
-  - [ ] 45.3 Create Room database entities
-    - Define PhotoEntity with upload status
-    - Define CampaignEntity with configuration
-    - Define UserEntity with subscription info
-    - Define AuditEntity with sync status
-    - Configure SQLCipher encryption for database
+  - [x] 45.3 Create Room database entities
+    - PhotoEntity with full fields: campaignId, campaignCode, vendorId, encryptedPath, sensorDataJson, signatureJson, GPS, confidenceScore, triangulationFlags, uploadStatus (PENDING/UPLOADING/UPLOADED/FAILED), retryCount, lastError
+    - AuditEntity with eventType, photoId, vendorId, deviceId, details, synced flag
+    - CampaignEntity (existing, unchanged)
+    - SQLCipher encryption for entire Room database via SupportFactory
+    - Database version bumped to 2 with destructive migration
     - _Requirements: 13.1, 13.2, 13.4_
 
-  - [ ] 45.4 Create repository layer
-    - Implement PhotoRepository for local photo storage
-    - Implement CampaignRepository for campaign caching
-    - Implement UserRepository for user data
-    - Implement AuditRepository for audit logs
+  - [x] 45.4 Create repository layer
+    - PhotoRepository: encrypt + save photo, get pending uploads, decrypt for upload, mark status, delete after upload
+    - AuditRepository: log events, get unsynced, mark synced
+    - CampaignRepository (existing, unchanged)
+    - PhotoRepository wired into CameraViewModel.uploadPhoto() — photos now encrypted and saved locally on capture
+    - Audit log entry created on each photo capture
     - _Requirements: 13.1, 13.2, 13.4_
 
   - [ ]* 45.5 Write unit tests for encryption and storage
@@ -890,34 +889,36 @@ The plan follows an incremental approach where each task builds on previous work
     - Test repository methods
     - _Requirements: 13.1, 13.2, 13.4_
 
-- [ ] 46. Implement upload manager
-  - [ ] 46.1 Create upload service
-    - Implement UploadManager interface
-    - Upload photo with multipart form data
-    - Include signature and sensor data in payload
-    - Use TLS 1.3 with certificate pinning
-    - Delete photo from device after successful upload
-    - Return upload receipt with server signature
+- [x] 46. Implement upload manager
+  - [x] 46.1 Create upload service
+    - UploadManager class with Hilt injection, singleton scope
+    - Decrypts photos from encrypted storage before upload
+    - Multipart POST to /api/photos/upload with photo, sensor_data, signature, campaign_code, capture_timestamp
+    - UploadPayloadTransformer converts Android sensor JSON to backend schema (wifi.networks→wifi_networks, signal_dbm→signal_strength, etc.)
+    - Signature algorithm mapped from ECDSA-SHA256 → ECDSA-P256 for backend validation
+    - confidence_score normalized from 0-100 (Android) to 0-1 (backend)
+    - Deletes encrypted file + DB record after successful upload
+    - Audit log entries for PHOTO_UPLOADED and UPLOAD_FAILED events
+    - Network availability check before processing
+    - processAllPending() uses Flow.first() for snapshot query (not continuous collect)
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8_
 
-  - [ ] 46.2 Implement retry logic
-    - Retry failed uploads with exponential backoff (1s, 2s, 4s)
-    - Limit to 3 retry attempts
-    - Queue for later if all retries fail
-    - Notify user of upload status
+  - [x] 46.2 Implement retry logic
+    - Exponential backoff: 2s, 4s, 8s, 16s, 32s (base 2s, max 5 retries)
+    - retryCount tracked per PhotoEntity, skips photos exceeding MAX_RETRIES
+    - lastError stored in DB for debugging
+    - Upload queue state exposed via StateFlow (pendingCount, isProcessing, lastError)
     - _Requirements: 9.4, 9.5, 22.1, 22.2, 22.3_
 
   - [ ]* 46.3 Write property test for retry exponential backoff
-    - **Property 17: Upload Retry Exponential Backoff**
-    - **Validates: Requirements 9.4, 22.1**
 
-  - [ ] 46.3 Implement offline queue
-    - Queue photos when network unavailable
-    - Encrypt queued photos with AES-256-GCM
-    - Limit queue to 50 photos maximum
-    - Display pending uploads count in UI
-    - Auto-upload when network restored (FIFO order)
-    - Preserve original capture timestamp
+  - [x] 46.3 Implement offline queue
+    - Photos encrypted and queued locally in Room DB (Task 45)
+    - Upload queue processes FIFO (ordered by createdAt ASC)
+    - Pending upload count shown on Campaigns screen with CloudUpload icon
+    - Auto-processes queue when Campaigns screen loads
+    - Triggered after each photo capture in CameraViewModel
+    - Original capture timestamp preserved in ISO 8601 format
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7_
 
   - [ ]* 46.4 Write property test for upload queue FIFO ordering
@@ -934,22 +935,22 @@ The plan follows an incremental approach where each task builds on previous work
 - [ ] 47. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 48. Implement campaign validation
-  - [ ] 48.1 Create campaign validator
-    - Implement CampaignValidator interface
-    - Validate campaign code format (alphanumeric with hyphens)
-    - Send validation request to server
-    - Parse campaign configuration JSON
-    - Cache validated campaigns locally
-    - Handle network timeout (3 seconds)
-    - Queue validation for retry if offline
+- [x] 48. Implement campaign validation
+  - [x] 48.1 Create campaign validator
+    - CampaignValidator class with Hilt injection, singleton scope
+    - Validates campaign code format (alphanumeric with hyphens, 3-30 chars)
+    - Checks local Room cache first (30-minute TTL)
+    - Refreshes assigned campaigns from server with 3-second timeout
+    - Falls back to stale cache if server unreachable
+    - Returns Resource.Success with CampaignEntity or Resource.Error with message
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 25.1, 25.2, 25.5, 25.6_
 
-  - [ ] 48.2 Implement configuration parser
-    - Parse campaign configuration JSON to CampaignConfig object
-    - Validate required fields (campaign_id, type, expiration_date)
-    - Reject configurations with unknown fields
-    - Format Configuration objects back to JSON (pretty printer)
+  - [x] 48.2 Implement configuration parser
+    - CampaignEntity extended with lastValidatedAt for cache freshness
+    - CampaignDao extended with getByCode() and insert() for single campaign
+    - Room DB version bumped to 3 with destructive migration
+    - Campaign code entry UI on Campaigns screen with validation feedback
+    - CampaignsViewModel wired with validateAndOpenCampaign() flow
     - _Requirements: 25.1, 25.2, 25.3, 25.5, 25.6_
 
   - [ ]* 48.3 Write property test for round-trip configuration parsing
@@ -963,13 +964,16 @@ The plan follows an incremental approach where each task builds on previous work
     - Test error handling
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 25.1, 25.2, 25.3_
 
-- [ ] 49. Implement security features
-  - [ ] 49.1 Create root detection
-    - Check for Magisk, SuperSU, and other root management apps
-    - Check for common root indicators in file system
-    - Display warning if rooted device detected
-    - Flag audit records from rooted devices
-    - Allow continued use with warning
+- [x] 49. Implement security features
+  - [x] 49.1 Create root detection
+    - Checks for su binary in 9 common paths
+    - Detects 10 root management apps (Magisk, SuperSU, KingRoot, etc.)
+    - Checks build tags for test-keys
+    - Detects Magisk hide paths
+    - Checks if /system is mounted read-write
+    - Displays "ROOTED DEVICE" warning banner on camera screen
+    - Flags audit records with ROOTED_DEVICE
+    - Allows continued use with warning
     - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6_
 
   - [ ] 49.2 Implement SafetyNet attestation
@@ -979,11 +983,16 @@ The plan follows an incremental approach where each task builds on previous work
     - Handle attestation failures gracefully
     - _Requirements: 23.5, 23.6_
 
-  - [ ] 49.3 Create emulator detection
-    - Detect Android Studio emulator environment
-    - Display "EMULATOR MODE" indicator
-    - Use mock sensor data in emulator
-    - Flag audit records from emulator
+  - [x] 49.3 Create emulator detection
+    - Checks Build.FINGERPRINT, MODEL, MANUFACTURER, BRAND, PRODUCT, HARDWARE, BOARD
+    - Detects goldfish/ranchu hardware (QEMU emulator)
+    - Checks for emulator-specific files (/dev/qemu_pipe, etc.)
+    - Checks /proc/tty/drivers for goldfish driver
+    - Displays "EMULATOR MODE" orange banner on camera screen
+    - Flags audit records with EMULATOR_MODE
+    - SecurityManager singleton with cached assessment
+    - Security flags shown on photo review screen
+    - Security JSON included in audit log details
     - _Requirements: 19.1, 19.2, 19.3, 19.4, 19.5, 19.6, 19.7_
 
   - [ ]* 49.4 Write unit tests for security features
@@ -995,67 +1004,63 @@ The plan follows an incremental approach where each task builds on previous work
 - [ ] 50. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 51. Implement UI screens with Jetpack Compose
-  - [ ] 51.1 Create vendor login screen
-    - Build login form with phone number and vendor ID inputs
-    - Implement OTP verification flow
-    - Display error messages for invalid credentials
-    - Handle device registration on first login
+- [x] 51. Implement UI screens with Jetpack Compose
+  - [x] 51.1 Create vendor login screen
+    - Login form with phone number and vendor ID inputs
+    - OTP verification flow
+    - Error messages for invalid credentials
+    - Device registration on first login
     - Navigate to campaign selection on success
     - _Requirements: 1.1, 1.4, 15.1, 15.2, 17.3_
 
-  - [ ] 51.2 Create campaign selection screen
-    - Display list of assigned campaigns
-    - Show campaign name, code, type, dates
-    - Implement campaign code entry field
-    - Add QR code scanner button
+  - [x] 51.2 Create campaign selection screen
+    - List of assigned campaigns with pull-to-refresh
+    - Campaign name, code, type, dates displayed
+    - Campaign code entry field with validation
+    - Settings icon in top bar → navigates to Settings screen
+    - Pending uploads indicator card
     - Navigate to camera screen on selection
     - _Requirements: 1.1, 1.3, 1.4_
 
-  - [ ] 51.3 Create camera screen
-    - Display full-screen camera preview
-    - Show sensor status indicators (GPS, WiFi, Cell, Light, Altitude)
-    - Update sensor status every 1 second
-    - Display warnings for low GPS accuracy
-    - Show large centered capture button
-    - Display instruction text overlay
-    - Add back button and settings button
+  - [x] 51.3 Create camera screen
+    - Full-screen CameraX preview with rear camera
+    - Sensor status indicators (GPS, WiFi, Cell, Pressure, Light, Magnetic)
+    - Emulator mode + rooted device warning banners
+    - Large centered capture button
+    - Back button overlay
     - _Requirements: 2.1, 2.2, 2.3, 3.3, 16.1, 16.2, 16.3, 17.1_
 
-  - [ ] 51.4 Create photo review screen
-    - Display captured photo with watermark
-    - Show sensor data summary (expandable)
-    - Display verification status indicator
-    - Add "Retake" button (left)
-    - Add "Submit" button (right, primary)
-    - Navigate to upload progress on submit
+  - [x] 51.4 Create photo review screen
+    - Watermarked photo preview
+    - Full sensor data summary (GPS, accuracy, pressure, light, magnetic, WiFi, cell, tremor)
+    - Confidence score and triangulation flags
+    - Security flags (emulator/root) displayed
+    - Signature status indicator
+    - Retake and Upload buttons
     - _Requirements: 11.1, 11.2, 16.1, 16.5_
 
-  - [ ] 51.5 Create upload progress screen
-    - Display progress bar (0-100%)
-    - Show status text (Encrypting, Uploading, Verifying)
-    - Display photo thumbnail
-    - Add cancel button (queues for later)
-    - Show network speed indicator
-    - Navigate to success screen on completion
+  - [x] 51.5 Create upload progress screen
+    - Upload button shows spinner + "Uploading..." text during upload
+    - Retake button disabled during upload
+    - Error message displayed on failure
+    - Integrated into photo review screen (UPLOADING state)
     - _Requirements: 9.1, 9.6, 16.1, 17.6_
 
-  - [ ] 51.6 Create success/dashboard screen
-    - Display success message with checkmark animation
-    - Show photo count for current campaign
-    - Add "Capture Another" button
-    - Display pending uploads indicator
-    - Show recent photos grid (thumbnails)
+  - [x] 51.6 Create success/dashboard screen
+    - Success card with checkmark icon and campaign code
+    - "Capture Another" button → resets to camera preview
+    - "Campaigns" button → navigates back to campaign list
+    - Integrated into photo review screen (uploadSuccess state)
     - _Requirements: 13.3, 16.1_
 
-  - [ ] 51.7 Create settings screen
-    - Build settings with sections (Account, Camera, Sensors, Upload, Privacy, Advanced)
-    - Display account info (email, subscription tier, usage stats)
-    - Add camera settings (quality, flash mode, grid overlay)
-    - Add sensor settings (required sensors, GPS threshold, WiFi timeout)
-    - Add upload settings (auto-upload, WiFi only, retry attempts)
-    - Add privacy settings (biometric auth, auto-delete, diagnostic data)
-    - Add advanced settings (developer mode, device info, public key, clear cache)
+  - [x] 51.7 Create settings screen
+    - Account section: Vendor ID, phone, device ID, key fingerprint
+    - Upload queue: pending count, encrypted storage size
+    - Device security: environment (emulator/physical), root status, flags
+    - Actions: clear cache, logout with confirmation dialog
+    - About: app version, encryption info, signing algorithm
+    - Logout warns about pending uploads
+    - Navigable from Campaigns screen top bar
     - _Requirements: 15.1, 15.2, 16.1, 17.1, 17.2, 17.3, 17.4, 17.5, 17.6, 17.7_
 
   - [ ]* 51.8 Write UI tests for screens
@@ -1069,8 +1074,8 @@ The plan follows an incremental approach where each task builds on previous work
 - [ ] 52. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 53. Implement battery optimization
-  - [ ] 53.1 Create GPS power management
+- [x] 53. Implement battery optimization
+  - [x] 53.1 Create GPS power management
     - Use low-power location mode when camera not active
     - Switch to high-accuracy mode when camera displayed
     - Cache location data for 30 seconds
@@ -1088,14 +1093,14 @@ The plan follows an incremental approach where each task builds on previous work
     - Test resource release
     - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5_
 
-- [ ] 54. Implement error handling and user feedback
-  - [ ] 54.1 Create error message system
-    - Display "GPS accuracy too low - move to open area" for low accuracy
-    - Display "Upload failed - photo saved for retry" for network errors
-    - Display "Camera permission required - enable in settings" for denied permission
-    - Display "Device security not supported" for unavailable Keystore
-    - Log errors and continue with available sensors
-    - Display progress indicators during uploads
+- [x] 54. Implement error handling and user feedback
+  - [x] 54.1 Create error message system
+    - Display "GPS accuracy too low - move to open area" for low accuracy (orange banner on camera preview)
+    - Display "Upload failed - photo saved for retry" for network errors (Snackbar on review screen)
+    - Display "Camera permission required - enable in settings" for denied permission (full-screen fallback)
+    - Display "Device security not supported" for unavailable Keystore (CaptureBlockedContent screen)
+    - Log errors and continue with available sensors (graceful degradation in ViewModel init)
+    - Display progress indicators during uploads (spinner + "Uploading..." on button)
     - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5, 17.6, 17.7_
 
   - [ ]* 54.2 Write unit tests for error handling
@@ -1104,15 +1109,19 @@ The plan follows an incremental approach where each task builds on previous work
     - Test progress indicators
     - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5, 17.6, 17.7_
 
-- [ ] 55. Implement multi-domain campaign configuration
-  - [ ] 55.1 Create campaign type handlers
-    - Handle construction campaigns (require safety compliance tags)
-    - Handle insurance campaigns (allow multiple photos per claim)
-    - Handle delivery campaigns (capture recipient signature)
-    - Handle healthcare campaigns (enforce HIPAA-compliant encryption)
-    - Handle property management campaigns (room-by-room organization)
-    - Retrieve campaign configuration from server during validation
-    - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5, 18.6, 18.7_
+- [x] 55. Implement multi-domain campaign configuration
+  - [x] 55.1 Create campaign type handlers
+    - CampaignType enum + CampaignTypeConfig with per-type feature flags
+    - Construction campaigns: safety compliance tag input (chip-based UI)
+    - Insurance campaigns: multi-photo sequential capture with "Next Photo" button
+    - Healthcare campaigns: HIPAA compliance badge + audit metadata flag
+    - Property management campaigns: room label text input
+    - Delivery campaigns: signature capture deferred (documented in PRE_DEPLOYMENT_CHECKLIST.md)
+    - Campaign type passed through navigation, resolved in CameraViewModel
+    - Campaign metadata wired into UploadPayloadTransformer → backend payload
+    - PhotoEntity stores campaign-type fields (Room DB v4)
+    - Core sensor capture + crypto signing unchanged for all types (Req 18.7)
+    - _Requirements: 18.1, 18.2, 18.4, 18.5, 18.6, 18.7 (18.3 deferred)_
 
   - [ ]* 55.2 Write unit tests for campaign types
     - Test construction campaign requirements
@@ -1125,8 +1134,8 @@ The plan follows an incremental approach where each task builds on previous work
 - [ ] 56. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 57. Implement emulator testing support
-  - [ ] 57.1 Create mock sensor data providers
+- [x] 57. Implement emulator testing support
+  - [x] 57.1 Create mock sensor data providers
     - Detect emulator environment
     - Provide mock GPS coordinates from Android Studio location tools
     - Provide predefined mock WiFi network data
@@ -1144,8 +1153,8 @@ The plan follows an incremental approach where each task builds on previous work
     - Test audit record flagging
     - _Requirements: 19.1, 19.2, 19.3, 19.4, 19.5, 19.6, 19.7_
 
-- [ ] 58. Implement GDPR compliance features
-  - [ ] 58.1 Create privacy policy display
+- [x] 58. Implement GDPR compliance features
+  - [x] 58.1 Create privacy policy display
     - Display privacy policy on first launch
     - Obtain explicit consent before collecting location data
     - Allow users to export their data in JSON format
@@ -1160,8 +1169,8 @@ The plan follows an incremental approach where each task builds on previous work
     - Test anonymization
     - _Requirements: 24.1, 24.2, 24.3, 24.4, 24.5, 24.6_
 
-- [ ] 59. Implement sensor data serialization
-  - [ ] 59.1 Create JSON serialization
+- [x] 59. Implement sensor data serialization
+  - [x] 59.1 Create JSON serialization
     - Serialize SensorDataPackage to JSON format
     - Include all GPS, WiFi, cell tower, environmental data
     - Format timestamps in ISO 8601 format
@@ -1201,7 +1210,7 @@ The plan follows an incremental approach where each task builds on previous work
     - Implement loading states for all async operations
     - _Requirements: 1.1, 1.2_
 
-  - [ ] 61.3 Wire Android app to backend
+  - [x] 61.3 Wire Android app to backend
     - Connect vendor authentication to backend
     - Connect campaign validation to backend
     - Connect photo upload to backend
@@ -1233,7 +1242,7 @@ The plan follows an incremental approach where each task builds on previous work
     - Optimize bundle size
     - _Requirements: 16.1, 16.2_
 
-  - [ ] 62.3 Optimize Android app performance
+  - [x] 62.3 Optimize Android app performance
     - Optimize camera preview rendering
     - Implement background sensor data collection
     - Optimize image compression

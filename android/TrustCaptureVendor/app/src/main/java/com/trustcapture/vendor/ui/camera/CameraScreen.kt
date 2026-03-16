@@ -13,7 +13,11 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -30,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.trustcapture.vendor.domain.model.CampaignTypeConfig
 import coil.compose.AsyncImage
 import java.io.File
 import java.text.SimpleDateFormat
@@ -64,10 +69,13 @@ fun CameraScreen(
         )
     }
 
-    // Collect GPS location updates
+    // Collect GPS location updates with adaptive power management
     LaunchedEffect(hasLocationPermission) {
         if (hasLocationPermission) {
-            com.trustcapture.vendor.util.locationUpdates(context).collect { loc ->
+            com.trustcapture.vendor.util.LocationHelper.locationUpdates(
+                context = context,
+                initialMode = com.trustcapture.vendor.util.GpsPowerMode.BALANCED
+            ).collect { loc ->
                 viewModel.onLocationUpdated(loc.latitude, loc.longitude, loc.accuracy)
             }
         }
@@ -75,12 +83,21 @@ fun CameraScreen(
 
     when (uiState.screenState) {
         CameraScreenState.PREVIEW -> {
-            if (hasCameraPermission) {
+            if (uiState.captureBlocked) {
+                // Keystore unavailable — block capture (Req 17.4)
+                CaptureBlockedContent(
+                    reason = uiState.captureBlockedReason ?: "Device security not supported",
+                    onBack = onBack
+                )
+            } else if (hasCameraPermission) {
                 CameraPreviewContent(
                     gpsStatus = uiState.gpsStatus,
+                    gpsWarning = uiState.gpsWarning,
                     sensorSummary = uiState.sensorSummary,
                     wifiCount = uiState.wifiCount,
                     cellTowerCount = uiState.cellTowerCount,
+                    isEmulator = uiState.isEmulator,
+                    isRooted = uiState.isRooted,
                     onPhotoCaptured = { uri ->
                         viewModel.onPhotoCaptured(uri)
                     },
@@ -108,7 +125,11 @@ fun CameraScreen(
                 uiState = uiState,
                 onRetake = viewModel::retakePhoto,
                 onUpload = viewModel::uploadPhoto,
-                onBack = onBack
+                onBack = onBack,
+                onAddSafetyTag = viewModel::addSafetyTag,
+                onRemoveSafetyTag = viewModel::removeSafetyTag,
+                onRoomLabelChanged = viewModel::setRoomLabel,
+                onCaptureAnother = viewModel::captureAnother
             )
         }
     }
@@ -117,15 +138,22 @@ fun CameraScreen(
 @Composable
 private fun CameraPreviewContent(
     gpsStatus: String,
+    gpsWarning: String?,
     sensorSummary: String,
     wifiCount: Int,
     cellTowerCount: Int,
+    isEmulator: Boolean,
+    isRooted: Boolean,
     onPhotoCaptured: (Uri) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val imageCapture = remember { ImageCapture.Builder().build() }
+    val imageCapture = remember {
+        ImageCapture.Builder()
+            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+            .build()
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Camera preview
@@ -164,14 +192,50 @@ private fun CameraPreviewContent(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(
-                onClick = onBack,
-                colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = Color.Black.copy(alpha = 0.5f),
-                    contentColor = Color.White
-                )
-            ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            Column {
+                IconButton(
+                    onClick = onBack,
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = Color.Black.copy(alpha = 0.5f),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+                // Emulator mode banner
+                if (isEmulator) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Surface(
+                        color = Color(0xFFFF6D00).copy(alpha = 0.85f),
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.PhoneAndroid, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("EMULATOR MODE", color = Color.White, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+                // Root warning banner
+                if (isRooted) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Surface(
+                        color = Color.Red.copy(alpha = 0.85f),
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("ROOTED DEVICE", color = Color.White, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
             }
 
             Column(horizontalAlignment = Alignment.End) {
@@ -273,6 +337,29 @@ private fun CameraPreviewContent(
             }
         }
 
+        // GPS accuracy warning banner (Req 17.1)
+        if (gpsWarning != null) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 120.dp)
+                    .padding(horizontal = 32.dp),
+                color = Color(0xFFFF6D00).copy(alpha = 0.9f),
+                shape = MaterialTheme.shapes.small
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(gpsWarning, color = Color.White, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+
         // Capture button at bottom
         Box(
             modifier = Modifier
@@ -332,8 +419,24 @@ private fun PhotoReviewContent(
     uiState: CameraUiState,
     onRetake: () -> Unit,
     onUpload: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onAddSafetyTag: (String) -> Unit = {},
+    onRemoveSafetyTag: (String) -> Unit = {},
+    onRoomLabelChanged: (String) -> Unit = {},
+    onCaptureAnother: () -> Unit = {}
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show error in Snackbar when it changes
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            snackbarHostState.showSnackbar(
+                message = it,
+                duration = SnackbarDuration.Long
+            )
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -344,20 +447,22 @@ private fun PhotoReviewContent(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Photo preview — show watermarked version
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
+                    .heightIn(min = 200.dp, max = 300.dp)
             ) {
                 val displayUri = uiState.watermarkedPhotoUri ?: uiState.originalPhotoUri
                 if (displayUri != null) {
@@ -474,10 +579,142 @@ private fun PhotoReviewContent(
                             )
                         }
                     }
+
+                    // Security flags
+                    if (uiState.isEmulator || uiState.isRooted) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        if (uiState.isEmulator) {
+                            MetadataRow(
+                                icon = Icons.Default.PhoneAndroid,
+                                label = "Device",
+                                value = "Emulator ⚠"
+                            )
+                        }
+                        if (uiState.isRooted) {
+                            MetadataRow(
+                                icon = Icons.Default.Warning,
+                                label = "Root",
+                                value = "Detected ⚠"
+                            )
+                        }
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            // --- Campaign-type-specific UI sections ---
+            val config = uiState.campaignConfig
+
+            // Insurance: photo sequence counter (Req 18.2)
+            if (config.allowMultiPhoto) {
+                Surface(
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Collections, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Photo ${uiState.photoSequenceNumber} of claim",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // Healthcare: HIPAA compliance badge (Req 18.4)
+            if (config.enforceHipaa) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.HealthAndSafety, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "HIPAA-compliant · AES-256-GCM encrypted",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // Construction: safety compliance tags (Req 18.1)
+            if (config.requiresSafetyTags) {
+                var tagInput by remember { mutableStateOf("") }
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("Safety Compliance Tags", style = MaterialTheme.typography.labelMedium)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                value = tagInput,
+                                onValueChange = { tagInput = it },
+                                modifier = Modifier.weight(1f),
+                                placeholder = { Text("e.g. PPE, Harness") },
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.bodySmall
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            FilledTonalButton(
+                                onClick = {
+                                    onAddSafetyTag(tagInput)
+                                    tagInput = ""
+                                },
+                                enabled = tagInput.isNotBlank()
+                            ) { Text("Add") }
+                        }
+                        if (uiState.safetyTags.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                items(uiState.safetyTags) { tag ->
+                                    InputChip(
+                                        selected = true,
+                                        onClick = { onRemoveSafetyTag(tag) },
+                                        label = { Text(tag, style = MaterialTheme.typography.bodySmall) },
+                                        trailingIcon = {
+                                            Icon(Icons.Default.Close, contentDescription = "Remove", modifier = Modifier.size(14.dp))
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // Property management: room label (Req 18.5)
+            if (config.roomOrganization) {
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("Room Label", style = MaterialTheme.typography.labelMedium)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = uiState.roomLabel,
+                            onValueChange = onRoomLabelChanged,
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("e.g. Kitchen, Bedroom 1, Bathroom") },
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
 
             // Upload success message
             if (uiState.uploadSuccess) {
@@ -487,17 +724,27 @@ private fun PhotoReviewContent(
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
                             Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(48.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Photo uploaded successfully")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Photo uploaded successfully",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Campaign: ${uiState.campaignCode}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -518,30 +765,52 @@ private fun PhotoReviewContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedButton(
-                    onClick = onRetake,
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    enabled = !uiState.isUploading
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Retake")
-                }
-                Button(
-                    onClick = onUpload,
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    enabled = !uiState.isUploading && !uiState.uploadSuccess
-                ) {
-                    if (uiState.isUploading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                if (uiState.uploadSuccess) {
+                    // After success: Capture Another + Back
+                    OutlinedButton(
+                        onClick = onBack,
+                        modifier = Modifier.weight(1f).height(48.dp)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Upload")
+                        Text("Campaigns")
+                    }
+                    Button(
+                        onClick = if (uiState.campaignConfig.allowMultiPhoto) onCaptureAnother else onRetake,
+                        modifier = Modifier.weight(1f).height(48.dp)
+                    ) {
+                        Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(if (uiState.campaignConfig.allowMultiPhoto) "Next Photo" else "Capture Another")
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = onRetake,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        enabled = !uiState.isUploading
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Retake")
+                    }
+                    Button(
+                        onClick = onUpload,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        enabled = !uiState.isUploading
+                    ) {
+                        if (uiState.isUploading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Uploading...")
+                        } else {
+                            Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Upload")
+                        }
                     }
                 }
             }
@@ -578,6 +847,42 @@ private fun MetadataRow(
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Medium
         )
+    }
+}
+
+@Composable
+private fun CaptureBlockedContent(reason: String, onBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            Icons.Default.Lock,
+            contentDescription = null,
+            modifier = Modifier.size(80.dp),
+            tint = MaterialTheme.colorScheme.error
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Capture Unavailable",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = reason,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(onClick = onBack) {
+            Text("Go Back")
+        }
     }
 }
 

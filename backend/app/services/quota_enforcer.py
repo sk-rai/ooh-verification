@@ -386,7 +386,7 @@ class QuotaEnforcer:
         
         # Count actual vendors
         vendor_count = await self.db.execute(
-            select(func.count(Vendor.vendor_id)).where(Vendor.client_id == client_id)
+            select(func.count(Vendor.vendor_id)).where(Vendor.created_by_client_id == client_id)
         )
         actual_vendors = vendor_count.scalar() or 0
         

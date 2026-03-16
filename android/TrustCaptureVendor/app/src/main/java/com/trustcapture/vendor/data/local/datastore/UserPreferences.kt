@@ -2,6 +2,7 @@ package com.trustcapture.vendor.data.local.datastore
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
@@ -18,6 +19,10 @@ class UserPreferences @Inject constructor(
         private val KEY_TENANT_ID = stringPreferencesKey("tenant_id")
         private val KEY_VENDOR_ID = stringPreferencesKey("vendor_id")
         private val KEY_PHONE_NUMBER = stringPreferencesKey("phone_number")
+        // GDPR consent flags (Req 24.1-24.7)
+        private val KEY_PRIVACY_CONSENT = booleanPreferencesKey("privacy_consent")
+        private val KEY_LOCATION_CONSENT = booleanPreferencesKey("location_consent")
+        private val KEY_PRIVACY_MODE = booleanPreferencesKey("privacy_mode")
     }
 
     val authToken: Flow<String?> = dataStore.data.map { it[KEY_AUTH_TOKEN] }
@@ -26,6 +31,11 @@ class UserPreferences @Inject constructor(
     val phoneNumber: Flow<String?> = dataStore.data.map { it[KEY_PHONE_NUMBER] }
 
     val isLoggedIn: Flow<Boolean> = authToken.map { !it.isNullOrBlank() }
+
+    // GDPR consent flows
+    val hasPrivacyConsent: Flow<Boolean> = dataStore.data.map { it[KEY_PRIVACY_CONSENT] == true }
+    val hasLocationConsent: Flow<Boolean> = dataStore.data.map { it[KEY_LOCATION_CONSENT] == true }
+    val privacyModeEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_PRIVACY_MODE] == true }
 
     suspend fun saveAuthData(token: String, tenantId: String) {
         dataStore.edit { prefs ->
@@ -38,6 +48,21 @@ class UserPreferences @Inject constructor(
         dataStore.edit { prefs ->
             prefs[KEY_VENDOR_ID] = vendorId
             prefs[KEY_PHONE_NUMBER] = phoneNumber
+        }
+    }
+
+    /** Save GDPR consent (Req 24.1, 24.2) */
+    suspend fun saveConsent(privacyConsent: Boolean, locationConsent: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_PRIVACY_CONSENT] = privacyConsent
+            prefs[KEY_LOCATION_CONSENT] = locationConsent
+        }
+    }
+
+    /** Toggle privacy mode — anonymizes vendor ID in exports (Req 24.6) */
+    suspend fun setPrivacyMode(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_PRIVACY_MODE] = enabled
         }
     }
 

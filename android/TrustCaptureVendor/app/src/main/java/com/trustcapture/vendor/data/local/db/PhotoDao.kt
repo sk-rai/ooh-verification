@@ -3,24 +3,44 @@ package com.trustcapture.vendor.data.local.db
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
-import com.trustcapture.vendor.data.local.entity.PendingPhotoEntity
+import com.trustcapture.vendor.data.local.entity.PhotoEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PhotoDao {
 
-    @Query("SELECT * FROM pending_photos WHERE status = 'pending' ORDER BY id ASC")
-    fun getPendingPhotos(): Flow<List<PendingPhotoEntity>>
+    @Insert
+    suspend fun insert(photo: PhotoEntity): Long
 
-    @Query("SELECT COUNT(*) FROM pending_photos WHERE status = 'pending'")
+    @Query("SELECT * FROM photos WHERE uploadStatus = 'PENDING' OR uploadStatus = 'FAILED' ORDER BY createdAt ASC")
+    fun getPendingUploads(): Flow<List<PhotoEntity>>
+
+    @Query("SELECT COUNT(*) FROM photos WHERE uploadStatus = 'PENDING' OR uploadStatus = 'FAILED'")
     fun getPendingCount(): Flow<Int>
 
-    @Insert
-    suspend fun insert(photo: PendingPhotoEntity): Long
+    @Query("SELECT * FROM photos WHERE campaignId = :campaignId ORDER BY capturedAt DESC")
+    fun getPhotosForCampaign(campaignId: String): Flow<List<PhotoEntity>>
 
-    @Query("UPDATE pending_photos SET status = :status WHERE id = :id")
+    @Query("SELECT * FROM photos WHERE id = :id")
+    suspend fun getById(id: Long): PhotoEntity?
+
+    @Query("UPDATE photos SET uploadStatus = :status WHERE id = :id")
     suspend fun updateStatus(id: Long, status: String)
 
-    @Query("DELETE FROM pending_photos WHERE status = 'uploaded'")
+    @Query("UPDATE photos SET uploadStatus = :status, retryCount = retryCount + 1, lastError = :error WHERE id = :id")
+    suspend fun markFailed(id: Long, status: String = "FAILED", error: String?)
+
+    @Query("DELETE FROM photos WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
+    @Query("DELETE FROM photos WHERE uploadStatus = 'UPLOADED'")
     suspend fun deleteUploaded()
+
+    // GDPR data export (Req 24.3)
+    @Query("SELECT * FROM photos WHERE vendorId = :vendorId ORDER BY capturedAt DESC")
+    suspend fun getAllForVendor(vendorId: String): List<PhotoEntity>
+
+    // GDPR data deletion (Req 24.4)
+    @Query("DELETE FROM photos WHERE vendorId = :vendorId")
+    suspend fun deleteAllForVendor(vendorId: String)
 }

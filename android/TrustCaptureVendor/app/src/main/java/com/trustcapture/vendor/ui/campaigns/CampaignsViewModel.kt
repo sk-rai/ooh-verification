@@ -3,8 +3,12 @@ package com.trustcapture.vendor.ui.campaigns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.trustcapture.vendor.data.local.entity.CampaignEntity
+import com.trustcapture.vendor.data.remote.UploadManager
 import com.trustcapture.vendor.domain.repository.AuthRepository
 import com.trustcapture.vendor.domain.repository.CampaignRepository
+import com.trustcapture.vendor.domain.repository.PhotoRepository
+import com.trustcapture.vendor.domain.validator.CampaignValidator
+import com.trustcapture.vendor.util.DbDebugHelper
 import com.trustcapture.vendor.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,13 +21,22 @@ import javax.inject.Inject
 
 data class CampaignsUiState(
     val isRefreshing: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val campaignCodeInput: String = "",
+    val isValidating: Boolean = false,
+    val validationError: String? = null,
+    val validatedCampaignId: String? = null,
+    val validatedCampaignCode: String? = null
 )
 
 @HiltViewModel
 class CampaignsViewModel @Inject constructor(
     private val campaignRepository: CampaignRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val photoRepository: PhotoRepository,
+    private val uploadManager: UploadManager,
+    private val campaignValidator: CampaignValidator,
+    private val dbDebugHelper: DbDebugHelper
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CampaignsUiState())
@@ -33,8 +46,16 @@ class CampaignsViewModel @Inject constructor(
         .getCachedCampaigns()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val pendingUploadCount: StateFlow<Int> = photoRepository
+        .getPendingCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     init {
         refresh()
+        // Try to upload any pending photos when campaigns screen loads
+        uploadManager.processQueue()
+        // Dump DB contents to logcat for debugging
+        viewModelScope.launch { dbDebugHelper.dumpToLogcat() }
     }
 
     fun refresh() {
@@ -73,6 +94,42 @@ class CampaignsViewModel @Inject constructor(
         viewModelScope.launch {
             authRepository.logout()
             onLoggedOut()
+        }
+    }
+
+    fun onCampaignCodeChanged(code: String) {
+        _uiState.value = _uiState.value.copy(
+            campaignCodeInput = code,
+            validationError = null,
+            validatedCampaignId = null,
+            validatedCampaignCode = null
+        )
+    }
+
+    fun validateAndOpenCampaign(onValid: (campaignId: String, campaignCode: String, campaignType: String) -> Unit) {
+        val code = _uiState.value.campaignCodeInput.trim()
+        if (code.isEmpty()) {
+            _uiState.value = _uiState.value.copy(validationError = "Enter a campaign code")
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isValidating = true, validationError = null)
+            when (val result = campaignValidator.validate(code)) {
+                is Resource.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        isValidating = false,
+                        campaignCodeInput = ""
+                    )
+                    onValid(result.data.campaignId, result.data.campaignCode, result.data.campaignType)
+                }
+                is Resource.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isValidating = false,
+                        validationError = result.message
+                    )
+                }
+                is Resource.Loading -> {}
+            }
         }
     }
 }

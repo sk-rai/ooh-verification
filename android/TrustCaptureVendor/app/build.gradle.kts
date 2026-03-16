@@ -19,9 +19,13 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8000/\"")
+        manifestPlaceholders["cleartextTrafficPermitted"] = "true"
     }
 
     buildTypes {
+        debug {
+            manifestPlaceholders["cleartextTrafficPermitted"] = "true"
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -29,6 +33,7 @@ android {
                 "proguard-rules.pro"
             )
             buildConfigField("String", "BASE_URL", "\"https://api.trustcapture.com/\"")
+            manifestPlaceholders["cleartextTrafficPermitted"] = "false"
         }
     }
     compileOptions {
@@ -79,6 +84,10 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
+
+    // SQLCipher
+    implementation(libs.sqlcipher.android)
+    implementation(libs.sqlite.ktx)
 
     // DataStore
     implementation(libs.datastore.preferences)

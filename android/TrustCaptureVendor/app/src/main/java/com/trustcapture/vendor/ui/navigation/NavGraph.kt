@@ -11,18 +11,22 @@ import com.trustcapture.vendor.ui.camera.CameraScreen
 import com.trustcapture.vendor.ui.campaigns.CampaignsScreen
 import com.trustcapture.vendor.ui.login.LoginScreen
 import com.trustcapture.vendor.ui.otp.OtpScreen
+import com.trustcapture.vendor.ui.privacy.PrivacyConsentScreen
+import com.trustcapture.vendor.ui.settings.SettingsScreen
 
 object Routes {
+    const val PRIVACY_CONSENT = "privacy_consent"
     const val LOGIN = "login"
     const val OTP = "otp/{phoneNumber}/{vendorId}"
     const val CAMPAIGNS = "campaigns"
-    const val CAMERA = "camera/{campaignId}/{campaignCode}"
+    const val CAMERA = "camera/{campaignId}/{campaignCode}/{campaignType}"
+    const val SETTINGS = "settings"
 
     fun otp(phoneNumber: String, vendorId: String) =
         "otp/$phoneNumber/$vendorId"
 
-    fun camera(campaignId: String, campaignCode: String) =
-        "camera/$campaignId/$campaignCode"
+    fun camera(campaignId: String, campaignCode: String, campaignType: String) =
+        "camera/$campaignId/$campaignCode/$campaignType"
 }
 
 @Composable
@@ -36,6 +40,16 @@ fun TrustCaptureNavGraph(
         startDestination = startDestination,
         modifier = modifier
     ) {
+        composable(Routes.PRIVACY_CONSENT) {
+            PrivacyConsentScreen(
+                onConsentGiven = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(Routes.PRIVACY_CONSENT) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(Routes.LOGIN) {
             LoginScreen(
                 onOtpRequested = { phoneNumber, vendorId ->
@@ -63,13 +77,16 @@ fun TrustCaptureNavGraph(
 
         composable(Routes.CAMPAIGNS) {
             CampaignsScreen(
-                onCampaignSelected = { campaignId, campaignCode ->
-                    navController.navigate(Routes.camera(campaignId, campaignCode))
+                onCampaignSelected = { campaignId, campaignCode, campaignType ->
+                    navController.navigate(Routes.camera(campaignId, campaignCode, campaignType))
                 },
                 onLoggedOut = {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(0) { inclusive = true }
                     }
+                },
+                onSettings = {
+                    navController.navigate(Routes.SETTINGS)
                 }
             )
         }
@@ -78,11 +95,23 @@ fun TrustCaptureNavGraph(
             route = Routes.CAMERA,
             arguments = listOf(
                 navArgument("campaignId") { type = NavType.StringType },
-                navArgument("campaignCode") { type = NavType.StringType }
+                navArgument("campaignCode") { type = NavType.StringType },
+                navArgument("campaignType") { type = NavType.StringType }
             )
         ) {
             CameraScreen(
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onLoggedOut = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
     }

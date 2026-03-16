@@ -32,6 +32,9 @@ object WatermarkGenerator {
      * Burns watermark into photo pixels. Returns URI of the watermarked file.
      * The watermark is rendered in the bottom 15% of the image with a
      * semi-transparent black background, using monospace font.
+     *
+     * Uses BitmapFactory.Options.inSampleSize to downsample large photos
+     * before processing, reducing memory usage significantly.
      */
     fun applyWatermark(
         context: Context,
@@ -39,10 +42,33 @@ object WatermarkGenerator {
         data: WatermarkData
     ): Uri? {
         return try {
-            // Decode the source bitmap
+            // First pass: decode bounds only to determine dimensions
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.contentResolver.openInputStream(sourceUri)?.use { stream ->
+                BitmapFactory.decodeStream(stream, null, options)
+            }
+
+            // Calculate inSampleSize: downsample if either dimension > 3000px
+            val maxDim = 3000
+            var sampleSize = 1
+            val w = options.outWidth
+            val h = options.outHeight
+            if (w > maxDim || h > maxDim) {
+                val halfW = w / 2
+                val halfH = h / 2
+                while ((halfW / sampleSize) >= maxDim || (halfH / sampleSize) >= maxDim) {
+                    sampleSize *= 2
+                }
+            }
+
+            // Second pass: decode with sample size
+            val decodeOptions = BitmapFactory.Options().apply {
+                inSampleSize = sampleSize
+                inPreferredConfig = Bitmap.Config.ARGB_8888
+            }
             val inputStream = context.contentResolver.openInputStream(sourceUri)
                 ?: return null
-            val original = BitmapFactory.decodeStream(inputStream)
+            val original = BitmapFactory.decodeStream(inputStream, null, decodeOptions)
             inputStream.close()
 
             if (original == null) return null
@@ -118,13 +144,22 @@ object WatermarkGenerator {
                 brandPaint
             )
 
-            // Save watermarked bitmap
+            // Save watermarked bitmap with adaptive compression
+            // Target: ~1-2MB output. Start at 90% quality, reduce if too large.
             val outputFile = File(
                 context.cacheDir,
                 "WM_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(data.timestamp)}.jpg"
             )
+            var quality = 90
             FileOutputStream(outputFile).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 92, out)
+                bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out)
+            }
+            // If file > 2MB, recompress at lower quality
+            if (outputFile.length() > 2 * 1024 * 1024) {
+                quality = 80
+                FileOutputStream(outputFile).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out)
+                }
             }
             bitmap.recycle()
 

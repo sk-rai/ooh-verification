@@ -32,17 +32,22 @@ data class EnvironmentalData(
  *
  * Sensors are registered on subscribe and unregistered on cancel,
  * so battery usage is minimal when not actively capturing.
+ *
+ * Uses SENSOR_DELAY_UI for most sensors (slower updates, less CPU)
+ * and SENSOR_DELAY_GAME only for accelerometer (tremor detection needs faster sampling).
  */
 @Singleton
 class EnvironmentalSensors @Inject constructor() {
 
     companion object {
         private const val TREMOR_THRESHOLD = 1.5f // m/s² deviation from gravity
+        private const val EMIT_THROTTLE_MS = 200L // Throttle emissions to reduce recomposition
     }
 
     /**
      * Emits EnvironmentalData updates as sensor values change.
      * Registers all available sensors; missing sensors are null in the output.
+     * Emissions are throttled to reduce UI recomposition overhead.
      */
     fun observe(context: Context): Flow<EnvironmentalData> = callbackFlow {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -54,6 +59,7 @@ class EnvironmentalSensors @Inject constructor() {
         var magZ: Float? = null
         var accelMag: Float? = null
         var tremor = false
+        var lastEmitTime = 0L
 
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
@@ -79,6 +85,11 @@ class EnvironmentalSensors @Inject constructor() {
                         tremor = kotlin.math.abs(mag - SensorManager.GRAVITY_EARTH) > TREMOR_THRESHOLD
                     }
                 }
+
+                // Throttle emissions to reduce CPU/UI overhead
+                val now = System.currentTimeMillis()
+                if (now - lastEmitTime < EMIT_THROTTLE_MS) return
+                lastEmitTime = now
 
                 val magMagnitude = if (magX != null && magY != null && magZ != null) {
                     kotlin.math.sqrt(magX!! * magX!! + magY!! * magY!! + magZ!! * magZ!!)
@@ -106,20 +117,22 @@ class EnvironmentalSensors @Inject constructor() {
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
         }
 
-        // Register all available sensors
+        // Register all available sensors with appropriate delays
+        // SENSOR_DELAY_UI (~60ms) for most sensors — sufficient for display
+        // SENSOR_DELAY_GAME (~20ms) for accelerometer — needed for tremor detection
         val barometer = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE)
         val lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
         val magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
         barometer?.let {
-            sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
         }
         lightSensor?.let {
-            sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
         }
         magnetometer?.let {
-            sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
         }
         accelerometer?.let {
             sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME)

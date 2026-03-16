@@ -215,11 +215,11 @@ async def upload_photo(
     # Check photo quota (Req 11.4: Quota enforcement)
     enforcer = get_quota_enforcer(db)
     try:
-        await enforcer.check_photo_quota(str(vendor.client_id))
+        await enforcer.check_photo_quota(str(vendor.created_by_client_id))
         
         # Calculate file size in MB for storage quota check
         file_size_mb = len(photo_bytes) / (1024 * 1024)
-        await enforcer.check_storage_quota(str(vendor.client_id), file_size_mb)
+        await enforcer.check_storage_quota(str(vendor.created_by_client_id), file_size_mb)
     except QuotaExceededError as e:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
@@ -350,6 +350,7 @@ async def upload_photo(
         photo_id=photo_id,
         campaign_id=campaign.campaign_id,
         vendor_id=vendor.vendor_id,
+        tenant_id=vendor.tenant_id,
         capture_timestamp=capture_dt,
         upload_timestamp=datetime.utcnow(),
         s3_key=photo_s3_key,
@@ -417,8 +418,8 @@ async def upload_photo(
     
     # Increment usage counters (Req 11.3: Usage tracking)
     try:
-        await enforcer.increment_photo_usage(str(vendor.client_id))
-        await enforcer.increment_storage_usage(str(vendor.client_id), file_size_mb)
+        await enforcer.increment_photo_usage(str(vendor.created_by_client_id))
+        await enforcer.increment_storage_usage(str(vendor.created_by_client_id), file_size_mb)
     except Exception as e:
         # Log error but don't fail the upload since photo is already committed
         import logging

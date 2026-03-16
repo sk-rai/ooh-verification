@@ -17,11 +17,17 @@ def get_storage_service() -> StorageInterface:
     Returns:
         StorageInterface implementation
     """
-    # Check if we're in test mode
+    # Check if we're in test mode or mock storage is requested
     if os.getenv('TESTING') == 'true' or os.getenv('USE_MOCK_STORAGE') == 'true':
         return MockStorageService()
     
-    # Otherwise, use S3 storage (lazy import to avoid connection on module load)
+    from app.core.config import settings
+    
+    # No AWS credentials configured — use mock storage for local development
+    if not settings.AWS_ACCESS_KEY_ID and not settings.AWS_SECRET_ACCESS_KEY:
+        return MockStorageService()
+    
+    # Production: use S3 storage
     from app.services.s3_storage import S3StorageService
     return S3StorageService()
 

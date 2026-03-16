@@ -35,8 +35,13 @@ class MainActivity : ComponentActivity() {
                 var startDestination by remember { mutableStateOf<String?>(null) }
 
                 LaunchedEffect(Unit) {
+                    val hasConsent = userPreferences.hasPrivacyConsent.first()
                     val isLoggedIn = userPreferences.isLoggedIn.first()
-                    startDestination = if (isLoggedIn) Routes.CAMPAIGNS else Routes.LOGIN
+                    startDestination = when {
+                        !hasConsent -> Routes.PRIVACY_CONSENT
+                        isLoggedIn -> Routes.CAMPAIGNS
+                        else -> Routes.LOGIN
+                    }
                 }
 
                 val navController = rememberNavController()
