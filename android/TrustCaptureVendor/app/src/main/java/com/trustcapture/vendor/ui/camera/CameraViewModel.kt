@@ -287,7 +287,10 @@ class CameraViewModel @Inject constructor(
                                 magnitude = env.magneticMagnitude ?: 0f
                             )
                         } else null,
-                        tremorDetected = env.tremorDetected
+                        tremorDetected = env.tremorDetected,
+                        tremorFrequency = env.tremorFrequencyHz,
+                        tremorIsHuman = env.tremorIsHuman,
+                        tremorConfidence = env.tremorConfidence
                     )
                 } else null
             )

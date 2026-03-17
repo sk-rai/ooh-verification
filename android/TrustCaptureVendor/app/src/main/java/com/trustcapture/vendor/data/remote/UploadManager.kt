@@ -150,7 +150,7 @@ class UploadManager @Inject constructor(
                     vendorId = photo.vendorId,
                     deviceId = "trustcapture_device_key",
                     photoId = photo.id,
-                    details = """{"server_photo_id":"${response.body()?.photoId}","verification":"${response.body()?.verificationStatus}"}""",
+                    details = """{"server_photo_id":"${response.body()?.photoId}","verification":"${response.body()?.verificationStatus}","confidence":${response.body()?.verificationConfidence ?: "null"},"flags":${response.body()?.verificationFlags?.let { "[${it.joinToString(",") { f -> "\"$f\"" }}]" } ?: "null"}}""",
                     emulatorMode = photo.emulatorMode
                 )
 

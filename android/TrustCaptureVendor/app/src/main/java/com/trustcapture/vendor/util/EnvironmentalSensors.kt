@@ -23,7 +23,10 @@ data class EnvironmentalData(
     val magneticZ: Float? = null,
     val magneticMagnitude: Float? = null,
     val tremorDetected: Boolean = false,
-    val accelerometerMagnitude: Float? = null
+    val accelerometerMagnitude: Float? = null,
+    val tremorFrequencyHz: Float? = null,
+    val tremorIsHuman: Boolean? = null,
+    val tremorConfidence: Float? = null
 )
 
 /**
@@ -42,6 +45,10 @@ class EnvironmentalSensors @Inject constructor() {
     companion object {
         private const val TREMOR_THRESHOLD = 1.5f // m/s² deviation from gravity
         private const val EMIT_THROTTLE_MS = 200L // Throttle emissions to reduce recomposition
+        // Human hand tremor is typically 4-12 Hz
+        private const val HUMAN_TREMOR_MIN_HZ = 4f
+        private const val HUMAN_TREMOR_MAX_HZ = 12f
+        private const val TREMOR_WINDOW_SIZE = 50 // samples for frequency estimation
     }
 
     /**
@@ -60,6 +67,13 @@ class EnvironmentalSensors @Inject constructor() {
         var accelMag: Float? = null
         var tremor = false
         var lastEmitTime = 0L
+
+        // Tremor frequency analysis: track zero-crossing times
+        val accelTimestamps = mutableListOf<Long>() // nanosecond timestamps of zero-crossings
+        var lastDeviationSign = 0 // +1 or -1
+        var tremorFreq: Float? = null
+        var tremorHuman: Boolean? = null
+        var tremorConf: Float? = null
 
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
@@ -81,8 +95,33 @@ class EnvironmentalSensors @Inject constructor() {
                         val z = event.values[2]
                         val mag = kotlin.math.sqrt(x * x + y * y + z * z)
                         accelMag = mag
-                        // Tremor = significant deviation from gravity (9.81 m/s²)
-                        tremor = kotlin.math.abs(mag - SensorManager.GRAVITY_EARTH) > TREMOR_THRESHOLD
+                        val deviation = mag - SensorManager.GRAVITY_EARTH
+                        tremor = kotlin.math.abs(deviation) > TREMOR_THRESHOLD
+
+                        // Zero-crossing detection for frequency estimation
+                        val sign = if (deviation >= 0) 1 else -1
+                        if (lastDeviationSign != 0 && sign != lastDeviationSign) {
+                            accelTimestamps.add(event.timestamp)
+                            if (accelTimestamps.size > TREMOR_WINDOW_SIZE) {
+                                accelTimestamps.removeAt(0)
+                            }
+                            // Estimate frequency from zero-crossings
+                            if (accelTimestamps.size >= 4) {
+                                val durationNs = accelTimestamps.last() - accelTimestamps.first()
+                                val crossings = accelTimestamps.size - 1
+                                // Each full cycle = 2 zero-crossings
+                                val durationSec = durationNs / 1_000_000_000.0f
+                                if (durationSec > 0) {
+                                    tremorFreq = (crossings / 2.0f) / durationSec
+                                    tremorHuman = tremorFreq!! in HUMAN_TREMOR_MIN_HZ..HUMAN_TREMOR_MAX_HZ
+                                    // Confidence based on consistency of crossings
+                                    tremorConf = if (tremor) {
+                                        (crossings.toFloat() / TREMOR_WINDOW_SIZE).coerceIn(0f, 1f)
+                                    } else 0f
+                                }
+                            }
+                        }
+                        lastDeviationSign = sign
                     }
                 }
 
@@ -109,7 +148,10 @@ class EnvironmentalSensors @Inject constructor() {
                         magneticZ = magZ,
                         magneticMagnitude = magMagnitude,
                         tremorDetected = tremor,
-                        accelerometerMagnitude = accelMag
+                        accelerometerMagnitude = accelMag,
+                        tremorFrequencyHz = tremorFreq,
+                        tremorIsHuman = tremorHuman,
+                        tremorConfidence = tremorConf
                     )
                 )
             }

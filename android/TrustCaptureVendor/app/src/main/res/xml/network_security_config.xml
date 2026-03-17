@@ -13,6 +13,11 @@
         openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | openssl enc -base64
 -->
 <network-security-config>
+    <!-- Emulator localhost: allow cleartext HTTP for development -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+
     <!-- Production domain with certificate pinning -->
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">api.trustcapture.com</domain>
@@ -28,7 +33,7 @@
         </trust-anchors>
     </domain-config>
 
-    <!-- Debug-only: Allow cleartext to emulator localhost -->
+    <!-- Debug-only: Trust user-installed certificates -->
     <debug-overrides>
         <trust-anchors>
             <certificates src="system" />

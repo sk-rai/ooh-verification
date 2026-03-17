@@ -42,6 +42,8 @@ data class PhotoUploadResponse(
     @SerializedName("signature_valid") val signatureValid: Boolean?,
     @SerializedName("location_match_score") val locationMatchScore: Double?,
     @SerializedName("distance_from_expected") val distanceFromExpected: Double?,
+    @SerializedName("verification_confidence") val verificationConfidence: Double?,
+    @SerializedName("verification_flags") val verificationFlags: List<String>?,
     @SerializedName("s3_url") val s3Url: String?,
     @SerializedName("thumbnail_url") val thumbnailUrl: String?,
     @SerializedName("message") val message: String?

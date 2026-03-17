@@ -41,7 +41,10 @@ data class EnvironmentalSensorData(
     @SerializedName("altitude_meters") val altitudeMeters: Float? = null,
     @SerializedName("light_lux") val lightLux: Float? = null,
     @SerializedName("magnetic_field") val magneticField: MagneticFieldData? = null,
-    @SerializedName("tremor_detected") val tremorDetected: Boolean = false
+    @SerializedName("tremor_detected") val tremorDetected: Boolean = false,
+    @SerializedName("tremor_frequency") val tremorFrequency: Float? = null,
+    @SerializedName("tremor_is_human") val tremorIsHuman: Boolean? = null,
+    @SerializedName("tremor_confidence") val tremorConfidence: Float? = null
 )
 
 data class MagneticFieldData(

@@ -95,6 +95,9 @@ object UploadPayloadTransformer {
                 mag.get("magnitude")?.let { e.addProperty("magnetic_field_magnitude", it.asFloat) }
             }
             env.get("tremor_detected")?.let { e.addProperty("hand_tremor_is_human", it.asBoolean) }
+            env.get("tremor_frequency")?.let { e.addProperty("hand_tremor_frequency", it.asFloat) }
+            env.get("tremor_is_human")?.let { e.addProperty("hand_tremor_is_human", it.asBoolean) }
+            env.get("tremor_confidence")?.let { e.addProperty("hand_tremor_confidence", it.asFloat) }
             out.add("environmental", e)
         }
 
