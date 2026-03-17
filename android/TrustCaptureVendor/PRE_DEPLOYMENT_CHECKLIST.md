@@ -17,8 +17,8 @@ Items deferred during development that must be completed before Play Store relea
 - [ ] Set proper versionCode/versionName scheme
 
 ## Permissions
-- [ ] Task 35.2: Permission rationale dialogs (explain why camera/location/phone needed)
-- [ ] Task 35.3: Handle "Don't ask again" → direct to app settings
+- [x] Task 35.2: Permission rationale dialogs (explain why camera/location/phone needed)
+- [x] Task 35.3: Handle "Don't ask again" → direct to app settings
 - [ ] Background location permission (separate from foreground) if needed for sync
 
 ## Missing Features
@@ -26,7 +26,7 @@ Items deferred during development that must be completed before Play Store relea
 - [x] Task 53: Battery optimization (GPS power management, low-power mode when camera inactive) — done
 - [x] Task 54: Error handling polish (user-friendly error messages, retry dialogs) — done
 - [ ] Task 55.1 (partial): Delivery campaign signature capture — Canvas-based touch drawing pad for recipient signature (Req 18.3). Deferred pending user demand. Requires: signature composable, PNG export, upload as separate file, backend storage.
-- [ ] WorkManager for background sync (currently upload only triggers on capture + screen load)
+- [x] WorkManager for background sync — periodic 15min + immediate one-shot after capture
 
 ## Testing
 - [ ] Property-based tests (tasks 35.3, 38.2, 38.6, 39.3, 42.2-42.4, 43.2, 45.2, 46.3-46.5)

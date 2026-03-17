@@ -397,6 +397,8 @@ class CameraViewModel @Inject constructor(
 
                 // Trigger upload queue to push to backend
                 uploadManager.processQueue()
+                // Also schedule via WorkManager for reliability
+                com.trustcapture.vendor.data.remote.UploadScheduler.triggerImmediateUpload(appContext)
 
                 // Switch back to balanced power after upload
                 LocationHelper.switchMode(GpsPowerMode.BALANCED)

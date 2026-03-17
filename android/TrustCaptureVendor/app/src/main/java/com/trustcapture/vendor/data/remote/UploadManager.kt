@@ -77,6 +77,21 @@ class UploadManager @Inject constructor(
         }
     }
 
+    /**
+     * Blocking (suspend) version for WorkManager. Processes the queue
+     * and returns when done. Does not launch a new coroutine.
+     */
+    suspend fun processQueueBlocking() {
+        if (_state.value.isProcessing) return
+        _state.value = _state.value.copy(isProcessing = true, lastError = null)
+        try {
+            processAllPending()
+        } finally {
+            _state.value = _state.value.copy(isProcessing = false)
+            cleanupCompleted()
+        }
+    }
+
     /** Remove uploaded photo records and their encrypted files to free disk space. */
     private suspend fun cleanupCompleted() {
         try {
