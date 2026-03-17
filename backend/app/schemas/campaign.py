@@ -1,6 +1,4 @@
-"""
-Pydantic schemas for campaign management endpoints.
-"""
+"""Pydantic schemas for campaign management endpoints."""
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
@@ -18,6 +16,8 @@ class LocationProfileCreate(BaseModel):
     expected_pressure_max: Optional[float] = Field(None, description="Maximum expected pressure in hPa")
     expected_light_min: Optional[float] = Field(None, description="Minimum expected light in lux")
     expected_light_max: Optional[float] = Field(None, description="Maximum expected light in lux")
+    expected_magnetic_min: Optional[float] = Field(None, description="Minimum expected magnetic field in µT")
+    expected_magnetic_max: Optional[float] = Field(None, description="Maximum expected magnetic field in µT")
 
     class Config:
         json_schema_extra = {
@@ -30,9 +30,12 @@ class LocationProfileCreate(BaseModel):
                 "expected_pressure_min": 1010.0,
                 "expected_pressure_max": 1020.0,
                 "expected_light_min": 100.0,
-                "expected_light_max": 500.0
+                "expected_light_max": 500.0,
+                "expected_magnetic_min": 40.0,
+                "expected_magnetic_max": 60.0
             }
         }
+
 
 
 class LocationProfileResponse(BaseModel):
@@ -48,6 +51,8 @@ class LocationProfileResponse(BaseModel):
     expected_pressure_max: Optional[float]
     expected_light_min: Optional[float]
     expected_light_max: Optional[float]
+    expected_magnetic_min: Optional[float]
+    expected_magnetic_max: Optional[float]
     created_at: datetime
 
     class Config:
@@ -94,6 +99,7 @@ class CampaignCreate(BaseModel):
                 }
             }
         }
+
 
 
 class CampaignUpdate(BaseModel):
