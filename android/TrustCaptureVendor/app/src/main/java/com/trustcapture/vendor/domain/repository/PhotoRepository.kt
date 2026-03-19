@@ -123,4 +123,15 @@ class PhotoRepository @Inject constructor(
     suspend fun resetStaleUploading() = withContext(Dispatchers.IO) {
         photoDao.resetStaleUploading()
     }
+
+    /** Give max-retried photos another chance (e.g. after a bug fix) */
+    suspend fun resetMaxRetriedPhotos(maxRetries: Int = 5) = withContext(Dispatchers.IO) {
+        photoDao.resetMaxRetriedPhotos(maxRetries)
+    }
+
+    /** Purge photos stuck failed for over 24 hours */
+    suspend fun purgeAbandonedPhotos(maxRetries: Int = 5) = withContext(Dispatchers.IO) {
+        val cutoff = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
+        photoDao.purgeAbandonedPhotos(maxRetries, cutoff)
+    }
 }

@@ -75,6 +75,10 @@ class UploadManager @Inject constructor(
             try {
                 // Reset any photos stuck in UPLOADING (stale from crashed workers)
                 photoRepository.resetStaleUploading()
+                // Give max-retried photos another chance (they may have failed due to bugs, not real errors)
+                photoRepository.resetMaxRetriedPhotos()
+                // Purge truly abandoned photos (failed + max retries + older than 24h)
+                photoRepository.purgeAbandonedPhotos()
                 processAllPending()
             } catch (e: Exception) {
                 Log.e(TAG, "processQueueInternal failed", e)

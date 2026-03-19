@@ -40,6 +40,14 @@ interface PhotoDao {
     @Query("UPDATE photos SET uploadStatus = 'PENDING' WHERE uploadStatus = 'UPLOADING'")
     suspend fun resetStaleUploading()
 
+    /** Reset retry count for photos that maxed out — gives them another chance after a fix */
+    @Query("UPDATE photos SET retryCount = 0, uploadStatus = 'PENDING', lastError = NULL WHERE retryCount >= :maxRetries AND uploadStatus = 'FAILED'")
+    suspend fun resetMaxRetriedPhotos(maxRetries: Int)
+
+    /** Delete photos that have been stuck failed for over 24 hours */
+    @Query("DELETE FROM photos WHERE uploadStatus = 'FAILED' AND retryCount >= :maxRetries AND createdAt < :cutoffMillis")
+    suspend fun purgeAbandonedPhotos(maxRetries: Int, cutoffMillis: Long)
+
     // GDPR data export (Req 24.3)
     @Query("SELECT * FROM photos WHERE vendorId = :vendorId ORDER BY capturedAt DESC")
     suspend fun getAllForVendor(vendorId: String): List<PhotoEntity>
