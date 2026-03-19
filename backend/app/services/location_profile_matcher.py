@@ -121,29 +121,29 @@ class LocationProfileMatcher:
         # Calculate environmental sensor score
         env_score = 0.0
         env_components = 0
-        
-        # Check pressure range
-        if (captured_data.get('pressure') is not None and 
-            location_profile.expected_pressure_range):
+
+        # Check pressure range (using min/max columns)
+        if (captured_data.get('pressure') is not None and
+                location_profile.expected_pressure_min is not None and
+                location_profile.expected_pressure_max is not None):
             env_components += 1
-            if self._is_in_range(
-                captured_data['pressure'],
-                location_profile.expected_pressure_range
-            ):
+            if (location_profile.expected_pressure_min
+                    <= captured_data['pressure']
+                    <= location_profile.expected_pressure_max):
                 result['details']['pressure_match'] = True
                 env_score += 1
-        
-        # Check light level range
-        if (captured_data.get('light_level') is not None and 
-            location_profile.expected_light_range):
+
+        # Check light level range (using min/max columns)
+        if (captured_data.get('light_level') is not None and
+                location_profile.expected_light_min is not None and
+                location_profile.expected_light_max is not None):
             env_components += 1
-            if self._is_in_range(
-                captured_data['light_level'],
-                location_profile.expected_light_range
-            ):
+            if (location_profile.expected_light_min
+                    <= captured_data['light_level']
+                    <= location_profile.expected_light_max):
                 result['details']['light_match'] = True
                 env_score += 1
-        
+
         # Calculate environmental score
         if env_components > 0:
             result['details']['environmental_score'] = (
