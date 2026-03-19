@@ -10,11 +10,6 @@ import dagger.assisted.AssistedInject
 
 private const val TAG = "UploadWorker"
 
-/**
- * WorkManager worker that processes the photo upload queue in the background.
- * Triggered periodically and on network availability changes.
- * Delegates actual upload logic to UploadManager.
- */
 @HiltWorker
 class UploadWorker @AssistedInject constructor(
     @Assisted appContext: Context,
@@ -23,19 +18,20 @@ class UploadWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        Log.d(TAG, "UploadWorker started — processing pending uploads")
+        Log.d(TAG, "UploadWorker started (attempt $runAttemptCount, id=${id})")
         return try {
             uploadManager.processQueueBlocking()
             val pending = uploadManager.state.value.pendingCount
+            val lastError = uploadManager.state.value.lastError
             if (pending > 0) {
-                Log.d(TAG, "UploadWorker finished with $pending still pending — will retry")
+                Log.d(TAG, "UploadWorker done — $pending still pending (error=$lastError). Will retry.")
                 Result.retry()
             } else {
-                Log.d(TAG, "UploadWorker finished — all uploads complete")
+                Log.d(TAG, "UploadWorker done — all uploads complete")
                 Result.success()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "UploadWorker failed", e)
+            Log.e(TAG, "UploadWorker exception", e)
             Result.retry()
         }
     }

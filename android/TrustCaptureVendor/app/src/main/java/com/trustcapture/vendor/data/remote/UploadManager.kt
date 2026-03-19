@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import android.util.Log
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -37,11 +39,6 @@ data class UploadQueueState(
     val lastError: String? = null
 )
 
-/**
- * Manages the photo upload queue with retry logic and offline support.
- * Picks up encrypted photos from the local DB, decrypts them, and uploads
- * to the backend via multipart POST. Retries failed uploads with exponential backoff.
- */
 @Singleton
 class UploadManager @Inject constructor(
     private val photoApi: PhotoApi,
@@ -55,76 +52,74 @@ class UploadManager @Inject constructor(
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val processingMutex = Mutex()
 
     private val _state = MutableStateFlow(UploadQueueState())
     val state: StateFlow<UploadQueueState> = _state.asStateFlow()
 
-    /**
-     * Starts processing the upload queue. Call after photo capture
-     * or when network becomes available.
-     */
+    /** Fire-and-forget version for UI calls. */
     fun processQueue() {
-        if (_state.value.isProcessing) return
-        scope.launch {
+        scope.launch { processQueueInternal() }
+    }
+
+    /** Suspend version for WorkManager — waits for completion. */
+    suspend fun processQueueBlocking() {
+        processQueueInternal()
+    }
+
+    private suspend fun processQueueInternal() {
+        // Mutex ensures only one processing loop runs at a time.
+        // Other callers wait instead of bailing out.
+        processingMutex.withLock {
             _state.value = _state.value.copy(isProcessing = true, lastError = null)
             try {
+                // Reset any photos stuck in UPLOADING (stale from crashed workers)
+                photoRepository.resetStaleUploading()
                 processAllPending()
+            } catch (e: Exception) {
+                Log.e(TAG, "processQueueInternal failed", e)
+                _state.value = _state.value.copy(lastError = e.message)
             } finally {
                 _state.value = _state.value.copy(isProcessing = false)
-                // Proactively clean up successfully uploaded records and files
                 cleanupCompleted()
             }
         }
     }
 
-    /**
-     * Blocking (suspend) version for WorkManager. Processes the queue
-     * and returns when done. Does not launch a new coroutine.
-     */
-    suspend fun processQueueBlocking() {
-        if (_state.value.isProcessing) return
-        _state.value = _state.value.copy(isProcessing = true, lastError = null)
-        try {
-            processAllPending()
-        } finally {
-            _state.value = _state.value.copy(isProcessing = false)
-            cleanupCompleted()
-        }
-    }
-
-    /** Remove uploaded photo records and their encrypted files to free disk space. */
     private suspend fun cleanupCompleted() {
-        try {
-            photoRepository.cleanupUploaded()
-        } catch (e: Exception) {
-            Log.w(TAG, "Cleanup of uploaded photos failed", e)
-        }
+        try { photoRepository.cleanupUploaded() } catch (e: Exception) { Log.w(TAG, "Cleanup failed", e) }
     }
 
     private suspend fun processAllPending() {
         val pendingPhotos = photoRepository.getPendingUploads().first()
-
+        Log.d(TAG, "processAllPending: ${pendingPhotos.size} photos queued")
         _state.value = _state.value.copy(pendingCount = pendingPhotos.size)
 
-        for (photo in pendingPhotos) {
-            if (!isNetworkAvailable()) {
-                _state.value = _state.value.copy(lastError = "No network connection")
-                return
-            }
-            if (photo.retryCount >= MAX_RETRIES) continue
+        if (pendingPhotos.isEmpty()) return
 
+        if (!isNetworkAvailable()) {
+            Log.w(TAG, "No network — skipping upload cycle")
+            _state.value = _state.value.copy(lastError = "No network connection")
+            return
+        }
+
+        for (photo in pendingPhotos) {
+            if (photo.retryCount >= MAX_RETRIES) {
+                Log.w(TAG, "Photo ${photo.id} exceeded max retries (${photo.retryCount}), skipping")
+                continue
+            }
             uploadSinglePhoto(photo)
         }
     }
 
     private suspend fun uploadSinglePhoto(photo: PhotoEntity) {
+        Log.d(TAG, "Uploading photo ${photo.id} (campaign=${photo.campaignCode}, retry=${photo.retryCount})")
         try {
             photoRepository.markUploading(photo.id)
 
-            // Decrypt the photo from encrypted storage
             val photoBytes = photoRepository.decryptForUpload(photo.encryptedPath)
+            Log.d(TAG, "Photo ${photo.id} decrypted (${photoBytes.size} bytes)")
 
-            // Build multipart request
             val photoBody = photoBytes.toRequestBody("image/jpeg".toMediaType())
             val photoPart = MultipartBody.Part.createFormData("photo", "photo.jpg", photoBody)
 
@@ -142,69 +137,50 @@ class UploadManager @Inject constructor(
             ).toRequestBody("text/plain".toMediaType())
             val signatureBody = UploadPayloadTransformer.transformSignature(photo.signatureJson)
                 .toRequestBody("text/plain".toMediaType())
-            val campaignCodeBody = photo.campaignCode
-                .toRequestBody("text/plain".toMediaType())
-            val timestampBody = formatTimestamp(photo.capturedAt)
-                .toRequestBody("text/plain".toMediaType())
+            val campaignCodeBody = photo.campaignCode.toRequestBody("text/plain".toMediaType())
+            val timestampBody = formatTimestamp(photo.capturedAt).toRequestBody("text/plain".toMediaType())
 
+            Log.d(TAG, "Photo ${photo.id} sending to backend...")
             val response = photoApi.uploadPhoto(
-                photo = photoPart,
-                sensorData = sensorDataBody,
-                signature = signatureBody,
-                campaignCode = campaignCodeBody,
-                captureTimestamp = timestampBody
+                photo = photoPart, sensorData = sensorDataBody, signature = signatureBody,
+                campaignCode = campaignCodeBody, captureTimestamp = timestampBody
             )
 
             if (response.isSuccessful) {
+                Log.d(TAG, "Photo ${photo.id} uploaded OK — server id=${response.body()?.photoId}")
                 photoRepository.markUploaded(photo.id)
-                // Delete encrypted file after successful upload
                 photoRepository.deleteAfterUpload(photo.id)
-
                 auditRepository.log(
-                    eventType = "PHOTO_UPLOADED",
-                    vendorId = photo.vendorId,
-                    deviceId = "trustcapture_device_key",
-                    photoId = photo.id,
+                    eventType = "PHOTO_UPLOADED", vendorId = photo.vendorId,
+                    deviceId = "trustcapture_device_key", photoId = photo.id,
                     details = """{"server_photo_id":"${response.body()?.photoId}","verification":"${response.body()?.verificationStatus}","confidence":${response.body()?.verificationConfidence ?: "null"},"flags":${response.body()?.verificationFlags?.let { "[${it.joinToString(",") { f -> "\"$f\"" }}]" } ?: "null"}}""",
                     emulatorMode = photo.emulatorMode
                 )
-
-                _state.value = _state.value.copy(
-                    pendingCount = (_state.value.pendingCount - 1).coerceAtLeast(0)
-                )
+                _state.value = _state.value.copy(pendingCount = (_state.value.pendingCount - 1).coerceAtLeast(0))
             } else {
                 val errorMsg = response.errorBody()?.string() ?: "Upload failed (${response.code()})"
+                Log.e(TAG, "Photo ${photo.id} upload failed: $errorMsg")
                 photoRepository.markFailed(photo.id, errorMsg)
-
                 auditRepository.log(
-                    eventType = "UPLOAD_FAILED",
-                    vendorId = photo.vendorId,
-                    deviceId = "trustcapture_device_key",
-                    photoId = photo.id,
+                    eventType = "UPLOAD_FAILED", vendorId = photo.vendorId,
+                    deviceId = "trustcapture_device_key", photoId = photo.id,
                     details = """{"code":${response.code()},"error":"$errorMsg"}""",
                     emulatorMode = photo.emulatorMode
                 )
-
                 _state.value = _state.value.copy(lastError = errorMsg)
-
-                // Exponential backoff before next retry
-                val backoff = BASE_DELAY_MS * (1L shl photo.retryCount.coerceAtMost(4))
-                delay(backoff)
+                delay(BASE_DELAY_MS * (1L shl photo.retryCount.coerceAtMost(4)))
             }
         } catch (e: Exception) {
             val errorMsg = e.localizedMessage ?: "Upload exception"
+            Log.e(TAG, "Photo ${photo.id} exception: $errorMsg", e)
             photoRepository.markFailed(photo.id, errorMsg)
             _state.value = _state.value.copy(lastError = errorMsg)
-
-            val backoff = BASE_DELAY_MS * (1L shl photo.retryCount.coerceAtMost(4))
-            delay(backoff)
+            delay(BASE_DELAY_MS * (1L shl photo.retryCount.coerceAtMost(4)))
         }
     }
 
     private fun formatTimestamp(epochMillis: Long): String {
-        return DateTimeFormatter.ISO_INSTANT
-            .withZone(ZoneOffset.UTC)
-            .format(Instant.ofEpochMilli(epochMillis))
+        return DateTimeFormatter.ISO_INSTANT.withZone(ZoneOffset.UTC).format(Instant.ofEpochMilli(epochMillis))
     }
 
     private fun isNetworkAvailable(): Boolean {

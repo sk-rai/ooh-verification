@@ -116,8 +116,11 @@ class PhotoRepository @Inject constructor(
     }
 
     suspend fun cleanupUploaded() = withContext(Dispatchers.IO) {
-        // Could also delete encrypted files here, but fallbackToDestructiveMigration
-        // handles stale data. For now just clear DB records.
         photoDao.deleteUploaded()
+    }
+
+    /** Reset photos stuck in UPLOADING back to PENDING */
+    suspend fun resetStaleUploading() = withContext(Dispatchers.IO) {
+        photoDao.resetStaleUploading()
     }
 }

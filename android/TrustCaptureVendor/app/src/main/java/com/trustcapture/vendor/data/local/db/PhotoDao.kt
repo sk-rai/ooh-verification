@@ -36,6 +36,10 @@ interface PhotoDao {
     @Query("DELETE FROM photos WHERE uploadStatus = 'UPLOADED'")
     suspend fun deleteUploaded()
 
+    /** Reset photos stuck in UPLOADING back to PENDING (stale from crashed workers) */
+    @Query("UPDATE photos SET uploadStatus = 'PENDING' WHERE uploadStatus = 'UPLOADING'")
+    suspend fun resetStaleUploading()
+
     // GDPR data export (Req 24.3)
     @Query("SELECT * FROM photos WHERE vendorId = :vendorId ORDER BY capturedAt DESC")
     suspend fun getAllForVendor(vendorId: String): List<PhotoEntity>
