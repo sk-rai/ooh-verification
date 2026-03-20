@@ -27,6 +27,7 @@ aioredis==2.0.1
 # External Services
 twilio==8.11.1
 stripe==7.11.0
+razorpay==1.4.2
 sendgrid==6.11.0
 
 # Testing

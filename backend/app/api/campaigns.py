@@ -17,11 +17,8 @@ from app.services.quota_enforcer import get_quota_enforcer, QuotaExceededError
 from app.services.elevation_service import get_pressure_range
 from app.services.magnetic_field_service import get_magnetic_field_range
 import logging
-
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/campaigns", tags=["campaigns"])
-
-
 @router.post("", response_model=CampaignResponse, status_code=status.HTTP_201_CREATED)
 async def create_campaign(data: CampaignCreate, client: Client = Depends(get_current_active_client), db: AsyncSession = Depends(get_db)):
     """Create a new campaign with optional location profile. Task A1: pressure auto-pop. Task A2: magnetic auto-pop."""
@@ -77,8 +74,6 @@ async def create_campaign(data: CampaignCreate, client: Client = Depends(get_cur
     result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign.campaign_id).options(selectinload(Campaign.location_profile)))
     campaign = result.scalar_one()
     return campaign
-
-
 @router.get("", response_model=CampaignListResponse)
 async def list_campaigns(status_filter: Optional[str] = Query(None), campaign_type: Optional[str] = Query(None), skip: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=1000), client: Client = Depends(get_current_active_client), db: AsyncSession = Depends(get_db)):
     """List all campaigns for the authenticated client."""
@@ -102,8 +97,6 @@ async def list_campaigns(status_filter: Optional[str] = Query(None), campaign_ty
     result = await db.execute(query)
     campaigns = result.scalars().all()
     return CampaignListResponse(campaigns=campaigns, total=total)
-
-
 @router.get("/{campaign_id}", response_model=CampaignResponse)
 async def get_campaign(campaign_id: UUID, client: Client = Depends(get_current_active_client), db: AsyncSession = Depends(get_db)):
     """Get campaign details by ID."""
@@ -112,8 +105,6 @@ async def get_campaign(campaign_id: UUID, client: Client = Depends(get_current_a
     if not campaign:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
     return campaign
-
-
 @router.patch("/{campaign_id}", response_model=CampaignResponse)
 async def update_campaign(campaign_id: UUID, data: CampaignUpdate, client: Client = Depends(get_current_active_client), db: AsyncSession = Depends(get_db)):
     """Update campaign information."""
@@ -134,8 +125,6 @@ async def update_campaign(campaign_id: UUID, data: CampaignUpdate, client: Clien
     result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign.campaign_id).options(selectinload(Campaign.location_profile)))
     campaign = result.scalar_one()
     return campaign
-
-
 @router.post("/{campaign_id}/vendors", response_model=list[VendorAssignmentResponse], status_code=status.HTTP_201_CREATED)
 async def assign_vendors_to_campaign(campaign_id: UUID, data: VendorAssignmentCreate, client: Client = Depends(get_current_active_client), db: AsyncSession = Depends(get_db)):
     """Assign vendors to a campaign and send SMS notifications."""
@@ -161,14 +150,11 @@ async def assign_vendors_to_campaign(campaign_id: UUID, data: VendorAssignmentCr
         assignments.append(assignment)
         await sms_service.send_campaign_assignment_sms(phone_number=vendor.phone_number, vendor_name=vendor.name, campaign_name=campaign.name, campaign_code=campaign.campaign_code)
     if not assignments and errors:
-        sep = "; "
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to assign vendors: {sep.join(errors)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to assign vendors: {'; '.join(errors)}")
     await db.commit()
     for assignment in assignments:
         await db.refresh(assignment)
     return assignments
-
-
 @router.delete("/{campaign_id}/vendors/{vendor_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_vendor_from_campaign(campaign_id: UUID, vendor_id: str, client: Client = Depends(get_current_active_client), db: AsyncSession = Depends(get_db)):
     """Remove a vendor assignment from a campaign."""

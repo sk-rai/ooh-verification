@@ -27,6 +27,7 @@ export interface Campaign {
   campaign_id: string
   campaign_code: string
   name: string
+  description?: string
   campaign_type: string
   status: string
   start_date: string
@@ -75,4 +76,19 @@ export interface BulkOperationRow {
 export interface BulkOperationResponse {
   created: any[]
   errors: BulkOperationRow[]
+}
+
+
+export interface PhotoLocation {
+  photo_id: string
+  campaign_name: string
+  campaign_code: string
+  confidence_score: number
+  vendor_id: string
+  timestamp: string
+  verification_status: string
+  latitude: number
+  longitude: number
+  match_confidence?: number
+  s3_url?: string
 }

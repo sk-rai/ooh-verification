@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: trustcapture
+      POSTGRES_PASSWORD: dev_password_123
+      POSTGRES_DB: trustcapture_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trustcapture -d trustcapture_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tcnet
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://trustcapture:dev_password_123@db:5432/trustcapture_db
+      SECRET_KEY: change-me-in-production-use-random-64-chars
+      JWT_SECRET_KEY: change-me-in-production-use-random-64-chars
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+      USE_MOCK_STORAGE: "true"
+      PORT: "8000"
+      WORKERS: "2"
+    depends_on:
+      db:
+        condition: service_healthy
+    links:
+      - db
+    networks:
+      - tcnet
+
+  web:
+    build:
+      context: ./web
+      args:
+        VITE_API_URL: http://localhost:8000
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - tcnet
+
+networks:
+  tcnet:
+    driver: bridge
+
+volumes:
+  pgdata:

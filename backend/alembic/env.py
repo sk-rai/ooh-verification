@@ -29,6 +29,9 @@ target_metadata = Base.metadata
 # Override sqlalchemy.url from environment variable if present
 database_url = os.getenv("DATABASE_URL")
 if database_url:
+    # Disable SSL for Docker internal connections
+    if "?" not in database_url:
+        database_url += "?ssl=disable"
     config.set_main_option("sqlalchemy.url", database_url)
 
 

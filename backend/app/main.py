@@ -12,6 +12,7 @@ import os
 
 from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations, tenants, assignments, bulk, admin, vendor_campaigns
 from app.core.database import close_db
+from app.core.config import settings
 from app.middleware.tenant_context import TenantContextMiddleware
 
 # Create FastAPI app
@@ -25,13 +26,18 @@ app = FastAPI(
 )
 
 # Configure CORS - MUST be before routers
+# Build CORS origins from env var + localhost defaults
+cors_origins = settings.cors_origins_list + [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+]
+# Deduplicate
+cors_origins = list(dict.fromkeys(cors_origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-    ],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -86,7 +92,7 @@ async def startup_event():
     print(f"📍 Campaign locations endpoints available at /api/campaigns/:id/locations")
     print(f"📸 Photo upload endpoints available at /api/photos")
     print(f"📊 Reports endpoints available at /api/reports")
-    print(f"🌐 CORS: localhost:3000, 127.0.0.1:3000, localhost:5173")
+    print(f"🌐 CORS origins: {cors_origins}")
 
 
 # Shutdown event

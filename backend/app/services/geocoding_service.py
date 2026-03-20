@@ -44,6 +44,7 @@ class GeocodingResult:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
+
             "latitude": self.latitude,
             "longitude": self.longitude,
             "formatted_address": self.formatted_address,
@@ -68,33 +69,35 @@ class GeocodingService:
         else:
             logger.warning("Google Maps API key not configured, will use Nominatim only")
 
-    async def geocode_address(self, address: str, use_cache: bool = True) -> 'GeocodingResult':
+    async def geocode_address(self, address: str, use_cache: bool = True) -> GeocodingResult:
         """Forward geocoding: Convert address to coordinates."""
         if not address or not address.strip():
             raise GeocodingError("Address cannot be empty")
 
         address = address.strip()
-        cache_key = f"forward:{address}"
 
+        # Check cache
         if use_cache:
-            cached = self._get_from_cache(cache_key)
+            cached = self._get_from_cache(f"forward:{address}")
             if cached:
                 logger.info(f"Cache hit for address: {address}")
                 return cached
 
+        # Try Google Maps first
         if self.google_api_key:
             try:
                 result = await self._google_forward_geocode(address)
                 if result:
-                    self._add_to_cache(cache_key, result)
+                    self._add_to_cache(f"forward:{address}", result)
                     return result
             except Exception as e:
                 logger.warning(f"Google Maps geocoding failed: {e}")
 
+        # Fallback to Nominatim
         try:
             result = await self._nominatim_forward_geocode(address)
             if result:
-                self._add_to_cache(cache_key, result)
+                self._add_to_cache(f"forward:{address}", result)
                 return result
         except Exception as e:
             logger.error(f"Nominatim geocoding failed: {e}")
@@ -106,7 +109,7 @@ class GeocodingService:
 
     async def reverse_geocode(
         self, latitude: float, longitude: float, use_cache: bool = True
-    ) -> 'GeocodingResult':
+    ) -> GeocodingResult:
         """Reverse geocoding: Convert coordinates to address."""
         if not (-90 <= latitude <= 90):
             raise GeocodingError(f"Invalid latitude: {latitude}. Must be between -90 and 90")
@@ -120,6 +123,7 @@ class GeocodingService:
                 logger.info(f"Cache hit for coordinates: ({latitude}, {longitude})")
                 return cached
 
+        # Try Google Maps first
         if self.google_api_key:
             try:
                 result = await self._google_reverse_geocode(latitude, longitude)
@@ -129,6 +133,7 @@ class GeocodingService:
             except Exception as e:
                 logger.warning(f"Google Maps reverse geocoding failed: {e}")
 
+        # Fallback to Nominatim
         try:
             result = await self._nominatim_reverse_geocode(latitude, longitude)
             if result:
@@ -143,7 +148,7 @@ class GeocodingService:
 
     async def batch_geocode_addresses(
         self, addresses: List[str], use_cache: bool = True
-    ) -> List[Optional['GeocodingResult']]:
+    ) -> List[Optional[GeocodingResult]]:
         """Batch forward geocode multiple addresses."""
         results = []
         for address in addresses:
@@ -157,7 +162,7 @@ class GeocodingService:
 
     async def batch_reverse_geocode(
         self, coordinates: List[Tuple[float, float]], use_cache: bool = True
-    ) -> List[Optional['GeocodingResult']]:
+    ) -> List[Optional[GeocodingResult]]:
         """Batch reverse geocode multiple coordinates."""
         results = []
         for lat, lon in coordinates:
@@ -169,7 +174,8 @@ class GeocodingService:
                 results.append(None)
         return results
 
-    async def _google_forward_geocode(self, address: str) -> Optional['GeocodingResult']:
+
+    async def _google_forward_geocode(self, address: str) -> Optional[GeocodingResult]:
         """Forward geocode using Google Maps API."""
         url = "https://maps.googleapis.com/maps/api/geocode/json"
         params = {"address": address, "key": self.google_api_key}
@@ -215,7 +221,7 @@ class GeocodingService:
 
     async def _google_reverse_geocode(
         self, latitude: float, longitude: float
-    ) -> Optional['GeocodingResult']:
+    ) -> Optional[GeocodingResult]:
         """Reverse geocode using Google Maps API."""
         url = "https://maps.googleapis.com/maps/api/geocode/json"
         params = {"latlng": f"{latitude},{longitude}", "key": self.google_api_key}
@@ -259,7 +265,8 @@ class GeocodingService:
             provider="google_maps"
         )
 
-    async def _nominatim_forward_geocode(self, address: str) -> Optional['GeocodingResult']:
+
+    async def _nominatim_forward_geocode(self, address: str) -> Optional[GeocodingResult]:
         """Forward geocode using Nominatim (OpenStreetMap)."""
         url = "https://nominatim.openstreetmap.org/search"
         params = {"q": address, "format": "json", "addressdetails": 1, "limit": 1}
@@ -298,7 +305,7 @@ class GeocodingService:
 
     async def _nominatim_reverse_geocode(
         self, latitude: float, longitude: float
-    ) -> Optional['GeocodingResult']:
+    ) -> Optional[GeocodingResult]:
         """Reverse geocode using Nominatim (OpenStreetMap)."""
         url = "https://nominatim.openstreetmap.org/reverse"
         params = {"lat": latitude, "lon": longitude, "format": "json", "addressdetails": 1}
@@ -334,7 +341,7 @@ class GeocodingService:
             provider="nominatim"
         )
 
-    def _get_from_cache(self, key: str) -> Optional['GeocodingResult']:
+    def _get_from_cache(self, key: str) -> Optional[GeocodingResult]:
         """Get result from cache if not expired."""
         if key in self.cache:
             result, timestamp = self.cache[key]
@@ -344,7 +351,7 @@ class GeocodingService:
                 del self.cache[key]
         return None
 
-    def _add_to_cache(self, key: str, result: 'GeocodingResult'):
+    def _add_to_cache(self, key: str, result: GeocodingResult):
         """Add result to cache with timestamp."""
         self.cache[key] = (result, datetime.now())
 

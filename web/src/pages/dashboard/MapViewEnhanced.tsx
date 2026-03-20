@@ -285,7 +285,7 @@ export default function MapViewEnhanced() {
               <PhotoMap
                 photos={filteredPhotos}
                 campaignLocations={campaignLocations}
-                onPhotoClick={handlePhotoClick}
+                onPhotoClick={handlePhotoClick as any}
               />
             </div>
           )}

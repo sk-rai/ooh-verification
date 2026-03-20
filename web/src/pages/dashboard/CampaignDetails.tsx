@@ -17,6 +17,7 @@ interface LocationProfile {
 interface Campaign {
   campaign_id: string
   name: string
+  description?: string
   campaign_code: string
   campaign_type: string
   status: string

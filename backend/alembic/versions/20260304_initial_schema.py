@@ -217,6 +217,10 @@ def upgrade() -> None:
     op.create_index('idx_signatures_photo', 'photo_signatures', ['photo_id'])
 
 
+    # Widen alembic_version to support long revision IDs
+    op.execute('ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(128)')
+
+
 def downgrade() -> None:
     """Drop all tables and enum types."""
     
