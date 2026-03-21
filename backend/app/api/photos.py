@@ -29,6 +29,86 @@ import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/photos", tags=["photos"])
+from app.core.deps import get_current_client
+from app.models.client import Client
+
+@router.get("")
+async def list_photos(
+    limit: int = 50,
+    offset: int = 0,
+    campaign_code: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    client: Client = Depends(get_current_client)
+):
+    """List photos for the current client."""
+    from sqlalchemy import func
+    query = select(Photo).where(Photo.tenant_id == client.tenant_id)
+    if campaign_code:
+        campaign = await db.execute(
+            select(Campaign).where(Campaign.campaign_code == campaign_code, Campaign.tenant_id == client.tenant_id)
+        )
+        campaign = campaign.scalar_one_or_none()
+        if campaign:
+            query = query.where(Photo.campaign_id == campaign.campaign_id)
+    query = query.order_by(Photo.created_at.desc()).offset(offset).limit(limit)
+    result = await db.execute(query)
+    photos = result.scalars().all()
+    count_result = await db.execute(
+        select(func.count()).select_from(Photo).where(Photo.tenant_id == client.tenant_id)
+    )
+    total = count_result.scalar() or 0
+    return {
+        "photos": [
+            {
+                "photo_id": str(p.photo_id),
+                "campaign_id": str(p.campaign_id),
+                "vendor_id": str(p.vendor_id) if p.vendor_id else None,
+                "photo_url": p.photo_url,
+                "status": p.status.value if hasattr(p.status, 'value') else str(p.status),
+                "verification_confidence": p.verification_confidence,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+                "latitude": p.latitude,
+                "longitude": p.longitude,
+            }
+            for p in photos
+        ],
+        "total": total
+    }
+
+@router.get("/locations")
+async def get_photo_locations(
+    db: AsyncSession = Depends(get_db),
+    client: Client = Depends(get_current_client)
+):
+    """Get photo locations for map view."""
+    query = select(Photo).where(
+        Photo.tenant_id == client.tenant_id,
+        Photo.latitude.isnot(None),
+        Photo.longitude.isnot(None)
+    ).limit(500)
+    result = await db.execute(query)
+    photos = result.scalars().all()
+    return {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [float(p.longitude), float(p.latitude)]
+                },
+                "properties": {
+                    "photo_id": str(p.photo_id),
+                    "status": p.status.value if hasattr(p.status, 'value') else str(p.status),
+                    "photo_url": p.photo_url,
+                    "created_at": p.created_at.isoformat() if p.created_at else None,
+                }
+            }
+            for p in photos
+        ]
+    }
+
+
 
 
 def validate_photo_file(file: UploadFile) -> bytes:

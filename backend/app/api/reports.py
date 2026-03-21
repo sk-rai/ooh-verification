@@ -15,7 +15,7 @@ from app.services.report_generator import ReportGenerator
 from app.services.chart_generator import ChartGenerator
 from app.services.map_generator import MapGenerator
 
-router = APIRouter(prefix="/reports", tags=["reports"])
+router = APIRouter(prefix="/api/reports", tags=["reports"])
 
 
 def get_report_generator(db: AsyncSession = Depends(get_db)) -> ReportGenerator:
@@ -266,3 +266,115 @@ async def get_campaign_dashboard(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating dashboard: {str(e)}")
+
+
+@router.get("/statistics")
+async def get_aggregate_statistics(
+    db: AsyncSession = Depends(get_db),
+    client: Client = Depends(get_current_client)
+):
+    """Get aggregate statistics across all campaigns."""
+    from sqlalchemy import func
+    from app.models import Campaign, Photo, Vendor
+    from app.models.campaign_vendor_assignment import CampaignVendorAssignment
+
+    campaigns_count = await db.execute(
+        select(func.count()).select_from(Campaign).where(Campaign.tenant_id == client.tenant_id)
+    )
+    photos_count = await db.execute(
+        select(func.count()).select_from(Photo).where(Photo.tenant_id == client.tenant_id)
+    )
+    vendors_count = await db.execute(
+        select(func.count()).select_from(Vendor).where(Vendor.tenant_id == client.tenant_id)
+    )
+    verified_count = await db.execute(
+        select(func.count()).select_from(Photo).where(
+            Photo.tenant_id == client.tenant_id,
+            Photo.status == 'verified'
+        )
+    )
+    return {
+        "total_campaigns": campaigns_count.scalar() or 0,
+        "total_photos": photos_count.scalar() or 0,
+        "total_vendors": vendors_count.scalar() or 0,
+        "verified_photos": verified_count.scalar() or 0,
+    }
+
+@router.get("/campaigns")
+async def get_campaigns_report(
+    db: AsyncSession = Depends(get_db),
+    client: Client = Depends(get_current_client)
+):
+    """Get campaign-level report data."""
+    from sqlalchemy import func
+    from app.models import Campaign, Photo
+
+    campaigns = await db.execute(
+        select(Campaign).where(Campaign.tenant_id == client.tenant_id).order_by(Campaign.created_at.desc())
+    )
+    result = []
+    for c in campaigns.scalars().all():
+        photo_count = await db.execute(
+            select(func.count()).select_from(Photo).where(Photo.campaign_id == c.campaign_id)
+        )
+        result.append({
+            "campaign_id": str(c.campaign_id),
+            "campaign_code": c.campaign_code,
+            "name": c.name,
+            "status": c.status,
+            "campaign_type": c.campaign_type,
+            "photo_count": photo_count.scalar() or 0,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+        })
+    return result
+
+@router.get("/vendors")
+async def get_vendors_report(
+    db: AsyncSession = Depends(get_db),
+    client: Client = Depends(get_current_client)
+):
+    """Get vendor-level report data."""
+    from sqlalchemy import func
+    from app.models import Vendor, Photo
+
+    vendors = await db.execute(
+        select(Vendor).where(Vendor.tenant_id == client.tenant_id)
+    )
+    result = []
+    for v in vendors.scalars().all():
+        photo_count = await db.execute(
+            select(func.count()).select_from(Photo).where(Photo.vendor_id == v.vendor_id)
+        )
+        result.append({
+            "vendor_id": v.vendor_id,
+            "name": v.name,
+            "status": v.status,
+            "photo_count": photo_count.scalar() or 0,
+        })
+    return result
+
+@router.get("/time-series")
+async def get_time_series(
+    start: str = None,
+    end: str = None,
+    db: AsyncSession = Depends(get_db),
+    client: Client = Depends(get_current_client)
+):
+    """Get photo upload time series data."""
+    from sqlalchemy import func, cast, Date
+    from app.models import Photo
+    from datetime import datetime, timedelta
+
+    query = select(
+        cast(Photo.created_at, Date).label("date"),
+        func.count().label("count")
+    ).where(Photo.tenant_id == client.tenant_id)
+
+    if start:
+        query = query.where(Photo.created_at >= datetime.fromisoformat(start))
+    if end:
+        query = query.where(Photo.created_at <= datetime.fromisoformat(end))
+
+    query = query.group_by(cast(Photo.created_at, Date)).order_by(cast(Photo.created_at, Date))
+    result = await db.execute(query)
+    return [{"date": str(row.date), "count": row.count} for row in result.all()]
