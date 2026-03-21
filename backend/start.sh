@@ -9,7 +9,7 @@ if [ -n "$DATABASE_URL" ]; then
     echo "Database URL configured (asyncpg)"
 fi
 
-# Run migrations directly (skip socket check - Render handles DB availability)
+# Run migrations
 echo "Running database migrations..."
 python3 -m alembic upgrade head || echo "Migration warning (may be OK if already applied)"
 
@@ -17,18 +17,18 @@ python3 -m alembic upgrade head || echo "Migration warning (may be OK if already
 echo "Checking admin user..."
 python3 -c "
 import asyncio
-from app.core.database import async_session_factory
-from app.models.admin import AdminUser
+from app.core.database import AsyncSessionLocal
+from app.models.admin_user import AdminUser
+from app.core.security import hash_password
 from sqlalchemy import select
 
 async def seed():
-    async with async_session_factory() as session:
+    async with AsyncSessionLocal() as session:
         result = await session.execute(select(AdminUser).limit(1))
         if not result.scalar_one_or_none():
-            from app.core.security import get_password_hash
             admin = AdminUser(
                 email='admin@trustcapture.com',
-                hashed_password=get_password_hash('TrustAdmin@2026'),
+                hashed_password=hash_password('TrustAdmin@2026'),
                 full_name='System Admin',
                 is_active=True
             )
@@ -45,13 +45,13 @@ asyncio.run(seed())
 echo "Checking default tenant..."
 python3 -c "
 import asyncio
-from app.core.database import async_session_factory
-from app.models.tenant import TenantConfig
+from app.core.database import AsyncSessionLocal
+from app.models.tenant_config import TenantConfig
 from sqlalchemy import select
 import uuid
 
 async def seed():
-    async with async_session_factory() as session:
+    async with AsyncSessionLocal() as session:
         result = await session.execute(select(TenantConfig).limit(1))
         if not result.scalar_one_or_none():
             tenant = TenantConfig(
@@ -60,7 +60,7 @@ async def seed():
                 subdomain='default',
                 is_active=True
             )
-            session.add(tenant)
+            session.add(admin)
             await session.commit()
             print('Default tenant seeded')
         else:
