@@ -25,8 +25,8 @@ async def seed():
         if not result.scalar_one_or_none():
             admin = AdminUser(
                 email="admin@trustcapture.com",
-                hashed_password=hash_password("TrustAdmin@2026"),
-                full_name="System Admin",
+                password_hash=hash_password("TrustAdmin@2026"),
+                name="System Admin",
                 is_active=True
             )
             session.add(admin)
