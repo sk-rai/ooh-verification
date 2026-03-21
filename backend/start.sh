@@ -5,45 +5,11 @@ echo "=== TrustCapture Backend Startup ==="
 
 # Convert DATABASE_URL from postgresql:// to postgresql+asyncpg:// if needed
 if [ -n "$DATABASE_URL" ]; then
-    # Render provides postgresql:// but SQLAlchemy async needs postgresql+asyncpg://
     export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's|^postgres://|postgresql+asyncpg://|' | sed 's|^postgresql://|postgresql+asyncpg://|')
     echo "Database URL configured (asyncpg)"
 fi
 
-# Wait for database to be ready
-echo "Waiting for database..."
-MAX_RETRIES=30
-RETRY_COUNT=0
-
-while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    # Extract host and port from DATABASE_URL for connectivity check
-    DB_HOST=$(echo "$DATABASE_URL" | sed -n 's|.*@\([^:/]*\).*|\1|p')
-    DB_PORT=$(echo "$DATABASE_URL" | sed -n 's|.*:\([0-9]*\)/.*|\1|p')
-    DB_PORT=${DB_PORT:-5432}
-
-    if python3 -c "
-import socket
-try:
-    s = socket.create_connection(('${DB_HOST}', ${DB_PORT}), timeout=5)
-    s.close()
-    exit(0)
-except:
-    exit(1)
-" 2>/dev/null; then
-        echo "Database is reachable at $DB_HOST:$DB_PORT"
-        break
-    fi
-
-    RETRY_COUNT=$((RETRY_COUNT + 1))
-    echo "Waiting for database... attempt $RETRY_COUNT/$MAX_RETRIES"
-    sleep 2
-done
-
-if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-    echo "WARNING: Could not verify database connectivity, proceeding anyway..."
-fi
-
-# Run migrations
+# Run migrations directly (skip socket check - Render handles DB availability)
 echo "Running database migrations..."
 python3 -m alembic upgrade head || echo "Migration warning (may be OK if already applied)"
 
@@ -51,9 +17,9 @@ python3 -m alembic upgrade head || echo "Migration warning (may be OK if already
 echo "Checking admin user..."
 python3 -c "
 import asyncio
-from app.core.database import async_session_factory, engine
+from app.core.database import async_session_factory
 from app.models.admin import AdminUser
-from sqlalchemy import select, text
+from sqlalchemy import select
 
 async def seed():
     async with async_session_factory() as session:
@@ -73,7 +39,35 @@ async def seed():
             print('Admin user exists')
 
 asyncio.run(seed())
-" 2>/dev/null || echo "Admin seed skipped (may need manual setup)"
+" 2>&1 || echo "Admin seed skipped"
+
+# Seed default tenant
+echo "Checking default tenant..."
+python3 -c "
+import asyncio
+from app.core.database import async_session_factory
+from app.models.tenant import TenantConfig
+from sqlalchemy import select
+import uuid
+
+async def seed():
+    async with async_session_factory() as session:
+        result = await session.execute(select(TenantConfig).limit(1))
+        if not result.scalar_one_or_none():
+            tenant = TenantConfig(
+                tenant_id=uuid.UUID('e27c6c7a-7f5b-43df-bdc4-abd76ebb99aa'),
+                tenant_name='Default Tenant',
+                subdomain='default',
+                is_active=True
+            )
+            session.add(tenant)
+            await session.commit()
+            print('Default tenant seeded')
+        else:
+            print('Tenant exists')
+
+asyncio.run(seed())
+" 2>&1 || echo "Tenant seed skipped"
 
 # Start server
 echo "Starting uvicorn on port ${PORT:-8000}..."
