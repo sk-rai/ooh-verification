@@ -44,8 +44,22 @@ export default function MapView() {
         api.get('/api/campaigns'),
       ])
 
-      setPhotos(photosRes.data)
-      setCampaigns(campaignsRes.data)
+      const locData = photosRes.data
+      const photoArr = Array.isArray(locData) ? locData : (locData?.features || []).map((f: any) => ({
+        photo_id: f.properties?.photo_id,
+        latitude: f.geometry?.coordinates?.[1],
+        longitude: f.geometry?.coordinates?.[0],
+        verification_status: f.properties?.status,
+        photo_url: f.properties?.photo_url,
+        created_at: f.properties?.created_at,
+        campaign_name: '',
+        campaign_code: '',
+        confidence_score: 0,
+        vendor_id: '',
+        timestamp: f.properties?.created_at || '',
+      }))
+      setPhotos(photoArr)
+      setCampaigns(Array.isArray(campaignsRes.data) ? campaignsRes.data : (campaignsRes.data?.campaigns || []))
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load map data')
     } finally {
