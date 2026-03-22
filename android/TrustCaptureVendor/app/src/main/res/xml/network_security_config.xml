@@ -1,47 +1,31 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-    Network Security Configuration for TrustCapture Vendor App
-    
-    Debug builds: Allow cleartext to emulator localhost (10.0.2.2)
-    Release builds: Enforce HTTPS with certificate pinning for api.trustcapture.com
-    
-    IMPORTANT: Before production release, replace the placeholder pin with the actual
-    SHA-256 fingerprint of your server's certificate (leaf or intermediate CA).
-    
-    To get the pin from your server certificate:
-    openssl s_client -connect api.trustcapture.com:443 | openssl x509 -pubkey -noout | \
-        openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | openssl enc -base64
--->
+﻿<?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Emulator localhost: allow cleartext HTTP for development -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">onrender.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">10.0.2.2</domain>
     </domain-config>
-
-    <!-- Production domain with certificate pinning -->
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">api.trustcapture.com</domain>
         <domain includeSubdomains="true">trustcapture.com</domain>
         <pin-set expiration="2027-01-01">
-            <!-- Primary pin: Replace with actual certificate SHA-256 before release -->
             <pin digest="SHA-256">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</pin>
-            <!-- Backup pin: Add a second pin for key rotation -->
             <pin digest="SHA-256">BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=</pin>
         </pin-set>
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
     </domain-config>
-
-    <!-- Debug-only: Trust user-installed certificates -->
     <debug-overrides>
         <trust-anchors>
             <certificates src="system" />
             <certificates src="user" />
         </trust-anchors>
     </debug-overrides>
-
-    <!-- Base config: No cleartext by default -->
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />

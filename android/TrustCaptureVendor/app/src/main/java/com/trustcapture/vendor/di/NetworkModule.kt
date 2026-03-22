@@ -77,9 +77,9 @@ object NetworkModule {
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
             .certificatePinner(certificatePinner)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(60, TimeUnit.SECONDS)
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(120, TimeUnit.SECONDS)
             .build()
 
     @Provides

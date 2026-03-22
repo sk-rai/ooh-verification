@@ -18,13 +18,13 @@ android {
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8000/\"")
-        manifestPlaceholders["cleartextTrafficPermitted"] = "true"
+        buildConfigField("String", "BASE_URL", "\"https://ooh-verification.onrender.com/\"")
+        manifestPlaceholders["cleartextTrafficPermitted"] = "false"
     }
 
     buildTypes {
         debug {
-            manifestPlaceholders["cleartextTrafficPermitted"] = "true"
+            manifestPlaceholders["cleartextTrafficPermitted"] = "false"
         }
         release {
             isMinifyEnabled = false
