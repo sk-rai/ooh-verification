@@ -40,10 +40,11 @@ export default function Dashboard() {
       setStats({
         campaigns: campaignsRes.data.length,
         vendors: vendorsRes.data.length,
-        photos: photosRes.data.length,
+        photos: (Array.isArray(photosRes.data) ? photosRes.data : (photosRes.data?.photos || [])).length,
       })
 
-      setRecentPhotos(photosRes.data.slice(0, 6))
+      const photosArr = Array.isArray(photosRes.data) ? photosRes.data : (photosRes.data?.photos || [])
+      setRecentPhotos(photosArr.slice(0, 6))
     } catch (err) {
       console.error('Failed to load dashboard data:', err)
     } finally {

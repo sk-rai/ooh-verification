@@ -53,27 +53,19 @@ async def list_photos(
     query = query.order_by(Photo.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(query)
     photos = result.scalars().all()
-    count_result = await db.execute(
-        select(func.count()).select_from(Photo).where(Photo.tenant_id == client.tenant_id)
-    )
-    total = count_result.scalar() or 0
-    return {
-        "photos": [
-            {
-                "photo_id": str(p.photo_id),
-                "campaign_id": str(p.campaign_id),
-                "vendor_id": str(p.vendor_id) if p.vendor_id else None,
-                "photo_url": p.photo_url,
-                "status": p.status.value if hasattr(p.status, 'value') else str(p.status),
-                "verification_confidence": p.verification_confidence,
-                "created_at": p.created_at.isoformat() if p.created_at else None,
-                "latitude": p.latitude,
-                "longitude": p.longitude,
-            }
-            for p in photos
-        ],
-        "total": total
-    }
+    # Return as array - frontend expects array directly
+    return [
+        {
+            "photo_id": str(p.photo_id),
+            "campaign_id": str(p.campaign_id),
+            "vendor_id": str(p.vendor_id) if p.vendor_id else None,
+            "photo_url": p.s3_key,
+            "status": p.verification_status.value if hasattr(p.verification_status, 'value') else str(p.verification_status),
+            "verification_confidence": p.verification_confidence,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+        }
+        for p in photos
+    ]
 
 @router.get("/locations")
 async def get_photo_locations(
@@ -81,13 +73,19 @@ async def get_photo_locations(
     client: Client = Depends(get_current_client)
 ):
     """Get photo locations for map view."""
-    query = select(Photo).where(
-        Photo.tenant_id == client.tenant_id,
-        Photo.latitude.isnot(None),
-        Photo.longitude.isnot(None)
-    ).limit(500)
+    from app.models import SensorData
+    query = (
+        select(Photo, SensorData)
+        .join(SensorData, SensorData.photo_id == Photo.photo_id, isouter=True)
+        .where(
+            Photo.tenant_id == client.tenant_id,
+            SensorData.gps_latitude.isnot(None),
+            SensorData.gps_longitude.isnot(None)
+        )
+        .limit(500)
+    )
     result = await db.execute(query)
-    photos = result.scalars().all()
+    rows = result.all()
     return {
         "type": "FeatureCollection",
         "features": [
@@ -95,16 +93,17 @@ async def get_photo_locations(
                 "type": "Feature",
                 "geometry": {
                     "type": "Point",
-                    "coordinates": [float(p.longitude), float(p.latitude)]
+                    "coordinates": [float(sd.gps_longitude), float(sd.gps_latitude)]
                 },
                 "properties": {
                     "photo_id": str(p.photo_id),
-                    "status": p.status.value if hasattr(p.status, 'value') else str(p.status),
-                    "photo_url": p.photo_url,
+                    "status": p.verification_status.value if hasattr(p.verification_status, 'value') else str(p.verification_status),
+                    "photo_url": p.s3_key,
                     "created_at": p.created_at.isoformat() if p.created_at else None,
                 }
             }
-            for p in photos
+            for p, sd in rows
+            if sd is not None
         ]
     }
 

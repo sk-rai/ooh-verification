@@ -290,7 +290,7 @@ async def get_aggregate_statistics(
     verified_count = await db.execute(
         select(func.count()).select_from(Photo).where(
             Photo.tenant_id == client.tenant_id,
-            Photo.status == 'verified'
+            Photo.verification_status == 'verified'
         )
     )
     return {
@@ -321,7 +321,7 @@ async def get_campaigns_report(
             "campaign_id": str(c.campaign_id),
             "campaign_code": c.campaign_code,
             "name": c.name,
-            "status": c.status,
+            "status": c.status.value if hasattr(c.status, 'value') else str(c.status),
             "campaign_type": c.campaign_type,
             "photo_count": photo_count.scalar() or 0,
             "created_at": c.created_at.isoformat() if c.created_at else None,
@@ -348,7 +348,7 @@ async def get_vendors_report(
         result.append({
             "vendor_id": v.vendor_id,
             "name": v.name,
-            "status": v.status,
+            "status": v.status.value if hasattr(v.status, 'value') else str(v.status),
             "photo_count": photo_count.scalar() or 0,
         })
     return result
