@@ -5,7 +5,7 @@ Items deferred during development that must be completed before Play Store relea
 ## Security & Integrity
 - [ ] Task 49.2: Play Integrity API (replaces deprecated SafetyNet) — requires Google Cloud project + API key
 - [x] Certificate pinning for production API endpoint — OkHttp CertificatePinner + network_security_config.xml added. Placeholder SHA-256 pins need replacing with real cert fingerprints before release.
-- [ ] Switch BASE_URL from `http://10.0.2.2:8000` to production HTTPS endpoint (already configured in release buildType)
+- [x] Switch BASE_URL from `http://10.0.2.2:8000` to production HTTPS endpoint — now pointing to `https://ooh-verification.onrender.com/`
 - [ ] Replace placeholder certificate pins in `NetworkModule.kt` and `network_security_config.xml` with actual SHA-256 fingerprints
 - [ ] ProGuard/R8 code obfuscation enabled in release build
 - [x] `android:usesCleartextTraffic` restricted to debug builds only via manifest placeholder

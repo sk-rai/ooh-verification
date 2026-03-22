@@ -105,10 +105,11 @@ fun LoginScreen(
             value = uiState.phoneNumber,
             onValueChange = viewModel::onPhoneNumberChange,
             label = { Text("Phone Number") },
-            placeholder = { Text("+91XXXXXXXXXX") },
+            placeholder = { Text("9902097794") },
             leadingIcon = {
                 Icon(Icons.Default.Phone, contentDescription = null)
             },
+            prefix = { Text("+91") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Phone,
@@ -118,7 +119,7 @@ fun LoginScreen(
                 onDone = {
                     focusManager.clearFocus()
                     viewModel.requestOtp {
-                        onOtpRequested(uiState.phoneNumber, uiState.vendorId)
+                        onOtpRequested("+91${uiState.phoneNumber}", uiState.vendorId)
                     }
                 }
             ),
@@ -141,7 +142,7 @@ fun LoginScreen(
         Button(
             onClick = {
                 viewModel.requestOtp {
-                    onOtpRequested(uiState.phoneNumber, uiState.vendorId)
+                    onOtpRequested("+91${uiState.phoneNumber}", uiState.vendorId)
                 }
             },
             enabled = !uiState.isLoading,

@@ -35,7 +35,7 @@ class LoginViewModel @Inject constructor(
 
     fun onPhoneNumberChange(value: String) {
         _uiState.value = _uiState.value.copy(
-            phoneNumber = value.filter { it.isDigit() || it == '+' }.take(15),
+            phoneNumber = value.filter { it.isDigit() }.take(10),
             error = null
         )
     }
@@ -47,13 +47,15 @@ class LoginViewModel @Inject constructor(
             return
         }
         if (state.phoneNumber.length < 10) {
-            _uiState.value = state.copy(error = "Enter a valid phone number")
+            _uiState.value = state.copy(error = "Enter a valid 10-digit phone number")
             return
         }
 
+        val fullPhone = "+91${state.phoneNumber}"
+
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            when (val result = authRepository.requestOtp(state.phoneNumber, state.vendorId)) {
+            when (val result = authRepository.requestOtp(fullPhone, state.vendorId)) {
                 is Resource.Success -> {
                     _uiState.value = _uiState.value.copy(isLoading = false)
                     onSuccess()
