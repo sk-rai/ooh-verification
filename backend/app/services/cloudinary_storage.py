@@ -63,6 +63,19 @@ class CloudinaryStorageService(StorageInterface):
 
         return photo_key, photo_url, thumbnail_key, thumbnail_url
 
+    def get_thumbnail_url(self, photo_key: str) -> str:
+        """Get Cloudinary thumbnail URL with transformations."""
+        url, _ = cloudinary.utils.cloudinary_url(
+            photo_key,
+            width=200,
+            height=200,
+            crop="fill",
+            quality="auto",
+            format="jpg",
+            secure=True
+        )
+        return url
+
     def get_photo_url(self, photo_key: str) -> str:
         """Get Cloudinary URL for a photo."""
         url, _ = cloudinary.utils.cloudinary_url(photo_key, secure=True)

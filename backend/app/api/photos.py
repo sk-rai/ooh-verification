@@ -54,14 +54,19 @@ async def list_photos(
     result = await db.execute(query)
     photos = result.scalars().all()
     # Return as array - frontend expects array directly
+    storage = get_storage_service()
     return [
         {
             "photo_id": str(p.photo_id),
             "campaign_id": str(p.campaign_id),
             "vendor_id": str(p.vendor_id) if p.vendor_id else None,
-            "photo_url": get_storage_service().get_photo_url(p.s3_key) if p.s3_key else None,
+            "photo_url": storage.get_photo_url(p.s3_key) if p.s3_key else None,
+            "thumbnail_url": storage.get_thumbnail_url(p.s3_key) if p.s3_key else None,
             "status": p.verification_status.value if hasattr(p.verification_status, 'value') else str(p.verification_status),
-            "verification_confidence": p.verification_confidence,
+            "verification_status": p.verification_status.value if hasattr(p.verification_status, 'value') else str(p.verification_status),
+            "verification_confidence": p.verification_confidence or 0,
+            "confidence_score": p.verification_confidence or 0,
+            "captured_at": p.capture_timestamp.isoformat() if p.capture_timestamp else (p.created_at.isoformat() if p.created_at else None),
             "created_at": p.created_at.isoformat() if p.created_at else None,
         }
         for p in photos

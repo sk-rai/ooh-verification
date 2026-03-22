@@ -33,6 +33,10 @@ class StorageInterface(ABC):
         """
         pass
 
+    def get_thumbnail_url(self, photo_key: str) -> str:
+        """Get URL for accessing a photo thumbnail. Default: same as photo URL."""
+        return self.get_photo_url(photo_key)
+
     @abstractmethod
     def get_photo_url(self, photo_key: str) -> str:
         """
@@ -90,6 +94,10 @@ class MockStorageService(StorageInterface):
         thumbnail_url = f"http://mock-storage.local/{thumbnail_key}"
 
         return photo_key, photo_url, thumbnail_key, thumbnail_url
+
+    def get_thumbnail_url(self, photo_key: str) -> str:
+        """Get mock thumbnail URL."""
+        return f"http://mock-storage.local/thumb/{photo_key}"
 
     def get_photo_url(self, photo_key: str) -> str:
         """Get mock URL for photo."""

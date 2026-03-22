@@ -85,14 +85,14 @@ function PhotoDetailModal({ photo, onClose }: PhotoDetailModalProps) {
                 <div className="flex-1 bg-gray-200 rounded-full h-2 w-32">
                   <div
                     className={`h-2 rounded-full ${
-                      photo.confidence_score >= 0.8 ? 'bg-green-500' :
-                      photo.confidence_score >= 0.6 ? 'bg-yellow-500' : 'bg-red-500'
+                      (photo.confidence_score ?? 0) >= 0.8 ? 'bg-green-500' :
+                      (photo.confidence_score ?? 0) >= 0.6 ? 'bg-yellow-500' : 'bg-red-500'
                     }`}
-                    style={{ width: `${photo.confidence_score * 100}%` }}
+                    style={{ width: `${(photo.confidence_score ?? 0) * 100}%` }}
                   />
                 </div>
                 <span className="text-sm font-medium text-gray-900 ml-2">
-                  {(photo.confidence_score * 100).toFixed(1)}%
+                  {((photo.confidence_score ?? 0) * 100).toFixed(1)}%
                 </span>
               </div>
             </div>
@@ -118,7 +118,7 @@ function PhotoDetailModal({ photo, onClose }: PhotoDetailModalProps) {
                 </div>
                 <div>
                   <dt className="text-xs text-gray-500">Captured At</dt>
-                  <dd className="text-sm text-gray-900">{new Date(photo.captured_at).toLocaleString()}</dd>
+                  <dd className="text-sm text-gray-900">{photo.captured_at ? new Date(photo.captured_at).toLocaleString() : 'N/A'}</dd>
                 </div>
               </dl>
             </div>
@@ -129,19 +129,19 @@ function PhotoDetailModal({ photo, onClose }: PhotoDetailModalProps) {
               <dl className="space-y-2">
                 <div>
                   <dt className="text-xs text-gray-500">Latitude</dt>
-                  <dd className="text-sm text-gray-900 font-mono">{photo.gps_latitude.toFixed(7)}</dd>
+                  <dd className="text-sm text-gray-900 font-mono">{(photo.gps_latitude ?? 0).toFixed(7)}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-gray-500">Longitude</dt>
-                  <dd className="text-sm text-gray-900 font-mono">{photo.gps_longitude.toFixed(7)}</dd>
+                  <dd className="text-sm text-gray-900 font-mono">{(photo.gps_longitude ?? 0).toFixed(7)}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-gray-500">Accuracy</dt>
-                  <dd className="text-sm text-gray-900">{photo.gps_accuracy.toFixed(1)}m</dd>
+                  <dd className="text-sm text-gray-900">{(photo.gps_accuracy ?? 0).toFixed(1)}m</dd>
                 </div>
               </dl>
               <a
-                href={`https://www.google.com/maps?q=${photo.gps_latitude},${photo.gps_longitude}`}
+                href={`https://www.google.com/maps?q=${photo.gps_latitude ?? 0},${photo.gps_longitude ?? 0}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-3 inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
@@ -390,7 +390,7 @@ export default function PhotoGallery() {
                     <p className="text-xs text-white mt-1 truncate">{photo.campaign_name}</p>
                   </div>
                   <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
-                    {(photo.confidence_score * 100).toFixed(0)}%
+                    {((photo.confidence_score ?? 0) * 100).toFixed(0)}%
                   </div>
                 </button>
               ))}
