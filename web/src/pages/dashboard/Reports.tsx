@@ -57,10 +57,10 @@ export default function Reports() {
         api.get(`/api/reports/time-series?start=${dateRange.start}&end=${dateRange.end}`).catch(() => ({ data: [] })),
       ])
 
-      setStats(statsRes.data)
-      setCampaignStats(campaignsRes.data)
-      setVendorStats(vendorsRes.data)
-      setTimeSeriesData(timeSeriesRes.data)
+      setStats(statsRes.data && typeof statsRes.data === 'object' ? statsRes.data : null)
+      setCampaignStats(Array.isArray(campaignsRes.data) ? campaignsRes.data : [])
+      setVendorStats(Array.isArray(vendorsRes.data) ? vendorsRes.data : [])
+      setTimeSeriesData(Array.isArray(timeSeriesRes.data) ? timeSeriesRes.data : [])
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load report data')
     } finally {

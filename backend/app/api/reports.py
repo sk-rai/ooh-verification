@@ -5,6 +5,7 @@ Provides CSV, GeoJSON, PDF, charts, and analytics for campaigns.
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import Optional
 import io
 
@@ -276,8 +277,6 @@ async def get_aggregate_statistics(
     """Get aggregate statistics across all campaigns."""
     from sqlalchemy import func
     from app.models import Campaign, Photo, Vendor
-    from app.models.campaign_vendor_assignment import CampaignVendorAssignment
-
     campaigns_count = await db.execute(
         select(func.count()).select_from(Campaign).where(Campaign.tenant_id == client.tenant_id)
     )
