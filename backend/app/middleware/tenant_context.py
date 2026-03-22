@@ -122,6 +122,10 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
         """
         if hostname in ["localhost", "127.0.0.1"]:
             return "default"
+
+        # Render deployment hostnames -> default tenant
+        if hostname.endswith(".onrender.com"):
+            return "default"
         
         parts = hostname.split(".")
         if len(parts) >= 3:
