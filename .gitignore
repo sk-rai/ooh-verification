@@ -126,3 +126,62 @@ app/services/__pycache__/
 !TRACEABILITY_MATRIX.csv
 !TRACEABILITY_MATRIX.md
 !INDEX.md
+node_modules
+
+# ===== Kiro/Dev session artifacts =====
+Kiro_session_log*
+*.sty
+
+# One-off scripts (not app code)
+/*.py
+/*.sh
+/*.bat
+/*.sql
+/*.yml
+
+# Dev notes at root
+/TASK*.md
+/GIT_*.md
+/SESSION_*.md
+/BACKEND_*.md
+/MIGRATION_*.md
+/ENUM_*.md
+/ERRORS_*.md
+/MULTI_TENANCY*.md
+/NEXT_*.md
+/OPTION1_*.md
+/PROJECT_STATUS*.md
+/RESTART_*.md
+/START_*.md
+/VIEW_*.md
+/WEB_UI_*.md
+/UPDATE_*.md
+/MANUAL_*.md
+/CAMPAIGN_*.md
+/DOCUMENTATION_*.md
+
+# Backups
+*.backup*
+
+# Test data at root
+/test_*.csv
+
+# Node artifacts at root (not a node project at root)
+/package.json
+/package-lock.json
+/node_modules/
+
+# Coverage
+coverage.xml
+htmlcov/
+.coverage
+
+# IDE
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
