@@ -1,10 +1,10 @@
 """
 Storage service factory - provides the appropriate storage backend.
 
-This allows easy switching between:
+Supports:
 - Mock storage (for testing)
-- S3-compatible storage (for production)
-- Local filesystem storage (for simple deployments)
+- Cloudinary (for production on Render free tier)
+- S3-compatible storage (AWS S3, MinIO, etc.)
 """
 import os
 from app.services.storage_interface import StorageInterface, MockStorageService
@@ -13,23 +13,30 @@ from app.services.storage_interface import StorageInterface, MockStorageService
 def get_storage_service() -> StorageInterface:
     """
     Get the appropriate storage service based on environment.
-    
-    Returns:
-        StorageInterface implementation
+
+    Priority:
+    1. TESTING or USE_MOCK_STORAGE -> MockStorageService
+    2. CLOUDINARY_CLOUD_NAME set -> CloudinaryStorageService
+    3. AWS credentials set -> S3StorageService
+    4. Fallback -> MockStorageService
     """
-    # Check if we're in test mode or mock storage is requested
+    # Test/mock mode
     if os.getenv('TESTING') == 'true' or os.getenv('USE_MOCK_STORAGE') == 'true':
         return MockStorageService()
-    
+
+    # Cloudinary (preferred for Render deployment)
+    if os.getenv('CLOUDINARY_CLOUD_NAME'):
+        from app.services.cloudinary_storage import CloudinaryStorageService
+        return CloudinaryStorageService()
+
+    # S3-compatible storage
     from app.core.config import settings
-    
-    # No AWS credentials configured — use mock storage for local development
-    if not settings.AWS_ACCESS_KEY_ID and not settings.AWS_SECRET_ACCESS_KEY:
-        return MockStorageService()
-    
-    # Production: use S3 storage
-    from app.services.s3_storage import S3StorageService
-    return S3StorageService()
+    if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
+        from app.services.s3_storage import S3StorageService
+        return S3StorageService()
+
+    # Fallback to mock
+    return MockStorageService()
 
 
 # Global storage service instance (will be set by dependency injection)

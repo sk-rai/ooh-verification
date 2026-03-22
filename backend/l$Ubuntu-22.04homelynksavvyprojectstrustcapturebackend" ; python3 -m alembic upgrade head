@@ -1,0 +1,16 @@
+                      List of relations
+ Schema |            Name             | Type  |    Owner     
+--------+-----------------------------+-------+--------------
+ public | alembic_version             | table | trustcapture
+ public | audit_logs                  | table | trustcapture
+ public | campaign_vendor_assignments | table | trustcapture
+ public | campaigns                   | table | trustcapture
+ public | clients                     | table | trustcapture
+ public | location_profiles           | table | trustcapture
+ public | photo_signatures            | table | trustcapture
+ public | photos                      | table | trustcapture
+ public | sensor_data                 | table | trustcapture
+ public | subscriptions               | table | trustcapture
+ public | vendors                     | table | trustcapture
+(11 rows)
+

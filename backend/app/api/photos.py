@@ -59,7 +59,7 @@ async def list_photos(
             "photo_id": str(p.photo_id),
             "campaign_id": str(p.campaign_id),
             "vendor_id": str(p.vendor_id) if p.vendor_id else None,
-            "photo_url": p.s3_key,
+            "photo_url": get_storage_service().get_photo_url(p.s3_key) if p.s3_key else None,
             "status": p.verification_status.value if hasattr(p.verification_status, 'value') else str(p.verification_status),
             "verification_confidence": p.verification_confidence,
             "created_at": p.created_at.isoformat() if p.created_at else None,
@@ -98,7 +98,7 @@ async def get_photo_locations(
                 "properties": {
                     "photo_id": str(p.photo_id),
                     "status": p.verification_status.value if hasattr(p.verification_status, 'value') else str(p.verification_status),
-                    "photo_url": p.s3_key,
+                    "photo_url": get_storage_service().get_photo_url(p.s3_key) if p.s3_key else None,
                     "created_at": p.created_at.isoformat() if p.created_at else None,
                 }
             }

@@ -8,13 +8,11 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
-import uuid
 import json
 import csv
 import io
 
 from app.models.client import Client
-from app.models.tenant_config import TenantConfig
 from app.models.campaign import Campaign, CampaignType, CampaignStatus
 from app.models.vendor import Vendor
 from app.models.photo import Photo, VerificationStatus
@@ -23,12 +21,11 @@ from app.models.audit_log import AuditLog
 
 
 @pytest.fixture
-async def test_campaign_with_photos(db_session: AsyncSession, test_client_user: Client, test_tenant: TenantConfig, test_vendor):
+async def test_campaign_with_photos(db_session: AsyncSession, test_client_user: Client):
     """Create a test campaign with sample photos for report testing."""
     # Create campaign
     campaign = Campaign(
-        tenant_id=test_tenant.tenant_id,
-        campaign_code=f"TEST_REPORT_{uuid.uuid4().hex[:8].upper()}",
+        campaign_code="TEST_REPORT_001",
         name="Test Report Campaign",
         campaign_type=CampaignType.OOH_ADVERTISING,
         client_id=test_client_user.client_id,
@@ -39,7 +36,16 @@ async def test_campaign_with_photos(db_session: AsyncSession, test_client_user: 
     db_session.add(campaign)
     await db_session.flush()
     
-    # Use test_vendor fixture (passed as parameter)
+    # Create vendor
+    vendor = Vendor(
+        vendor_id="VND001",
+        created_by_client_id=test_client_user.client_id,
+        name="Test Vendor",
+        phone_number="+1234567890"
+    )
+    db_session.add(vendor)
+    await db_session.flush()
+    
     # Create sample photos with sensor data
     photos_data = [
         {
@@ -70,9 +76,8 @@ async def test_campaign_with_photos(db_session: AsyncSession, test_client_user: 
     
     for i, photo_data in enumerate(photos_data):
         photo = Photo(
-            tenant_id=test_tenant.tenant_id,
             campaign_id=campaign.campaign_id,
-            vendor_id=test_vendor.vendor_id,
+            vendor_id=vendor.vendor_id,
             capture_timestamp=datetime.utcnow() - timedelta(hours=i),
             s3_key=f"test/photo_{i}.jpg",
             verification_status=photo_data['status'],
@@ -95,13 +100,12 @@ async def test_campaign_with_photos(db_session: AsyncSession, test_client_user: 
                 {'cell_id': 12345, 'lac': 100, 'mcc': 404, 'mnc': 45}
             ]
         )
-        db_session.add(sensor_data)
+        db.add(sensor_data)
         
         # Add audit log for flagged photo
         if photo_data['status'] == VerificationStatus.FLAGGED:
             audit_log = AuditLog(
-            tenant_id=test_tenant.tenant_id,
-            vendor_id=test_vendor.vendor_id,
+                vendor_id=vendor.vendor_id,
                 photo_id=photo.photo_id,
                 campaign_code=campaign.campaign_code,
                 sensor_data={'gps': {'lat': photo_data['lat'], 'lon': photo_data['lon']}},
@@ -110,10 +114,10 @@ async def test_campaign_with_photos(db_session: AsyncSession, test_client_user: 
                 record_hash='test_hash',
                 audit_flags=['location_mismatch']
             )
-            db_session.add(audit_log)
+            db.add(audit_log)
     
-    await db_session.commit()
-    await db_session.refresh(campaign)
+    await db.commit()
+    await db.refresh(campaign)
     
     return campaign
 
