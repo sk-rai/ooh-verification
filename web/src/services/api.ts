@@ -28,8 +28,12 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      const currentPath = window.location.pathname
       localStorage.removeItem('token')
-      window.location.href = '/login'
+      // Don't redirect if already on auth pages to avoid redirect loops
+      if (currentPath !== '/login' && currentPath !== '/register' && !currentPath.startsWith('/admin')) {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }
