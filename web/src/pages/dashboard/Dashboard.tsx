@@ -38,8 +38,8 @@ export default function Dashboard() {
       ])
 
       setStats({
-        campaigns: campaignsRes.data.length,
-        vendors: vendorsRes.data.length,
+        campaigns: (Array.isArray(campaignsRes.data) ? campaignsRes.data : (campaignsRes.data?.campaigns || [])).length,
+        vendors: (Array.isArray(vendorsRes.data) ? vendorsRes.data : (vendorsRes.data?.vendors || [])).length,
         photos: (Array.isArray(photosRes.data) ? photosRes.data : (photosRes.data?.photos || [])).length,
       })
 

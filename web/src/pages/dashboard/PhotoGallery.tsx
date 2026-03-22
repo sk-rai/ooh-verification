@@ -193,9 +193,9 @@ export default function PhotoGallery() {
         api.get('/api/vendors'),
       ])
 
-      setPhotos(photosRes.data)
-      setCampaigns(campaignsRes.data)
-      setVendors(vendorsRes.data)
+      setPhotos(Array.isArray(photosRes.data) ? photosRes.data : (photosRes.data?.photos || []))
+      setCampaigns(Array.isArray(campaignsRes.data) ? campaignsRes.data : (campaignsRes.data?.campaigns || []))
+      setVendors(Array.isArray(vendorsRes.data) ? vendorsRes.data : (vendorsRes.data?.vendors || []))
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load photos')
     } finally {

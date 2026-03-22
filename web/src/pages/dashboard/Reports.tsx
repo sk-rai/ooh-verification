@@ -51,7 +51,7 @@ export default function Reports() {
     setLoading(true)
     try {
       const [statsRes, campaignsRes, vendorsRes, timeSeriesRes] = await Promise.all([
-        api.get('/api/reports/statistics').catch(() => ({ data: null })),
+        api.get('/api/reports/statistics').catch(() => ({ data: {} })),
         api.get('/api/reports/campaigns').catch(() => ({ data: [] })),
         api.get('/api/reports/vendors').catch(() => ({ data: [] })),
         api.get(`/api/reports/time-series?start=${dateRange.start}&end=${dateRange.end}`).catch(() => ({ data: [] })),
