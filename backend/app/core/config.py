@@ -58,6 +58,14 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: str = "http://localhost:3000"
     
+    # Google Play Integrity (activate when Google Cloud is configured)
+    GOOGLE_PLAY_INTEGRITY_ENABLED: bool = False
+    ANDROID_PACKAGE_NAME: Optional[str] = None
+    GOOGLE_SERVICE_ACCOUNT_JSON: Optional[str] = None
+    
+    # Google Maps API (activate for geocoding fallback when Nominatim fails)
+    GOOGLE_MAPS_API_KEY: Optional[str] = None
+    
     # File Upload
     MAX_UPLOAD_SIZE: int = 5242880  # 5MB
     ALLOWED_EXTENSIONS: str = "jpg,jpeg"
