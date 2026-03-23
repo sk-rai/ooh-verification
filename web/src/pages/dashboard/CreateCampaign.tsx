@@ -87,7 +87,7 @@ export default function CreateCampaign() {
   }
 
   const updateLocation = (id: string, field: keyof Location, value: string) => {
-    setLocations(locations.map(loc => 
+    setLocations(prev => prev.map(loc => 
       loc.id === id ? { ...loc, [field]: value } : loc
     ))
   }
