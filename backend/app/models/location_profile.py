@@ -62,6 +62,13 @@ class LocationProfile(Base):
     expected_magnetic_min = Column(Float, nullable=True)  # µT (microtesla)
     expected_magnetic_max = Column(Float, nullable=True)
 
+    # Delivery Verification: Time Window
+    delivery_window_start = Column(DateTime(timezone=True), nullable=True)
+    delivery_window_end = Column(DateTime(timezone=True), nullable=True)
+
+    # Resolved address (from geocoding)
+    resolved_address = Column(String(500), nullable=True)
+
     # Timestamps
     created_at = Column(
         DateTime(timezone=True),

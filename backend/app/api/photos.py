@@ -278,12 +278,14 @@ async def upload_photo(
                 captured_data['light_level'] = sensor_data_obj.environmental.ambient_light_lux
         location_match_result = matcher.match_location(captured_data, location_profile)
 
-    # Task C: Enhanced verification
+    # Task C: Enhanced verification (includes delivery window check)
     verification_result = run_enhanced_verification(
         signature_valid=signature_valid,
         location_match_result=location_match_result,
         sensor_data=sensor_data_obj,
         location_profile=location_profile,
+        campaign=campaign,
+        capture_timestamp=capture_dt,
     )
 
     # Determine status from enhanced verification

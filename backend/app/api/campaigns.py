@@ -16,6 +16,7 @@ from app.schemas.campaign import (CampaignCreate, CampaignUpdate, CampaignRespon
 from app.services.quota_enforcer import get_quota_enforcer, QuotaExceededError
 from app.services.elevation_service import get_pressure_range
 from app.services.magnetic_field_service import get_magnetic_field_range
+from app.services.geocoding_service import get_geocoding_service, GeocodingError
 import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/campaigns", tags=["campaigns"])
@@ -43,7 +44,50 @@ async def create_campaign(data: CampaignCreate, client: Client = Depends(get_cur
     await db.flush()
     if data.location_profile:
         lp = data.location_profile
+        # Bidirectional geocoding resolution
+        geocoding_service = get_geocoding_service()
+        address = getattr(lp, 'address', None)
+        resolved_address = None
+
         has_coords = lp.expected_latitude is not None and lp.expected_longitude is not None
+        has_address = address and address.strip()
+
+        if has_address and not has_coords:
+            # Forward geocode: address -> coordinates
+            try:
+                # Try DB cache first
+                geo_result = await geocoding_service.lookup_address_from_db(address, db)
+                if not geo_result:
+                    geo_result = await geocoding_service.geocode_address(address)
+                if geo_result:
+                    lp.expected_latitude = geo_result.latitude
+                    lp.expected_longitude = geo_result.longitude
+                    resolved_address = geo_result.formatted_address
+                    has_coords = True
+                    logger.info(f"Geocoded address '{address}' -> ({geo_result.latitude}, {geo_result.longitude})")
+            except GeocodingError as e:
+                logger.warning(f"Failed to geocode address '{address}': {e}")
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Could not geocode address: {address}. Please provide coordinates directly.")
+
+        elif has_coords and not has_address:
+            # Reverse geocode: coordinates -> address
+            try:
+                geo_result = await geocoding_service.lookup_coords_from_db(lp.expected_latitude, lp.expected_longitude, db)
+                if not geo_result:
+                    geo_result = await geocoding_service.reverse_geocode(lp.expected_latitude, lp.expected_longitude)
+                if geo_result:
+                    resolved_address = geo_result.formatted_address
+                    logger.info(f"Reverse geocoded ({lp.expected_latitude}, {lp.expected_longitude}) -> '{resolved_address}'")
+            except GeocodingError as e:
+                logger.warning(f"Reverse geocoding failed: {e}")
+                # Non-fatal: coordinates are still valid without an address
+
+        elif has_address and has_coords:
+            # Both provided, just store the address
+            resolved_address = address
+
+        if not has_coords:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Location profile requires either coordinates or a valid address.")
         pressure_min = lp.expected_pressure_min
         pressure_max = lp.expected_pressure_max
         if pressure_min is None and pressure_max is None and has_coords:
@@ -64,7 +108,11 @@ async def create_campaign(data: CampaignCreate, client: Client = Depends(get_cur
                     logger.info(f"Auto-populated magnetic for {campaign_code}: [{magnetic_min}, {magnetic_max}] uT")
             except Exception as e:
                 logger.warning(f"Failed to auto-populate magnetic field: {e}")
-        loc_profile = LocationProfile(campaign_id=campaign.campaign_id, expected_latitude=lp.expected_latitude, expected_longitude=lp.expected_longitude, tolerance_meters=lp.tolerance_meters, expected_wifi_bssids=lp.expected_wifi_bssids, expected_cell_tower_ids=lp.expected_cell_tower_ids, expected_pressure_min=pressure_min, expected_pressure_max=pressure_max, expected_light_min=lp.expected_light_min, expected_light_max=lp.expected_light_max, expected_magnetic_min=magnetic_min, expected_magnetic_max=magnetic_max)
+        # For delivery campaigns, use tighter geofence default if not specified
+        tolerance = lp.tolerance_meters
+        if data.campaign_type in ('delivery', 'DELIVERY') and tolerance == 50.0:
+            tolerance = 150.0  # Delivery needs wider radius (driver at doorstep vs exact billboard)
+        loc_profile = LocationProfile(campaign_id=campaign.campaign_id, expected_latitude=lp.expected_latitude, expected_longitude=lp.expected_longitude, tolerance_meters=tolerance, expected_wifi_bssids=lp.expected_wifi_bssids, expected_cell_tower_ids=lp.expected_cell_tower_ids, expected_pressure_min=pressure_min, expected_pressure_max=pressure_max, expected_light_min=lp.expected_light_min, expected_light_max=lp.expected_light_max, expected_magnetic_min=magnetic_min, expected_magnetic_max=magnetic_max, delivery_window_start=getattr(lp, 'delivery_window_start', None), delivery_window_end=getattr(lp, 'delivery_window_end', None), resolved_address=resolved_address)
         db.add(loc_profile)
     await db.commit()
     try:

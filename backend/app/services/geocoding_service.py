@@ -341,6 +341,72 @@ class GeocodingService:
             provider="nominatim"
         )
 
+    async def lookup_address_from_db(self, address: str, db) -> Optional[GeocodingResult]:
+        """Look up address in campaign_locations table before hitting external API."""
+        try:
+            from sqlalchemy import select, func
+            from app.models.campaign_location import CampaignLocation
+            # Case-insensitive partial match
+            result = await db.execute(
+                select(CampaignLocation)
+                .where(func.lower(CampaignLocation.address).contains(address.lower().strip()))
+                .limit(1)
+            )
+            loc = result.scalar_one_or_none()
+            if loc and loc.latitude and loc.longitude:
+                logger.info(f"DB cache hit for address: {address}")
+                return GeocodingResult(
+                    latitude=loc.latitude,
+                    longitude=loc.longitude,
+                    formatted_address=loc.address,
+                    address_components={
+                        "city": loc.city or "",
+                        "state": loc.state or "",
+                        "country": loc.country or "",
+                        "postal_code": loc.postal_code or "",
+                    },
+                    place_id=loc.place_id,
+                    accuracy=loc.geocoding_accuracy,
+                    provider="db_cache"
+                )
+        except Exception as e:
+            logger.warning(f"DB lookup failed for address '{address}': {e}")
+        return None
+
+    async def lookup_coords_from_db(self, latitude: float, longitude: float, db, radius_deg: float = 0.001) -> Optional[GeocodingResult]:
+        """Look up coordinates in campaign_locations table (within ~100m radius)."""
+        try:
+            from sqlalchemy import select, and_
+            from app.models.campaign_location import CampaignLocation
+            result = await db.execute(
+                select(CampaignLocation)
+                .where(and_(
+                    CampaignLocation.latitude.between(latitude - radius_deg, latitude + radius_deg),
+                    CampaignLocation.longitude.between(longitude - radius_deg, longitude + radius_deg),
+                ))
+                .limit(1)
+            )
+            loc = result.scalar_one_or_none()
+            if loc and loc.address:
+                logger.info(f"DB cache hit for coords: ({latitude}, {longitude})")
+                return GeocodingResult(
+                    latitude=loc.latitude,
+                    longitude=loc.longitude,
+                    formatted_address=loc.address,
+                    address_components={
+                        "city": loc.city or "",
+                        "state": loc.state or "",
+                        "country": loc.country or "",
+                        "postal_code": loc.postal_code or "",
+                    },
+                    place_id=loc.place_id,
+                    accuracy=loc.geocoding_accuracy,
+                    provider="db_cache"
+                )
+        except Exception as e:
+            logger.warning(f"DB lookup failed for coords ({latitude}, {longitude}): {e}")
+        return None
+
     def _get_from_cache(self, key: str) -> Optional[GeocodingResult]:
         """Get result from cache if not expired."""
         if key in self.cache:

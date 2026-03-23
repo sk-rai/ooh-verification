@@ -205,11 +205,70 @@ def check_tremor(
     return 0.5, []
 
 
+
+def check_delivery_window(
+    capture_timestamp,
+    delivery_window_start,
+    delivery_window_end,
+) -> tuple[float, list[str]]:
+    """Check if capture timestamp falls within the delivery time window.
+
+    Args:
+        capture_timestamp: When the photo was captured.
+        delivery_window_start: Earliest allowed capture time.
+        delivery_window_end: Latest allowed capture time.
+
+    Returns:
+        Tuple of (score 0-1, list of flags).
+    """
+    flags = []
+
+    if capture_timestamp is None:
+        return 0.5, ["CAPTURE_TIMESTAMP_MISSING"]
+
+    if delivery_window_start is None and delivery_window_end is None:
+        # No delivery window configured, neutral
+        return 1.0, []
+
+    from datetime import timezone
+
+    # Make timestamps timezone-aware for comparison
+    ts = capture_timestamp
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+
+    if delivery_window_start is not None:
+        ws = delivery_window_start
+        if ws.tzinfo is None:
+            ws = ws.replace(tzinfo=timezone.utc)
+        if ts < ws:
+            flags.append("OUTSIDE_DELIVERY_WINDOW")
+            # How far outside? Score degrades
+            diff_minutes = (ws - ts).total_seconds() / 60
+            if diff_minutes > 60:
+                return 0.0, flags
+            return max(0.0, 1.0 - diff_minutes / 60), flags
+
+    if delivery_window_end is not None:
+        we = delivery_window_end
+        if we.tzinfo is None:
+            we = we.replace(tzinfo=timezone.utc)
+        if ts > we:
+            flags.append("OUTSIDE_DELIVERY_WINDOW")
+            diff_minutes = (ts - we).total_seconds() / 60
+            if diff_minutes > 60:
+                return 0.0, flags
+            return max(0.0, 1.0 - diff_minutes / 60), flags
+
+    return 1.0, []
+
 def run_enhanced_verification(
     signature_valid: bool,
     location_match_result: Optional[Dict[str, Any]],
     sensor_data: Optional[Any],
     location_profile: Optional[Any],
+    campaign: Optional[Any] = None,
+    capture_timestamp=None,
 ) -> VerificationResult:
     """Run the full enhanced verification pipeline.
     
@@ -288,8 +347,23 @@ def run_enhanced_verification(
     result.tremor_score = t_score
     result.flags.extend(t_flags)
     
-    # 6. Compute weighted confidence score
-    result.confidence_score = round(
+    # 6. Delivery time-window check
+    dw_score = 1.0
+    dw_flags = []
+    if location_profile and capture_timestamp:
+        dw_start = getattr(location_profile, 'delivery_window_start', None)
+        dw_end = getattr(location_profile, 'delivery_window_end', None)
+        if dw_start or dw_end:
+            dw_score, dw_flags = check_delivery_window(
+                capture_timestamp, dw_start, dw_end
+            )
+            result.flags.extend(dw_flags)
+            # If outside delivery window, penalize confidence
+            if dw_flags:
+                result.details['delivery_window_score'] = dw_score
+
+    # 7. Compute weighted confidence score
+    base_confidence = round(
         WEIGHT_SIGNATURE * result.signature_score
         + WEIGHT_LOCATION * result.location_score
         + WEIGHT_PRESSURE * result.pressure_score
@@ -297,6 +371,8 @@ def run_enhanced_verification(
         + WEIGHT_TREMOR * result.tremor_score,
         4,
     )
+    # Apply delivery window penalty (multiplicative — outside window tanks the score)
+    result.confidence_score = round(base_confidence * dw_score, 4)
     
     # Store details
     result.details = {
@@ -346,7 +422,7 @@ def determine_status_from_verification(vr: VerificationResult) -> str:
     if not vr.signature_score:
         return "rejected"
     
-    severe_flags = [f for f in vr.flags if "SEVERE" in f]
+    severe_flags = [f for f in vr.flags if "SEVERE" in f or f == "OUTSIDE_DELIVERY_WINDOW"]
     if severe_flags:
         return "flagged"
     

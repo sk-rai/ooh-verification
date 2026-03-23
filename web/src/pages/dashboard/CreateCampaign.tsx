@@ -22,11 +22,56 @@ export default function CreateCampaign() {
     campaign_type: 'ooh',
     start_date: '',
     end_date: '',
+    delivery_window_start: '',
+    delivery_window_end: '',
   })
 
   const [locations, setLocations] = useState<Location[]>([
     { id: '1', address: '', latitude: '', longitude: '', radius_meters: '100' }
   ])
+
+  const [geocoding, setGeocoding] = useState(false)
+  const [geocodeMessage, setGeocodeMessage] = useState('')
+
+  const geocodeAddress = async (locationId: string) => {
+    const loc = locations.find(l => l.id === locationId)
+    if (!loc || !loc.address.trim()) return
+    setGeocoding(true)
+    setGeocodeMessage('')
+    try {
+      const res = await api.post('/api/campaigns/locations/geocode', { address: loc.address })
+      if (res.data && res.data.latitude && res.data.longitude) {
+        updateLocation(locationId, 'latitude', String(res.data.latitude))
+        updateLocation(locationId, 'longitude', String(res.data.longitude))
+        setGeocodeMessage(`Resolved: ${res.data.formatted_address} (${res.data.latitude}, ${res.data.longitude})`)
+      }
+    } catch (err) {
+      setGeocodeMessage('Could not resolve address. Please enter coordinates manually.')
+    } finally {
+      setGeocoding(false)
+    }
+  }
+
+  const reverseGeocodeCoords = async (locationId: string) => {
+    const loc = locations.find(l => l.id === locationId)
+    if (!loc || !loc.latitude || !loc.longitude) return
+    setGeocoding(true)
+    setGeocodeMessage('')
+    try {
+      const res = await api.post('/api/campaigns/locations/reverse-geocode', {
+        latitude: parseFloat(loc.latitude),
+        longitude: parseFloat(loc.longitude),
+      })
+      if (res.data && res.data.formatted_address) {
+        updateLocation(locationId, 'address', res.data.formatted_address)
+        setGeocodeMessage(`Resolved: ${res.data.formatted_address}`)
+      }
+    } catch (err) {
+      setGeocodeMessage('Could not resolve coordinates to address.')
+    } finally {
+      setGeocoding(false)
+    }
+  }
 
   const addLocation = () => {
     setLocations([
@@ -91,16 +136,33 @@ export default function CreateCampaign() {
         return
       }
       
+      const locationProfile: any = {
+          tolerance_meters: parseFloat(firstLocation.radius_meters),
+        }
+      // Send coordinates if available
+      if (firstLocation.latitude && firstLocation.longitude) {
+        locationProfile.expected_latitude = parseFloat(firstLocation.latitude)
+        locationProfile.expected_longitude = parseFloat(firstLocation.longitude)
+      }
+      // Send address for server-side geocoding if coordinates missing
+      if (firstLocation.address.trim()) {
+        locationProfile.address = firstLocation.address.trim()
+      }
+      // Add delivery window if set
+      if (formData.campaign_type === 'delivery') {
+        if (formData.delivery_window_start) {
+          locationProfile.delivery_window_start = new Date(formData.delivery_window_start).toISOString()
+        }
+        if (formData.delivery_window_end) {
+          locationProfile.delivery_window_end = new Date(formData.delivery_window_end).toISOString()
+        }
+      }
       await api.post('/api/campaigns', {
         name: formData.name,
         campaign_type: formData.campaign_type,
         start_date: new Date(formData.start_date).toISOString(),
         end_date: new Date(formData.end_date).toISOString(),
-        location_profile: {
-          expected_latitude: parseFloat(firstLocation.latitude),
-          expected_longitude: parseFloat(firstLocation.longitude),
-          tolerance_meters: parseFloat(firstLocation.radius_meters),
-        },
+        location_profile: locationProfile,
       })
 
       navigate('/campaigns')
@@ -118,7 +180,7 @@ export default function CreateCampaign() {
     }
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -178,6 +240,31 @@ export default function CreateCampaign() {
                 />
               </div>
 
+              <div>
+                <label htmlFor="campaign_type" className="block text-sm font-medium text-gray-700">
+                  Campaign Type *
+                </label>
+                <select
+                  id="campaign_type"
+                  name="campaign_type"
+                  value={formData.campaign_type}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                >
+                  <option value="ooh">OOH Advertising</option>
+                  <option value="delivery">Delivery Verification</option>
+                  <option value="construction">Construction</option>
+                  <option value="insurance">Insurance</option>
+                  <option value="healthcare">Healthcare</option>
+                  <option value="property_management">Property Management</option>
+                </select>
+                {formData.campaign_type === 'delivery' && (
+                  <p className="mt-1 text-xs text-blue-600">
+                    Delivery campaigns use a wider geofence (150m default) and support time-window enforcement.
+                  </p>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="start_date" className="block text-sm font-medium text-gray-700">
@@ -209,6 +296,44 @@ export default function CreateCampaign() {
                   />
                 </div>
               </div>
+
+              {/* Delivery Time Window (only for delivery campaigns) */}
+              {formData.campaign_type === 'delivery' && (
+                <div className="mt-6 border-t border-gray-200 pt-6">
+                  <h4 className="text-sm font-medium text-gray-900 mb-1">Delivery Time Window</h4>
+                  <p className="text-xs text-gray-500 mb-4">
+                    Photos captured outside this window will be flagged. Leave empty to skip time validation.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label htmlFor="delivery_window_start" className="block text-sm font-medium text-gray-700">
+                        Window Start
+                      </label>
+                      <input
+                        type="datetime-local"
+                        id="delivery_window_start"
+                        name="delivery_window_start"
+                        value={formData.delivery_window_start}
+                        onChange={handleChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="delivery_window_end" className="block text-sm font-medium text-gray-700">
+                        Window End
+                      </label>
+                      <input
+                        type="datetime-local"
+                        id="delivery_window_end"
+                        name="delivery_window_end"
+                        value={formData.delivery_window_end}
+                        onChange={handleChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Target Locations */}
@@ -267,9 +392,19 @@ export default function CreateCampaign() {
                         className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                         placeholder="e.g., 123 Main St, City, State, ZIP"
                       />
-                      <p className="text-xs text-gray-500">
-                        Provide a street address (geocoding will convert to coordinates)
-                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => geocodeAddress(location.id)}
+                          disabled={geocoding || !location.address.trim()}
+                          className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50"
+                        >
+                          {geocoding ? 'Resolving...' : 'Resolve to Coordinates'}
+                        </button>
+                        <p className="text-xs text-gray-500">
+                          Auto-fills lat/lng from address
+                        </p>
+                      </div>
                     </div>
 
                     {/* OR Divider */}
@@ -320,9 +455,19 @@ export default function CreateCampaign() {
                           />
                         </div>
                       </div>
-                      <p className="text-xs text-gray-500">
-                        Right-click on Google Maps and select "What's here?" to get coordinates
-                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => reverseGeocodeCoords(location.id)}
+                          disabled={geocoding || !location.latitude || !location.longitude}
+                          className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50"
+                        >
+                          {geocoding ? 'Resolving...' : 'Resolve to Address'}
+                        </button>
+                        <p className="text-xs text-gray-500">
+                          Auto-fills address from coordinates
+                        </p>
+                      </div>
                     </div>
 
                     {/* Radius */}
@@ -343,6 +488,13 @@ export default function CreateCampaign() {
                         Photos must be taken within this radius of the target location
                       </p>
                     </div>
+
+                    {/* Geocode result message */}
+                    {geocodeMessage && (
+                      <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                        <p className="text-xs text-blue-800">{geocodeMessage}</p>
+                      </div>
+                    )}
 
                     {/* Validation indicator */}
                     {location.address === '' && location.latitude === '' && location.longitude === '' && (

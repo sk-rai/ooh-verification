@@ -7,8 +7,9 @@ from uuid import UUID
 
 class LocationProfileCreate(BaseModel):
     """Schema for creating a location profile within a campaign."""
-    expected_latitude: float = Field(..., ge=-90, le=90, description="Expected GPS latitude with 7 decimal precision")
-    expected_longitude: float = Field(..., ge=-180, le=180, description="Expected GPS longitude with 7 decimal precision")
+    expected_latitude: Optional[float] = Field(None, ge=-90, le=90, description="Expected GPS latitude. Auto-resolved from address if not provided.")
+    expected_longitude: Optional[float] = Field(None, ge=-180, le=180, description="Expected GPS longitude. Auto-resolved from address if not provided.")
+    address: Optional[str] = Field(None, max_length=500, description="Street address. Will be geocoded to lat/lng if coordinates not provided.")
     tolerance_meters: float = Field(50.0, gt=0, description="GPS tolerance radius in meters")
     expected_wifi_bssids: Optional[List[str]] = Field(None, description="Expected WiFi BSSIDs (MAC addresses)")
     expected_cell_tower_ids: Optional[List[int]] = Field(None, description="Expected cell tower IDs")
@@ -18,6 +19,8 @@ class LocationProfileCreate(BaseModel):
     expected_light_max: Optional[float] = Field(None, description="Maximum expected light in lux")
     expected_magnetic_min: Optional[float] = Field(None, description="Minimum expected magnetic field in µT")
     expected_magnetic_max: Optional[float] = Field(None, description="Maximum expected magnetic field in µT")
+    delivery_window_start: Optional[datetime] = Field(None, description="Delivery window start (ISO 8601). Required for delivery campaigns.")
+    delivery_window_end: Optional[datetime] = Field(None, description="Delivery window end (ISO 8601). Required for delivery campaigns.")
 
     class Config:
         json_schema_extra = {
@@ -53,6 +56,9 @@ class LocationProfileResponse(BaseModel):
     expected_light_max: Optional[float]
     expected_magnetic_min: Optional[float]
     expected_magnetic_max: Optional[float]
+    delivery_window_start: Optional[datetime]
+    delivery_window_end: Optional[datetime]
+    resolved_address: Optional[str]
     created_at: datetime
 
     class Config:
