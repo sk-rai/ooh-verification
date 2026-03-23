@@ -264,3 +264,100 @@ def generate_campaign_code() -> str:
     campaign_code = f"{prefix}-{year}-{suffix}"
 
     return campaign_code
+
+
+
+class ChallengeManager:
+    """
+    Manages challenge nonces for device-attested authentication.
+    
+    Flow:
+      1. Device requests challenge → server generates random nonce
+      2. Device signs nonce with StrongBox private key
+      3. Device sends signature → server verifies with stored public key
+    """
+    
+    def __init__(self, expiration_seconds: int = 300):
+        self.challenges: Dict[str, Dict[str, Any]] = {}  # {challenge: {vendor_id, device_id, expires_at}}
+        self.expiration_seconds = expiration_seconds
+    
+    def generate(self, vendor_id: str, device_id: str) -> str:
+        """Generate a random challenge nonce."""
+        challenge = secrets.token_hex(32)  # 64-char hex string
+        expires_at = datetime.utcnow() + timedelta(seconds=self.expiration_seconds)
+        
+        self.challenges[challenge] = {
+            "vendor_id": vendor_id,
+            "device_id": device_id,
+            "expires_at": expires_at,
+        }
+        
+        # Cleanup old challenges
+        self._cleanup()
+        
+        return challenge
+    
+    def validate(self, challenge: str, vendor_id: str, device_id: str) -> bool:
+        """Validate that a challenge exists and matches the vendor/device."""
+        if challenge not in self.challenges:
+            return False
+        
+        stored = self.challenges[challenge]
+        
+        if datetime.utcnow() > stored["expires_at"]:
+            del self.challenges[challenge]
+            return False
+        
+        if stored["vendor_id"] != vendor_id or stored["device_id"] != device_id:
+            return False
+        
+        # One-time use — consume the challenge
+        del self.challenges[challenge]
+        return True
+    
+    def _cleanup(self):
+        """Remove expired challenges."""
+        now = datetime.utcnow()
+        expired = [c for c, d in self.challenges.items() if now > d["expires_at"]]
+        for c in expired:
+            del self.challenges[c]
+
+
+def verify_ecdsa_signature(public_key_pem: str, challenge: str, signature_b64: str) -> bool:
+    """
+    Verify an ECDSA signature from Android StrongBox/TEE.
+    
+    Args:
+        public_key_pem: PEM-encoded ECDSA public key from vendor registration
+        challenge: The challenge nonce that was signed
+        signature_b64: Base64-encoded DER signature from Android
+        
+    Returns:
+        True if signature is valid
+    """
+    try:
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import ec
+        import base64
+        
+        # Load public key
+        public_key = serialization.load_pem_public_key(public_key_pem.encode())
+        
+        # Decode signature
+        signature_bytes = base64.b64decode(signature_b64)
+        
+        # Verify — Android StrongBox uses SHA256withECDSA
+        public_key.verify(
+            signature_bytes,
+            challenge.encode(),
+            ec.ECDSA(hashes.SHA256())
+        )
+        return True
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"ECDSA verification failed: {e}")
+        return False
+
+
+# Global challenge manager
+challenge_manager = ChallengeManager()

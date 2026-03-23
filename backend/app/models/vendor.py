@@ -1,7 +1,7 @@
 """
 Vendor model - represents field workers who capture photos.
 """
-from sqlalchemy import Column, String, DateTime, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -59,6 +59,7 @@ class Vendor(Base):
     # Device Registration (set after first Android app login)
     device_id = Column(String(255), nullable=True, unique=True)
     public_key = Column(String, nullable=True)  # RSA/ECDSA public key from Android Keystore
+    device_verified = Column(Boolean, default=False, server_default="false")  # True after first OTP login
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=__import__("datetime").timezone.utc), nullable=False)

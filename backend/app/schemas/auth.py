@@ -196,3 +196,49 @@ class OTPResponse(BaseModel):
                 "expires_in": 600
             }
         }
+
+
+class ChallengeRequest(BaseModel):
+    """Request a challenge nonce for device-attested login."""
+    vendor_id: str = Field(..., min_length=6, max_length=6, pattern=r'^[A-Z0-9]{6}$')
+    device_id: str = Field(..., description="Registered device ID")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "vendor_id": "ABC123",
+                "device_id": "android-device-uuid"
+            }
+        }
+
+
+class ChallengeResponse(BaseModel):
+    """Challenge nonce for device to sign."""
+    challenge: str = Field(..., description="Random nonce to sign with device private key")
+    expires_in: int = Field(..., description="Challenge expiration in seconds")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "challenge": "a1b2c3d4e5f6...",
+                "expires_in": 300
+            }
+        }
+
+
+class DeviceLoginRequest(BaseModel):
+    """Device-attested login using StrongBox signature."""
+    vendor_id: str = Field(..., min_length=6, max_length=6, pattern=r'^[A-Z0-9]{6}$')
+    device_id: str = Field(..., description="Registered device ID")
+    challenge: str = Field(..., description="The challenge nonce that was signed")
+    signature: str = Field(..., description="Base64-encoded ECDSA signature of the challenge")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "vendor_id": "ABC123",
+                "device_id": "android-device-uuid",
+                "challenge": "a1b2c3d4e5f6...",
+                "signature": "MEUCIQD..."
+            }
+        }
