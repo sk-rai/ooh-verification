@@ -25,6 +25,7 @@ from app.schemas.auth import (
     ChallengeRequest, ChallengeResponse, DeviceLoginRequest
 )
 from app.middleware.tenant_context import get_current_tenant
+from app.core.sms import sms_service
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -196,9 +197,11 @@ async def vendor_request_otp(
     # Generate and store OTP
     otp = otp_manager.generate_and_store(data.phone_number)
     
-    # TODO: Send OTP via Twilio SMS
-    # For development, we'll log it
-    print(f"[DEV] OTP for {data.phone_number}: {otp}")
+    # Send OTP via SMS (Twilio)
+    sms_sent = await sms_service.send_otp_sms(data.phone_number, otp)
+
+    if not sms_sent:
+        print(f"⚠️ SMS delivery failed for {data.phone_number}, OTP: {otp}")
     
     return {
         "message": "OTP sent to your phone number",

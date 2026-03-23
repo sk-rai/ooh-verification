@@ -33,11 +33,13 @@ class SMSService:
                 from twilio.rest import Client
                 self.client = Client(self.account_sid, self.auth_token)
                 logger.info("Twilio SMS service initialized")
+                print(f"✅ Twilio SMS initialized: from={self.from_number}")
             except ImportError:
                 logger.warning("Twilio library not installed — pip install twilio")
                 self.enabled = False
         else:
             logger.warning("Twilio credentials not configured — SMS will log to console")
+            print(f"⚠️ Twilio not configured: SID={bool(self.account_sid)}, TOKEN={bool(self.auth_token)}, NUM={bool(self.from_number)}")
 
     async def send_sms(self, to_number: str, message: str) -> bool:
         """
