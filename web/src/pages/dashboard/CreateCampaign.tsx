@@ -39,7 +39,7 @@ export default function CreateCampaign() {
     setGeocoding(true)
     setGeocodeMessage('')
     try {
-      const res = await api.post('/api/campaigns/locations/geocode', { address: loc.address })
+      const res = await api.post('/api/campaigns/geocode', { address: loc.address })
       if (res.data && res.data.latitude && res.data.longitude) {
         updateLocation(locationId, 'latitude', String(res.data.latitude))
         updateLocation(locationId, 'longitude', String(res.data.longitude))
@@ -58,7 +58,7 @@ export default function CreateCampaign() {
     setGeocoding(true)
     setGeocodeMessage('')
     try {
-      const res = await api.post('/api/campaigns/locations/reverse-geocode', {
+      const res = await api.post('/api/campaigns/reverse-geocode', {
         latitude: parseFloat(loc.latitude),
         longitude: parseFloat(loc.longitude),
       })
