@@ -12,7 +12,7 @@ Items deferred during development that must be completed before Play Store relea
 - [x] `network_security_config.xml` enforces HTTPS-only for release, cleartext only for debug emulator
 - [x] Hybrid auth: Device attestation login via StrongBox/TEE ECDSA challenge-response (skips SMS OTP on subsequent logins)
 - [x] OkHttp logging reverted from BODY to HEADERS (no more photo binary spam in debug logs)
-- [x] Auto-prepend +91 country code on login screen (users enter 10-digit number only)
+- [x] Auto-detect country dial code from SIM/locale (editable, supports 50+ countries)
 
 ## Signing & Release
 - [ ] Generate production signing keystore (upload key for Play App Signing)

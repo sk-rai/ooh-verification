@@ -173,6 +173,7 @@ Campaign List    POST /register-device (public key PEM)
 - Signature format: Base64-encoded DER
 - On logout, `device_registered` flag and vendor ID are preserved (Keystore key survives logout)
 - On 401 (key mismatch), flag is reset and user falls back to OTP
+- Country dial code auto-detected from SIM (`TelephonyManager.simCountryIso`), falls back to network country, then device locale. Editable field supports 50+ countries via `CountryCodeHelper.kt`.
 
 ### Auth Interceptor
 
