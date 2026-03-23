@@ -22,7 +22,7 @@ from app.schemas.campaign_location import (
     GeocodeResponse,
     LocationVerificationResponse
 )
-from app.services.geocoding_service import get_geocoding_service
+from app.services.geocoding_service import get_geocoding_service, GeocodingError
 from app.services.location_verification_service import get_location_verification_service
 
 router = APIRouter(prefix="/api/campaigns", tags=["Campaign Locations"])
