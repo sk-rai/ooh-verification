@@ -107,6 +107,10 @@ class GeocodingService:
             "Please provide coordinates directly."
         )
 
+    async def geocode(self, address: str, use_cache: bool = True) -> GeocodingResult:
+        """Alias for geocode_address for backward compatibility."""
+        return await self.geocode_address(address, use_cache=use_cache)
+
     async def reverse_geocode(
         self, latitude: float, longitude: float, use_cache: bool = True
     ) -> GeocodingResult:

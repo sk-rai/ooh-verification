@@ -354,7 +354,18 @@ async def geocode_address(
             detail="Unable to geocode address. Please check the address and try again."
         )
     
-    return GeocodeResponse(**result.to_dict())
+    components = result.address_components or {}
+    return GeocodeResponse(
+        latitude=result.latitude,
+        longitude=result.longitude,
+        formatted_address=result.formatted_address,
+        accuracy=result.accuracy or "unknown",
+        place_id=result.place_id,
+        city=components.get("city"),
+        state=components.get("state"),
+        country=components.get("country"),
+        postal_code=components.get("postal_code"),
+    )
 
 
 @router.post("/reverse-geocode", response_model=GeocodeResponse)
@@ -376,7 +387,18 @@ async def reverse_geocode_coordinates(
             detail="Unable to reverse geocode coordinates."
         )
     
-    return GeocodeResponse(**result.to_dict())
+    components = result.address_components or {}
+    return GeocodeResponse(
+        latitude=result.latitude,
+        longitude=result.longitude,
+        formatted_address=result.formatted_address,
+        accuracy=result.accuracy or "unknown",
+        place_id=result.place_id,
+        city=components.get("city"),
+        state=components.get("state"),
+        country=components.get("country"),
+        postal_code=components.get("postal_code"),
+    )
 
 
 @router.post("/{campaign_id}/verify-location", response_model=LocationVerificationResponse)
