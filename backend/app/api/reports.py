@@ -277,26 +277,52 @@ async def get_aggregate_statistics(
     """Get aggregate statistics across all campaigns."""
     from sqlalchemy import func
     from app.models import Campaign, Photo, Vendor
-    campaigns_count = await db.execute(
-        select(func.count()).select_from(Campaign).where(Campaign.tenant_id == client.tenant_id)
-    )
-    photos_count = await db.execute(
+    from app.models.photo import VerificationStatus
+    from app.models.campaign import CampaignStatus
+    from app.models.vendor import VendorStatus
+
+    total_photos = (await db.execute(
         select(func.count()).select_from(Photo).where(Photo.tenant_id == client.tenant_id)
-    )
-    vendors_count = await db.execute(
-        select(func.count()).select_from(Vendor).where(Vendor.tenant_id == client.tenant_id)
-    )
-    verified_count = await db.execute(
+    )).scalar() or 0
+    verified = (await db.execute(
         select(func.count()).select_from(Photo).where(
-            Photo.tenant_id == client.tenant_id,
-            Photo.verification_status == 'verified'
+            Photo.tenant_id == client.tenant_id, Photo.verification_status == VerificationStatus.VERIFIED
         )
-    )
+    )).scalar() or 0
+    rejected = (await db.execute(
+        select(func.count()).select_from(Photo).where(
+            Photo.tenant_id == client.tenant_id, Photo.verification_status == VerificationStatus.REJECTED
+        )
+    )).scalar() or 0
+    pending = total_photos - verified - rejected
+
+    total_campaigns = (await db.execute(
+        select(func.count()).select_from(Campaign).where(Campaign.tenant_id == client.tenant_id)
+    )).scalar() or 0
+    active_campaigns = (await db.execute(
+        select(func.count()).select_from(Campaign).where(
+            Campaign.tenant_id == client.tenant_id, Campaign.status == CampaignStatus.ACTIVE
+        )
+    )).scalar() or 0
+
+    total_vendors = (await db.execute(
+        select(func.count()).select_from(Vendor).where(Vendor.tenant_id == client.tenant_id)
+    )).scalar() or 0
+    active_vendors = (await db.execute(
+        select(func.count()).select_from(Vendor).where(
+            Vendor.tenant_id == client.tenant_id, Vendor.status == VendorStatus.ACTIVE
+        )
+    )).scalar() or 0
+
     return {
-        "total_campaigns": campaigns_count.scalar() or 0,
-        "total_photos": photos_count.scalar() or 0,
-        "total_vendors": vendors_count.scalar() or 0,
-        "verified_photos": verified_count.scalar() or 0,
+        "total_photos": total_photos,
+        "verified_photos": verified,
+        "failed_photos": rejected,
+        "pending_photos": pending,
+        "total_campaigns": total_campaigns,
+        "active_campaigns": active_campaigns,
+        "total_vendors": total_vendors,
+        "active_vendors": active_vendors,
     }
 
 @router.get("/campaigns")
@@ -311,18 +337,27 @@ async def get_campaigns_report(
     campaigns = await db.execute(
         select(Campaign).where(Campaign.tenant_id == client.tenant_id).order_by(Campaign.created_at.desc())
     )
+    from app.models.photo import VerificationStatus
     result = []
     for c in campaigns.scalars().all():
-        photo_count = await db.execute(
+        photo_count = (await db.execute(
             select(func.count()).select_from(Photo).where(Photo.campaign_id == c.campaign_id)
-        )
+        )).scalar() or 0
+        verified_count = (await db.execute(
+            select(func.count()).select_from(Photo).where(
+                Photo.campaign_id == c.campaign_id,
+                Photo.verification_status == VerificationStatus.VERIFIED
+            )
+        )).scalar() or 0
         result.append({
             "campaign_id": str(c.campaign_id),
             "campaign_code": c.campaign_code,
+            "campaign_name": c.name,
             "name": c.name,
             "status": c.status.value if hasattr(c.status, 'value') else str(c.status),
             "campaign_type": c.campaign_type,
-            "photo_count": photo_count.scalar() or 0,
+            "photo_count": photo_count,
+            "verified_count": verified_count,
             "created_at": c.created_at.isoformat() if c.created_at else None,
         })
     return result
@@ -339,16 +374,26 @@ async def get_vendors_report(
     vendors = await db.execute(
         select(Vendor).where(Vendor.tenant_id == client.tenant_id)
     )
+    from app.models.photo import VerificationStatus
     result = []
     for v in vendors.scalars().all():
-        photo_count = await db.execute(
+        photo_count = (await db.execute(
             select(func.count()).select_from(Photo).where(Photo.vendor_id == v.vendor_id)
-        )
+        )).scalar() or 0
+        verified_count = (await db.execute(
+            select(func.count()).select_from(Photo).where(
+                Photo.vendor_id == v.vendor_id,
+                Photo.verification_status == VerificationStatus.VERIFIED
+            )
+        )).scalar() or 0
         result.append({
             "vendor_id": v.vendor_id,
+            "vendor_name": v.name,
             "name": v.name,
             "status": v.status.value if hasattr(v.status, 'value') else str(v.status),
-            "photo_count": photo_count.scalar() or 0,
+            "photo_count": photo_count,
+            "verified_count": verified_count,
+            "verification_rate": (verified_count / photo_count) if photo_count > 0 else 0,
         })
     return result
 
@@ -376,4 +421,93 @@ async def get_time_series(
 
     query = query.group_by(cast(Photo.created_at, Date)).order_by(cast(Photo.created_at, Date))
     result = await db.execute(query)
-    return [{"date": str(row.date), "count": row.count} for row in result.all()]
+    return [{"date": str(row.date), "photo_count": row.count, "count": row.count} for row in result.all()]
+
+
+@router.get("/export/csv")
+async def export_csv(
+    start_date: str = None,
+    end_date: str = None,
+    db: AsyncSession = Depends(get_db),
+    client: Client = Depends(get_current_client)
+):
+    """Export all photos as CSV."""
+    from sqlalchemy import func, cast, Date
+    from app.models import Photo, Campaign, Vendor, SensorData
+    from datetime import datetime
+
+    query = (
+        select(Photo, Campaign.name.label("campaign_name"), Campaign.campaign_code,
+               Vendor.name.label("vendor_name"), Vendor.vendor_id.label("vid"),
+               SensorData.gps_latitude, SensorData.gps_longitude, SensorData.gps_accuracy)
+        .join(Campaign, Campaign.campaign_id == Photo.campaign_id, isouter=True)
+        .join(Vendor, Vendor.vendor_id == Photo.vendor_id, isouter=True)
+        .join(SensorData, SensorData.photo_id == Photo.photo_id, isouter=True)
+        .where(Photo.tenant_id == client.tenant_id)
+    )
+    if start_date:
+        query = query.where(Photo.created_at >= datetime.fromisoformat(start_date))
+    if end_date:
+        query = query.where(Photo.created_at <= datetime.fromisoformat(end_date))
+    query = query.order_by(Photo.created_at.desc())
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    csv_lines = ["photo_id,campaign_code,campaign_name,vendor_id,vendor_name,status,confidence,latitude,longitude,accuracy,captured_at"]
+    for row in rows:
+        p = row[0]
+        csv_lines.append(",".join([
+            str(p.photo_id),
+            str(row.campaign_code or ""),
+            str(row.campaign_name or "").replace(",", ";"),
+            str(row.vid or ""),
+            str(row.vendor_name or "").replace(",", ";"),
+            p.verification_status.value if hasattr(p.verification_status, 'value') else str(p.verification_status),
+            str(p.verification_confidence or 0),
+            str(row.gps_latitude or 0),
+            str(row.gps_longitude or 0),
+            str(row.gps_accuracy or 0),
+            p.created_at.isoformat() if p.created_at else "",
+        ]))
+
+    csv_content = "\n".join(csv_lines)
+    return StreamingResponse(
+        io.StringIO(csv_content),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=trustcapture-report.csv"}
+    )
+
+
+@router.get("/export/pdf")
+async def export_pdf(
+    start_date: str = None,
+    end_date: str = None,
+    db: AsyncSession = Depends(get_db),
+    client: Client = Depends(get_current_client)
+):
+    """Export summary as PDF (simple text-based)."""
+    from sqlalchemy import func
+    from app.models import Photo, Campaign, Vendor
+    from app.models.photo import VerificationStatus
+
+    total = (await db.execute(select(func.count()).select_from(Photo).where(Photo.tenant_id == client.tenant_id))).scalar() or 0
+    verified = (await db.execute(select(func.count()).select_from(Photo).where(Photo.tenant_id == client.tenant_id, Photo.verification_status == VerificationStatus.VERIFIED))).scalar() or 0
+    rejected = (await db.execute(select(func.count()).select_from(Photo).where(Photo.tenant_id == client.tenant_id, Photo.verification_status == VerificationStatus.REJECTED))).scalar() or 0
+    campaigns = (await db.execute(select(func.count()).select_from(Campaign).where(Campaign.tenant_id == client.tenant_id))).scalar() or 0
+    vendors = (await db.execute(select(func.count()).select_from(Vendor).where(Vendor.tenant_id == client.tenant_id))).scalar() or 0
+
+    content = f"""TrustCapture Report
+====================
+Total Photos: {total}
+Verified: {verified}
+Rejected: {rejected}
+Pending: {total - verified - rejected}
+Campaigns: {campaigns}
+Vendors: {vendors}
+"""
+    return Response(
+        content=content.encode(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=trustcapture-report.pdf"}
+    )

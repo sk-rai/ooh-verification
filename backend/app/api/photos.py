@@ -50,26 +50,48 @@ async def list_photos(
         campaign = campaign.scalar_one_or_none()
         if campaign:
             query = query.where(Photo.campaign_id == campaign.campaign_id)
-    query = query.order_by(Photo.created_at.desc()).offset(offset).limit(limit)
-    result = await db.execute(query)
-    photos = result.scalars().all()
-    # Return as array - frontend expects array directly
+    # Join with SensorData, Campaign, Vendor for full details
+    from app.models import SensorData as SD, Campaign as Cam, Vendor as Ven
+    detail_query = (
+        select(Photo, SD.gps_latitude, SD.gps_longitude, SD.gps_accuracy,
+               Cam.name.label("campaign_name"), Cam.campaign_code,
+               Ven.name.label("vendor_name"))
+        .join(SD, SD.photo_id == Photo.photo_id, isouter=True)
+        .join(Cam, Cam.campaign_id == Photo.campaign_id, isouter=True)
+        .join(Ven, Ven.vendor_id == Photo.vendor_id, isouter=True)
+        .where(Photo.tenant_id == client.tenant_id)
+    )
+    if campaign_code:
+        campaign_result = await db.execute(
+            select(Campaign).where(Campaign.campaign_code == campaign_code, Campaign.tenant_id == client.tenant_id)
+        )
+        campaign_obj = campaign_result.scalar_one_or_none()
+        if campaign_obj:
+            detail_query = detail_query.where(Photo.campaign_id == campaign_obj.campaign_id)
+    detail_query = detail_query.order_by(Photo.created_at.desc()).offset(offset).limit(limit)
+    result = await db.execute(detail_query)
+    rows = result.all()
     storage = get_storage_service()
     return [
         {
-            "photo_id": str(p.photo_id),
-            "campaign_id": str(p.campaign_id),
-            "vendor_id": str(p.vendor_id) if p.vendor_id else None,
-            "photo_url": storage.get_photo_url(p.s3_key) if p.s3_key else None,
-            "thumbnail_url": storage.get_thumbnail_url(p.s3_key) if p.s3_key else None,
-            "status": p.verification_status.value if hasattr(p.verification_status, 'value') else str(p.verification_status),
-            "verification_status": p.verification_status.value if hasattr(p.verification_status, 'value') else str(p.verification_status),
-            "verification_confidence": p.verification_confidence or 0,
-            "confidence_score": p.verification_confidence or 0,
-            "captured_at": p.capture_timestamp.isoformat() if p.capture_timestamp else (p.created_at.isoformat() if p.created_at else None),
-            "created_at": p.created_at.isoformat() if p.created_at else None,
+            "photo_id": str(row[0].photo_id),
+            "campaign_id": str(row[0].campaign_id),
+            "campaign_name": row.campaign_name or "",
+            "vendor_id": str(row[0].vendor_id) if row[0].vendor_id else None,
+            "vendor_name": row.vendor_name or "",
+            "photo_url": storage.get_photo_url(row[0].s3_key) if row[0].s3_key else None,
+            "thumbnail_url": storage.get_thumbnail_url(row[0].s3_key) if row[0].s3_key else None,
+            "status": row[0].verification_status.value if hasattr(row[0].verification_status, 'value') else str(row[0].verification_status),
+            "verification_status": row[0].verification_status.value if hasattr(row[0].verification_status, 'value') else str(row[0].verification_status),
+            "verification_confidence": row[0].verification_confidence or 0,
+            "confidence_score": row[0].verification_confidence or 0,
+            "gps_latitude": float(row.gps_latitude) if row.gps_latitude else 0,
+            "gps_longitude": float(row.gps_longitude) if row.gps_longitude else 0,
+            "gps_accuracy": float(row.gps_accuracy) if row.gps_accuracy else 0,
+            "captured_at": row[0].capture_timestamp.isoformat() if row[0].capture_timestamp else (row[0].created_at.isoformat() if row[0].created_at else None),
+            "created_at": row[0].created_at.isoformat() if row[0].created_at else None,
         }
-        for p in photos
+        for row in rows
     ]
 
 @router.get("/locations")
