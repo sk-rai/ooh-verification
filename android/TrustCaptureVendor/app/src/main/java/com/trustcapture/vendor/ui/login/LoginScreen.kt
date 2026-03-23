@@ -34,6 +34,7 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
+    val fullPhone = "${uiState.countryCode}${uiState.phoneNumber}"
 
     Column(
         modifier = Modifier
@@ -101,7 +102,7 @@ fun LoginScreen(
                     if (uiState.isDeviceRegistered) {
                         focusManager.clearFocus()
                         viewModel.login(
-                            onOtpNeeded = { onOtpRequested("+91${uiState.phoneNumber}", uiState.vendorId) },
+                            onOtpNeeded = { onOtpRequested(fullPhone, uiState.vendorId) },
                             onLoggedIn = onLoggedIn
                         )
                     }
@@ -110,35 +111,55 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Phone number field — only shown for first-time login (OTP flow)
+        // Phone number fields — only shown for first-time login (OTP flow)
         if (!uiState.isDeviceRegistered) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
-                value = uiState.phoneNumber,
-                onValueChange = viewModel::onPhoneNumberChange,
-                label = { Text("Phone Number") },
-                placeholder = { Text("9902097794") },
-                leadingIcon = {
-                    Icon(Icons.Default.Phone, contentDescription = null)
-                },
-                prefix = { Text("+91") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Phone,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        focusManager.clearFocus()
-                        viewModel.login(
-                            onOtpNeeded = { onOtpRequested("+91${uiState.phoneNumber}", uiState.vendorId) },
-                            onLoggedIn = onLoggedIn
-                        )
-                    }
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Country code field (editable, auto-detected)
+                OutlinedTextField(
+                    value = uiState.countryCode,
+                    onValueChange = viewModel::onCountryCodeChange,
+                    label = { Text("Code") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(FocusDirection.Right) }
+                    ),
+                    modifier = Modifier.width(90.dp)
+                )
+
+                // Phone number field
+                OutlinedTextField(
+                    value = uiState.phoneNumber,
+                    onValueChange = viewModel::onPhoneNumberChange,
+                    label = { Text("Phone Number") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Phone, contentDescription = null)
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            focusManager.clearFocus()
+                            viewModel.login(
+                                onOtpNeeded = { onOtpRequested(fullPhone, uiState.vendorId) },
+                                onLoggedIn = onLoggedIn
+                            )
+                        }
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
 
         // Error message
@@ -157,7 +178,7 @@ fun LoginScreen(
         Button(
             onClick = {
                 viewModel.login(
-                    onOtpNeeded = { onOtpRequested("+91${uiState.phoneNumber}", uiState.vendorId) },
+                    onOtpNeeded = { onOtpRequested(fullPhone, uiState.vendorId) },
                     onLoggedIn = onLoggedIn
                 )
             },

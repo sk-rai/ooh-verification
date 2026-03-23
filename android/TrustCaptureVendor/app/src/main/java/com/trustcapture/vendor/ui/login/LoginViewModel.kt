@@ -1,8 +1,10 @@
 package com.trustcapture.vendor.ui.login
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.trustcapture.vendor.domain.repository.AuthRepository
+import com.trustcapture.vendor.util.CountryCodeHelper
 import com.trustcapture.vendor.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +16,7 @@ import javax.inject.Inject
 data class LoginUiState(
     val vendorId: String = "",
     val phoneNumber: String = "",
+    val countryCode: String = "+1",
     val isLoading: Boolean = false,
     val error: String? = null,
     val isDeviceRegistered: Boolean = false
@@ -21,10 +24,13 @@ data class LoginUiState(
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
+    application: Application,
     private val authRepository: AuthRepository
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
-    private val _uiState = MutableStateFlow(LoginUiState())
+    private val _uiState = MutableStateFlow(LoginUiState(
+        countryCode = CountryCodeHelper.getDialCode(application)
+    ))
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     init {
@@ -47,7 +53,15 @@ class LoginViewModel @Inject constructor(
 
     fun onPhoneNumberChange(value: String) {
         _uiState.value = _uiState.value.copy(
-            phoneNumber = value.filter { it.isDigit() }.take(10),
+            phoneNumber = value.filter { it.isDigit() }.take(15),
+            error = null
+        )
+    }
+
+    fun onCountryCodeChange(value: String) {
+        val filtered = value.filter { it.isDigit() || it == '+' }.take(5)
+        _uiState.value = _uiState.value.copy(
+            countryCode = if (filtered.startsWith("+")) filtered else "+$filtered",
             error = null
         )
     }
@@ -64,15 +78,12 @@ class LoginViewModel @Inject constructor(
         }
 
         if (state.isDeviceRegistered) {
-            // Try device attestation (no SMS needed)
             attemptDeviceLogin(onFallbackToOtp = {
-                // Device login failed — fall back to OTP
                 requestOtp(onOtpNeeded)
             }, onSuccess = onLoggedIn)
         } else {
-            // First login — need OTP
-            if (state.phoneNumber.length < 10) {
-                _uiState.value = state.copy(error = "Enter a valid 10-digit phone number")
+            if (state.phoneNumber.length < 7) {
+                _uiState.value = state.copy(error = "Enter a valid phone number")
                 return
             }
             requestOtp(onOtpNeeded)
@@ -90,7 +101,6 @@ class LoginViewModel @Inject constructor(
                 }
                 is Resource.Error -> {
                     _uiState.value = _uiState.value.copy(isLoading = false)
-                    // 403 = device not verified, 401 = key mismatch → fall back to OTP
                     if (result.code == 403 || result.code == 401) {
                         _uiState.value = _uiState.value.copy(
                             isDeviceRegistered = false,
@@ -106,18 +116,24 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    /** Full phone number with country code for API calls. */
+    private fun fullPhoneNumber(): String {
+        val state = _uiState.value
+        return "${state.countryCode}${state.phoneNumber}"
+    }
+
     fun requestOtp(onSuccess: () -> Unit) {
         val state = _uiState.value
         if (state.vendorId.length < 6) {
             _uiState.value = state.copy(error = "Vendor ID must be 6 characters")
             return
         }
-        if (state.phoneNumber.length < 10) {
-            _uiState.value = state.copy(error = "Enter a valid 10-digit phone number")
+        if (state.phoneNumber.length < 7) {
+            _uiState.value = state.copy(error = "Enter a valid phone number")
             return
         }
 
-        val fullPhone = "+91${state.phoneNumber}"
+        val fullPhone = fullPhoneNumber()
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
