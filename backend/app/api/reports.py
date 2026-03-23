@@ -569,8 +569,8 @@ async def export_pdf(
     result = await db.execute(query)
     rows = result.all()
 
-    # Build PDF
-    pdf = FPDF()
+    # Build PDF - all landscape
+    pdf = FPDF(orientation="L")
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
@@ -585,12 +585,11 @@ async def export_pdf(
     pdf.cell(0, 8, date_label, new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.ln(8)
 
-    # Summary box
-    pdf.set_fill_color(245, 245, 245)
+    # Summary - compact horizontal boxes
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Helvetica", "B", 14)
     pdf.cell(0, 10, "Summary", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", "", 11)
+    pdf.ln(2)
     summary_items = [
         ("Total Photos", str(total)),
         ("Verified", str(verified)),
@@ -599,33 +598,43 @@ async def export_pdf(
         ("Campaigns", str(num_campaigns)),
         ("Vendors", str(num_vendors)),
     ]
+    box_w = 43
+    pdf.set_fill_color(245, 245, 245)
     for label, value in summary_items:
-        pdf.cell(60, 8, label + ":", new_x="RIGHT")
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(30, 8, value, new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("Helvetica", "", 11)
-    pdf.ln(6)
+        pdf.set_font("Helvetica", "", 8)
+        x = pdf.get_x()
+        y = pdf.get_y()
+        pdf.cell(box_w, 6, label, border="LTR", fill=True, align="C")
+        pdf.set_xy(x, y + 6)
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.cell(box_w, 10, value, border="LBR", fill=True, align="C")
+        pdf.set_xy(x + box_w + 2, y)
+    pdf.ln(22)
 
     # Photo details table
     if rows:
-        pdf.add_page(orientation="L")  # Landscape for table
         pdf.set_font("Helvetica", "B", 14)
         pdf.cell(0, 10, "Photo Details", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(2)
 
-        # Table header - landscape gives us 277mm width
+        col_widths = [38, 28, 20, 15, 38, 24]
+        total_fixed = sum(col_widths)
+        reasons_w = pdf.w - pdf.l_margin - pdf.r_margin - total_fixed
+
+        # Table header
         pdf.set_font("Helvetica", "B", 8)
         pdf.set_fill_color(59, 130, 246)
         pdf.set_text_color(255, 255, 255)
-        col_widths = [40, 30, 20, 15, 35, 25, 92]
-        headers = ["Campaign", "Vendor", "Status", "Conf", "Location", "Date", "Rejection Reasons"]
+        headers = ["Campaign", "Vendor", "Status", "Conf", "Location", "Date"]
         for i, h in enumerate(headers):
             pdf.cell(col_widths[i], 7, h, border=1, fill=True, align="C")
+        pdf.cell(reasons_w, 7, "Rejection Reasons", border=1, fill=True, align="C")
         pdf.ln()
 
         # Table rows
         pdf.set_font("Helvetica", "", 7)
         pdf.set_text_color(0, 0, 0)
+        row_h = 5
         for idx, row in enumerate(rows):
             p = row[0]
             bg = idx % 2 == 0
@@ -641,20 +650,39 @@ async def export_pdf(
             loc = f"{lat}, {lon}"
             date_str = p.created_at.strftime("%Y-%m-%d") if p.created_at else "N/A"
             flags = p.verification_flags or []
-            reasons = "; ".join(flags) if flags else "-"
 
-            vals = [
-                row.campaign_name or "",
-                row.vendor_name or "",
-                status,
-                conf,
-                loc,
-                date_str,
-                reasons,
-            ]
+            # Each flag on its own line
+            num_lines = max(len(flags), 1)
+            cell_h = row_h * num_lines
+
+            x_start = pdf.get_x()
+            y_start = pdf.get_y()
+
+            # Fixed columns
+            vals = [row.campaign_name or "", row.vendor_name or "", status, conf, loc, date_str]
             for i, v in enumerate(vals):
-                pdf.cell(col_widths[i], 6, v, border=1, fill=bg, align="C" if i in [2, 3] else "L")
-            pdf.ln()
+                pdf.set_xy(x_start + sum(col_widths[:i]), y_start)
+                pdf.cell(col_widths[i], cell_h, v, border=1, fill=bg, align="C" if i in [2, 3] else "L")
+
+            # Rejection reasons - one per line
+            pdf.set_xy(x_start + total_fixed, y_start)
+            if flags:
+                for fi, flag in enumerate(flags):
+                    pdf.set_xy(x_start + total_fixed, y_start + fi * row_h)
+                    border = "LR"
+                    if fi == 0:
+                        border = "TLR"
+                    if fi == len(flags) - 1:
+                        border = border.replace("R", "BR") if "B" not in border else border
+                        if fi == 0:
+                            border = "TLBR"
+                        else:
+                            border = "LBR"
+                    pdf.cell(reasons_w, row_h, f"  {flag}", border=border, fill=bg, align="L")
+            else:
+                pdf.cell(reasons_w, cell_h, "  -", border=1, fill=bg, align="L")
+
+            pdf.set_xy(x_start, y_start + cell_h)
 
     pdf_bytes = pdf.output()
 
