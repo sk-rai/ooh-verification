@@ -454,7 +454,7 @@ async def export_csv(
     result = await db.execute(query)
     rows = result.all()
 
-    csv_lines = ["photo_id,campaign_code,campaign_name,vendor_id,vendor_name,status,confidence,latitude,longitude,accuracy,captured_at"]
+    csv_lines = ["photo_id,campaign_code,campaign_name,vendor_id,vendor_name,status,confidence,latitude,longitude,accuracy,captured_at,rejection_reasons"]
     for row in rows:
         p = row[0]
         csv_lines.append(",".join([

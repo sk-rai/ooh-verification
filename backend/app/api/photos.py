@@ -100,39 +100,47 @@ async def get_photo_locations(
     client: Client = Depends(get_current_client)
 ):
     """Get photo locations for map view."""
-    from app.models import SensorData
+    from app.models import SensorData as SD, Campaign as Cam, Vendor as Ven
     query = (
-        select(Photo, SensorData)
-        .join(SensorData, SensorData.photo_id == Photo.photo_id, isouter=True)
+        select(Photo, SD.gps_latitude, SD.gps_longitude, SD.gps_accuracy,
+               Cam.name.label("campaign_name"), Cam.campaign_code,
+               Ven.name.label("vendor_name"))
+        .join(SD, SD.photo_id == Photo.photo_id, isouter=True)
+        .join(Cam, Cam.campaign_id == Photo.campaign_id, isouter=True)
+        .join(Ven, Ven.vendor_id == Photo.vendor_id, isouter=True)
         .where(
             Photo.tenant_id == client.tenant_id,
-            SensorData.gps_latitude.isnot(None),
-            SensorData.gps_longitude.isnot(None)
+            SD.gps_latitude.isnot(None),
+            SD.gps_longitude.isnot(None)
         )
         .limit(500)
     )
     result = await db.execute(query)
     rows = result.all()
-    return {
-        "type": "FeatureCollection",
-        "features": [
-            {
-                "type": "Feature",
-                "geometry": {
-                    "type": "Point",
-                    "coordinates": [float(sd.gps_longitude), float(sd.gps_latitude)]
-                },
-                "properties": {
-                    "photo_id": str(p.photo_id),
-                    "status": p.verification_status.value if hasattr(p.verification_status, 'value') else str(p.verification_status),
-                    "photo_url": get_storage_service().get_photo_url(p.s3_key) if p.s3_key else None,
-                    "created_at": p.created_at.isoformat() if p.created_at else None,
-                }
+    storage = get_storage_service()
+    features = []
+    for row in rows:
+        p = row[0]
+        features.append({
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [float(row.gps_longitude), float(row.gps_latitude)]
+            },
+            "properties": {
+                "photo_id": str(p.photo_id),
+                "status": p.verification_status.value if hasattr(p.verification_status, 'value') else str(p.verification_status),
+                "confidence": p.verification_confidence or 0,
+                "flags": p.verification_flags or [],
+                "campaign_name": row.campaign_name or "",
+                "campaign_code": row.campaign_code or "",
+                "vendor_name": row.vendor_name or "",
+                "photo_url": storage.get_photo_url(p.s3_key) if p.s3_key else None,
+                "thumbnail_url": storage.get_thumbnail_url(p.s3_key) if p.s3_key else None,
+                "captured_at": p.capture_timestamp.isoformat() if p.capture_timestamp else (p.created_at.isoformat() if p.created_at else None),
             }
-            for p, sd in rows
-            if sd is not None
-        ]
-    }
+        })
+    return {"type": "FeatureCollection", "features": features}
 
 
 
