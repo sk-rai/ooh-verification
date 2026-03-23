@@ -113,7 +113,7 @@ export default function Reports() {
         params: { start_date: dateRange.start, end_date: dateRange.end },
       })
       
-      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
       const link = document.createElement('a')
       link.href = url
       link.setAttribute('download', `trustcapture-report-${dateRange.start}-${dateRange.end}.pdf`)
