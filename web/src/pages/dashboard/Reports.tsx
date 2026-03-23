@@ -31,11 +31,28 @@ interface TimeSeriesData {
   photo_count: number
 }
 
+interface PhotoRow {
+  photo_id: string
+  campaign_code: string
+  campaign_name: string
+  vendor_id: string
+  vendor_name: string
+  status: string
+  confidence: number
+  latitude: number
+  longitude: number
+  accuracy: number
+  captured_at: string
+  rejection_reasons: string[]
+}
+
 export default function Reports() {
   const [stats, setStats] = useState<ReportStats | null>(null)
   const [campaignStats, setCampaignStats] = useState<CampaignStats[]>([])
   const [vendorStats, setVendorStats] = useState<VendorStats[]>([])
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesData[]>([])
+  const [tableData, setTableData] = useState<PhotoRow[]>([])
+  const [activeTab, setActiveTab] = useState<'charts' | 'table'>('charts')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [dateRange, setDateRange] = useState({
@@ -50,17 +67,19 @@ export default function Reports() {
   const fetchReportData = async () => {
     setLoading(true)
     try {
-      const [statsRes, campaignsRes, vendorsRes, timeSeriesRes] = await Promise.all([
+      const [statsRes, campaignsRes, vendorsRes, timeSeriesRes, tableRes] = await Promise.all([
         api.get('/api/reports/statistics').catch(() => ({ data: {} })),
         api.get('/api/reports/campaigns').catch(() => ({ data: [] })),
         api.get('/api/reports/vendors').catch(() => ({ data: [] })),
         api.get(`/api/reports/time-series?start=${dateRange.start}&end=${dateRange.end}`).catch(() => ({ data: [] })),
+        api.get(`/api/reports/table-data?start_date=${dateRange.start}&end_date=${dateRange.end}`).catch(() => ({ data: [] })),
       ])
 
       setStats(statsRes.data && typeof statsRes.data === 'object' ? statsRes.data : null)
       setCampaignStats(Array.isArray(campaignsRes.data) ? campaignsRes.data : [])
       setVendorStats(Array.isArray(vendorsRes.data) ? vendorsRes.data : [])
       setTimeSeriesData(Array.isArray(timeSeriesRes.data) ? timeSeriesRes.data : [])
+      setTableData(Array.isArray(tableRes.data) ? tableRes.data : [])
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load report data')
     } finally {
@@ -282,6 +301,82 @@ export default function Reports() {
                 </div>
               )}
 
+              {/* Tab Buttons */}
+              <div className="flex gap-2 mb-6">
+                <button
+                  onClick={() => setActiveTab('charts')}
+                  className={`px-4 py-2 rounded-md font-medium ${activeTab === 'charts' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'}`}
+                >
+                  Charts & Analytics
+                </button>
+                <button
+                  onClick={() => setActiveTab('table')}
+                  className={`px-4 py-2 rounded-md font-medium ${activeTab === 'table' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'}`}
+                >
+                  View Report Data ({tableData.length})
+                </button>
+              </div>
+
+              {activeTab === 'table' ? (
+                <div className="bg-white shadow rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Campaign</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Confidence</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Captured</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rejection Reasons</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {tableData.map((row) => (
+                          <tr key={row.photo_id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm">
+                              <div className="font-medium text-gray-900">{row.campaign_name}</div>
+                              <div className="text-xs text-gray-500">{row.campaign_code}</div>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <div className="text-gray-900">{row.vendor_name}</div>
+                              <div className="text-xs text-gray-500">{row.vendor_id}</div>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                row.status === 'verified' ? 'bg-green-100 text-green-800' :
+                                row.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>{row.status}</span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{((row.confidence || 0) * 100).toFixed(0)}%</td>
+                            <td className="px-4 py-3 text-sm text-gray-500 font-mono text-xs">
+                              {(row.latitude ?? 0).toFixed(4)}, {(row.longitude ?? 0).toFixed(4)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-500">
+                              {row.captured_at ? new Date(row.captured_at).toLocaleDateString() : 'N/A'}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              {row.rejection_reasons && row.rejection_reasons.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {row.rejection_reasons.map((r: string, i: number) => (
+                                    <span key={i} className="inline-block px-1.5 py-0.5 text-xs bg-red-100 text-red-700 rounded">{r}</span>
+                                  ))}
+                                </div>
+                              ) : <span className="text-gray-400">-</span>}
+                            </td>
+                          </tr>
+                        ))}
+                        {tableData.length === 0 && (
+                          <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">No data available</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+              <>
               {/* Charts Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Verification Status Pie Chart */}
@@ -340,6 +435,8 @@ export default function Reports() {
                     No data available for the selected date range.
                   </p>
                 </div>
+              )}
+              </>
               )}
             </>
           )}

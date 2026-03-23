@@ -432,7 +432,6 @@ async def export_csv(
     client: Client = Depends(get_current_client)
 ):
     """Export all photos as CSV."""
-    from sqlalchemy import func, cast, Date
     from app.models import Photo, Campaign, Vendor, SensorData
     from datetime import datetime
 
@@ -457,6 +456,8 @@ async def export_csv(
     csv_lines = ["photo_id,campaign_code,campaign_name,vendor_id,vendor_name,status,confidence,latitude,longitude,accuracy,captured_at,rejection_reasons"]
     for row in rows:
         p = row[0]
+        flags = p.verification_flags or []
+        reasons = "; ".join(flags) if flags else ""
         csv_lines.append(",".join([
             str(p.photo_id),
             str(row.campaign_code or ""),
@@ -469,6 +470,7 @@ async def export_csv(
             str(row.gps_longitude or 0),
             str(row.gps_accuracy or 0),
             p.created_at.isoformat() if p.created_at else "",
+            '"' + reasons.replace('"', '""') + '"',
         ]))
 
     csv_content = "\n".join(csv_lines)
@@ -477,6 +479,54 @@ async def export_csv(
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=trustcapture-report.csv"}
     )
+
+
+@router.get("/table-data")
+async def get_table_data(
+    start_date: str = None,
+    end_date: str = None,
+    db: AsyncSession = Depends(get_db),
+    client: Client = Depends(get_current_client)
+):
+    """Get photo data as JSON for the reports table view."""
+    from app.models import Photo, Campaign, Vendor, SensorData
+    from datetime import datetime
+
+    query = (
+        select(Photo, Campaign.name.label("campaign_name"), Campaign.campaign_code,
+               Vendor.name.label("vendor_name"), Vendor.vendor_id.label("vid"),
+               SensorData.gps_latitude, SensorData.gps_longitude, SensorData.gps_accuracy)
+        .join(Campaign, Campaign.campaign_id == Photo.campaign_id, isouter=True)
+        .join(Vendor, Vendor.vendor_id == Photo.vendor_id, isouter=True)
+        .join(SensorData, SensorData.photo_id == Photo.photo_id, isouter=True)
+        .where(Photo.tenant_id == client.tenant_id)
+    )
+    if start_date:
+        query = query.where(Photo.created_at >= datetime.fromisoformat(start_date))
+    if end_date:
+        query = query.where(Photo.created_at <= datetime.fromisoformat(end_date))
+    query = query.order_by(Photo.created_at.desc())
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    return [
+        {
+            "photo_id": str(row[0].photo_id),
+            "campaign_code": row.campaign_code or "",
+            "campaign_name": row.campaign_name or "",
+            "vendor_id": row.vid or "",
+            "vendor_name": row.vendor_name or "",
+            "status": row[0].verification_status.value if hasattr(row[0].verification_status, 'value') else str(row[0].verification_status),
+            "confidence": row[0].verification_confidence or 0,
+            "latitude": float(row.gps_latitude) if row.gps_latitude else 0,
+            "longitude": float(row.gps_longitude) if row.gps_longitude else 0,
+            "accuracy": float(row.gps_accuracy) if row.gps_accuracy else 0,
+            "captured_at": row[0].created_at.isoformat() if row[0].created_at else None,
+            "rejection_reasons": row[0].verification_flags or [],
+        }
+        for row in rows
+    ]
 
 
 @router.get("/export/pdf")
