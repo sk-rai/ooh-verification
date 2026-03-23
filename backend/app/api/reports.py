@@ -536,28 +536,129 @@ async def export_pdf(
     db: AsyncSession = Depends(get_db),
     client: Client = Depends(get_current_client)
 ):
-    """Export summary as PDF (simple text-based)."""
+    """Export summary as PDF."""
     from sqlalchemy import func
-    from app.models import Photo, Campaign, Vendor
+    from app.models import Photo, Campaign, Vendor, SensorData
     from app.models.photo import VerificationStatus
+    from datetime import datetime
+    from fpdf import FPDF
 
+    # Gather stats
     total = (await db.execute(select(func.count()).select_from(Photo).where(Photo.tenant_id == client.tenant_id))).scalar() or 0
     verified = (await db.execute(select(func.count()).select_from(Photo).where(Photo.tenant_id == client.tenant_id, Photo.verification_status == VerificationStatus.VERIFIED))).scalar() or 0
     rejected = (await db.execute(select(func.count()).select_from(Photo).where(Photo.tenant_id == client.tenant_id, Photo.verification_status == VerificationStatus.REJECTED))).scalar() or 0
-    campaigns = (await db.execute(select(func.count()).select_from(Campaign).where(Campaign.tenant_id == client.tenant_id))).scalar() or 0
-    vendors = (await db.execute(select(func.count()).select_from(Vendor).where(Vendor.tenant_id == client.tenant_id))).scalar() or 0
+    pending = total - verified - rejected
+    num_campaigns = (await db.execute(select(func.count()).select_from(Campaign).where(Campaign.tenant_id == client.tenant_id))).scalar() or 0
+    num_vendors = (await db.execute(select(func.count()).select_from(Vendor).where(Vendor.tenant_id == client.tenant_id))).scalar() or 0
 
-    content = f"""TrustCapture Report
-====================
-Total Photos: {total}
-Verified: {verified}
-Rejected: {rejected}
-Pending: {total - verified - rejected}
-Campaigns: {campaigns}
-Vendors: {vendors}
-"""
+    # Gather photo rows
+    query = (
+        select(Photo, Campaign.name.label("campaign_name"), Campaign.campaign_code,
+               Vendor.name.label("vendor_name"), Vendor.vendor_id.label("vid"),
+               SensorData.gps_latitude, SensorData.gps_longitude)
+        .join(Campaign, Campaign.campaign_id == Photo.campaign_id, isouter=True)
+        .join(Vendor, Vendor.vendor_id == Photo.vendor_id, isouter=True)
+        .join(SensorData, SensorData.photo_id == Photo.photo_id, isouter=True)
+        .where(Photo.tenant_id == client.tenant_id)
+    )
+    if start_date:
+        query = query.where(Photo.created_at >= datetime.fromisoformat(start_date))
+    if end_date:
+        query = query.where(Photo.created_at <= datetime.fromisoformat(end_date))
+    query = query.order_by(Photo.created_at.desc())
+    result = await db.execute(query)
+    rows = result.all()
+
+    # Build PDF
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+
+    # Title
+    pdf.set_font("Helvetica", "B", 20)
+    pdf.cell(0, 12, "TrustCapture Report", new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_text_color(100, 100, 100)
+    date_label = f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
+    if start_date or end_date:
+        date_label += f"  |  Range: {start_date or 'all'} to {end_date or 'now'}"
+    pdf.cell(0, 8, date_label, new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.ln(8)
+
+    # Summary box
+    pdf.set_fill_color(245, 245, 245)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.cell(0, 10, "Summary", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 11)
+    summary_items = [
+        ("Total Photos", str(total)),
+        ("Verified", str(verified)),
+        ("Rejected", str(rejected)),
+        ("Pending", str(pending)),
+        ("Campaigns", str(num_campaigns)),
+        ("Vendors", str(num_vendors)),
+    ]
+    for label, value in summary_items:
+        pdf.cell(60, 8, label + ":", new_x="RIGHT")
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.cell(30, 8, value, new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", "", 11)
+    pdf.ln(6)
+
+    # Photo details table
+    if rows:
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.cell(0, 10, "Photo Details", new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(2)
+
+        # Table header
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.set_fill_color(59, 130, 246)
+        pdf.set_text_color(255, 255, 255)
+        col_widths = [35, 30, 18, 15, 30, 22, 40]
+        headers = ["Campaign", "Vendor", "Status", "Conf", "Location", "Date", "Rejection Reasons"]
+        for i, h in enumerate(headers):
+            pdf.cell(col_widths[i], 7, h, border=1, fill=True, align="C")
+        pdf.ln()
+
+        # Table rows
+        pdf.set_font("Helvetica", "", 7)
+        pdf.set_text_color(0, 0, 0)
+        for idx, row in enumerate(rows):
+            p = row[0]
+            bg = idx % 2 == 0
+            if bg:
+                pdf.set_fill_color(249, 250, 251)
+            else:
+                pdf.set_fill_color(255, 255, 255)
+
+            status = p.verification_status.value if hasattr(p.verification_status, 'value') else str(p.verification_status)
+            conf = f"{((p.verification_confidence or 0) * 100):.0f}%"
+            lat = f"{float(row.gps_latitude):.4f}" if row.gps_latitude else "N/A"
+            lon = f"{float(row.gps_longitude):.4f}" if row.gps_longitude else "N/A"
+            loc = f"{lat}, {lon}"
+            date_str = p.created_at.strftime("%Y-%m-%d") if p.created_at else "N/A"
+            flags = p.verification_flags or []
+            reasons = "; ".join(flags) if flags else "-"
+
+            vals = [
+                row.campaign_name or "",
+                row.vendor_name or "",
+                status,
+                conf,
+                loc,
+                date_str,
+                reasons[:50],
+            ]
+            for i, v in enumerate(vals):
+                pdf.cell(col_widths[i], 6, v, border=1, fill=bg, align="C" if i in [2, 3] else "L")
+            pdf.ln()
+
+    pdf_bytes = pdf.output()
+
     return Response(
-        content=content.encode(),
+        content=bytes(pdf_bytes),
         media_type="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=trustcapture-report.pdf"}
+        headers={"Content-Disposition": f"attachment; filename=trustcapture-report-{start_date or 'all'}-{end_date or 'now'}.pdf"}
     )

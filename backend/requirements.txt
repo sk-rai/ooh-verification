@@ -57,3 +57,6 @@ geojson==3.1.0
 # Photo Storage
 cloudinary==1.40.0
 Pillow==10.2.0
+
+# PDF Generation
+fpdf2==2.7.9
