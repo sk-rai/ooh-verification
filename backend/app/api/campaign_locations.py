@@ -346,7 +346,13 @@ async def geocode_address(
     Uses Google Maps API if configured, otherwise falls back to OpenStreetMap Nominatim.
     """
     geocoding_service = get_geocoding_service()
-    result = await geocoding_service.geocode(request.address)
+    try:
+        result = await geocoding_service.geocode(request.address)
+    except GeocodingError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Geocoding failed: {str(e)}"
+        )
     
     if not result:
         raise HTTPException(
@@ -379,7 +385,13 @@ async def reverse_geocode_coordinates(
     Uses Google Maps API if configured, otherwise falls back to OpenStreetMap Nominatim.
     """
     geocoding_service = get_geocoding_service()
-    result = await geocoding_service.reverse_geocode(request.latitude, request.longitude)
+    try:
+        result = await geocoding_service.reverse_geocode(request.latitude, request.longitude)
+    except GeocodingError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Reverse geocoding failed: {str(e)}"
+        )
     
     if not result:
         raise HTTPException(
