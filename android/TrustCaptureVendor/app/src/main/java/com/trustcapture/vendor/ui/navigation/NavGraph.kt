@@ -14,6 +14,8 @@ import com.trustcapture.vendor.ui.otp.OtpScreen
 import com.trustcapture.vendor.ui.privacy.PrivacyConsentScreen
 import com.trustcapture.vendor.ui.settings.SettingsScreen
 
+import java.net.URLEncoder
+
 object Routes {
     const val PRIVACY_CONSENT = "privacy_consent"
     const val LOGIN = "login"
@@ -23,7 +25,7 @@ object Routes {
     const val SETTINGS = "settings"
 
     fun otp(phoneNumber: String, vendorId: String) =
-        "otp/$phoneNumber/$vendorId"
+        "otp/${URLEncoder.encode(phoneNumber, "UTF-8")}/$vendorId"
 
     fun camera(campaignId: String, campaignCode: String, campaignType: String) =
         "camera/$campaignId/$campaignCode/$campaignType"
@@ -54,6 +56,11 @@ fun TrustCaptureNavGraph(
             LoginScreen(
                 onOtpRequested = { phoneNumber, vendorId ->
                     navController.navigate(Routes.otp(phoneNumber, vendorId))
+                },
+                onLoggedIn = {
+                    navController.navigate(Routes.CAMPAIGNS) {
+                        popUpTo(Routes.LOGIN) { inclusive = true }
+                    }
                 }
             )
         }

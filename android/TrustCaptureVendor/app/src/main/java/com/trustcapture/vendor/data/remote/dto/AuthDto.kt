@@ -40,3 +40,22 @@ data class VendorProfileResponse(
     @SerializedName("created_at") val createdAt: String?,
     @SerializedName("last_login_at") val lastLoginAt: String?
 )
+
+// ── Device Attestation DTOs ─────────────────────────────────────────
+
+data class ChallengeRequest(
+    @SerializedName("vendor_id") val vendorId: String,
+    @SerializedName("device_id") val deviceId: String
+)
+
+data class ChallengeResponse(
+    @SerializedName("challenge") val challenge: String,
+    @SerializedName("expires_in") val expiresIn: Int
+)
+
+data class DeviceLoginRequest(
+    @SerializedName("vendor_id") val vendorId: String,
+    @SerializedName("device_id") val deviceId: String,
+    @SerializedName("challenge") val challenge: String,
+    @SerializedName("signature") val signature: String
+)

@@ -1,6 +1,9 @@
 package com.trustcapture.vendor.data.remote.api
 
 import com.trustcapture.vendor.data.remote.dto.AuthTokenResponse
+import com.trustcapture.vendor.data.remote.dto.ChallengeRequest
+import com.trustcapture.vendor.data.remote.dto.ChallengeResponse
+import com.trustcapture.vendor.data.remote.dto.DeviceLoginRequest
 import com.trustcapture.vendor.data.remote.dto.OtpRequest
 import com.trustcapture.vendor.data.remote.dto.OtpResponse
 import com.trustcapture.vendor.data.remote.dto.OtpVerifyRequest
@@ -21,6 +24,12 @@ interface AuthApi {
 
     @POST("api/auth/vendor/register-device")
     suspend fun registerDevice(@Body request: RegisterDeviceRequest): Response<VendorProfileResponse>
+
+    @POST("api/auth/vendor/challenge")
+    suspend fun requestChallenge(@Body request: ChallengeRequest): Response<ChallengeResponse>
+
+    @POST("api/auth/vendor/device-login")
+    suspend fun deviceLogin(@Body request: DeviceLoginRequest): Response<AuthTokenResponse>
 
     @GET("api/auth/me/vendor")
     suspend fun getVendorProfile(): Response<VendorProfileResponse>

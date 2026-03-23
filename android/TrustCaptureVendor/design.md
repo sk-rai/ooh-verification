@@ -115,36 +115,64 @@ com.trustcapture.vendor/
 | `/api/auth/vendor/request-otp` | POST | Send OTP to vendor phone |
 | `/api/auth/vendor/verify-otp` | POST | Verify OTP, get JWT token |
 | `/api/auth/vendor/register-device` | POST | Register device + public key |
+| `/api/auth/vendor/challenge` | POST | Get challenge nonce for device auth |
+| `/api/auth/vendor/device-login` | POST | Verify ECDSA signature, get JWT |
 | `/api/vendors/{id}/campaigns` | GET | Get assigned campaigns |
 | `/api/campaigns/{id}` | GET | Get campaign details |
 | `/api/photos` | POST | Upload photo with metadata |
 
 ### Auth Flow
 
+The app uses a hybrid authentication model:
+- **First login**: SMS OTP (via Twilio) + device registration (ECDSA public key)
+- **Subsequent logins**: Device attestation via StrongBox/TEE ECDSA challenge-response (no SMS needed)
+
 ```
-Vendor enters phone + vendor_id
+Vendor enters vendor_id
         │
         ▼
-POST /api/auth/vendor/request-otp
-        │
-        ▼
-Vendor enters OTP from SMS
-        │
-        ▼
-POST /api/auth/vendor/verify-otp
-        │
-        ▼
-Receive JWT token → store in EncryptedSharedPreferences
-        │
-        ▼
-(First login only) Generate RSA keypair in Keystore
-        │
-        ▼
-POST /api/auth/vendor/register-device
-        │
-        ▼
-Navigate to Campaign List
+  Is device registered?
+     ┌──────┴──────┐
+    YES             NO
+     │               │
+     ▼               ▼
+POST /challenge   Vendor enters phone number
+     │               │
+     ▼               ▼
+Sign challenge    POST /request-otp
+with StrongBox       │
+ECDSA key            ▼
+     │            Vendor enters OTP from SMS
+     ▼               │
+POST /device-login   ▼
+     │            POST /verify-otp (with device_id)
+     ▼               │
+Receive JWT          ▼
+     │            Receive JWT → generate ECDSA key pair
+     ▼               │
+Navigate to          ▼
+Campaign List    POST /register-device (public key PEM)
+                     │
+                     ▼
+                 Save device_registered flag
+                     │
+                     ▼
+                 Navigate to Campaign List
 ```
+
+**Device attestation endpoints:**
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/auth/vendor/challenge` | POST | Get random 64-char hex nonce (5min TTL) |
+| `/api/auth/vendor/device-login` | POST | Verify ECDSA signature, return JWT |
+
+**Key details:**
+- Algorithm: ECDSA P-256 (secp256r1), SHA256withECDSA
+- Key storage: Android Keystore with StrongBox (falls back to TEE)
+- Challenge: 64-char hex string signed as UTF-8 bytes
+- Signature format: Base64-encoded DER
+- On logout, `device_registered` flag and vendor ID are preserved (Keystore key survives logout)
+- On 401 (key mismatch), flag is reset and user falls back to OTP
 
 ### Auth Interceptor
 

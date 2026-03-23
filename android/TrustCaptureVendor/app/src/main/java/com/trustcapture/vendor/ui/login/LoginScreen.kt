@@ -1,6 +1,5 @@
 package com.trustcapture.vendor.ui.login
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -8,6 +7,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.*
@@ -29,6 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun LoginScreen(
     onOtpRequested: (phoneNumber: String, vendorId: String) -> Unit,
+    onLoggedIn: () -> Unit,
     viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -43,7 +44,6 @@ fun LoginScreen(
     ) {
         Spacer(modifier = Modifier.height(48.dp))
 
-        // App icon
         Icon(
             imageVector = Icons.Default.Verified,
             contentDescription = "TrustCapture",
@@ -69,7 +69,10 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(48.dp))
 
         Text(
-            text = "Enter your Vendor ID and phone number to get started",
+            text = if (uiState.isDeviceRegistered)
+                "Enter your Vendor ID to sign in with device key"
+            else
+                "Enter your Vendor ID and phone number to get started",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -90,41 +93,53 @@ fun LoginScreen(
             singleLine = true,
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.Characters,
-                imeAction = ImeAction.Next
+                imeAction = if (uiState.isDeviceRegistered) ImeAction.Done else ImeAction.Next
             ),
             keyboardActions = KeyboardActions(
-                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Phone number field
-        OutlinedTextField(
-            value = uiState.phoneNumber,
-            onValueChange = viewModel::onPhoneNumberChange,
-            label = { Text("Phone Number") },
-            placeholder = { Text("9902097794") },
-            leadingIcon = {
-                Icon(Icons.Default.Phone, contentDescription = null)
-            },
-            prefix = { Text("+91") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Phone,
-                imeAction = ImeAction.Done
-            ),
-            keyboardActions = KeyboardActions(
+                onNext = { focusManager.moveFocus(FocusDirection.Down) },
                 onDone = {
-                    focusManager.clearFocus()
-                    viewModel.requestOtp {
-                        onOtpRequested("+91${uiState.phoneNumber}", uiState.vendorId)
+                    if (uiState.isDeviceRegistered) {
+                        focusManager.clearFocus()
+                        viewModel.login(
+                            onOtpNeeded = { onOtpRequested("+91${uiState.phoneNumber}", uiState.vendorId) },
+                            onLoggedIn = onLoggedIn
+                        )
                     }
                 }
             ),
             modifier = Modifier.fillMaxWidth()
         )
+
+        // Phone number field — only shown for first-time login (OTP flow)
+        if (!uiState.isDeviceRegistered) {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = uiState.phoneNumber,
+                onValueChange = viewModel::onPhoneNumberChange,
+                label = { Text("Phone Number") },
+                placeholder = { Text("9902097794") },
+                leadingIcon = {
+                    Icon(Icons.Default.Phone, contentDescription = null)
+                },
+                prefix = { Text("+91") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Phone,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        focusManager.clearFocus()
+                        viewModel.login(
+                            onOtpNeeded = { onOtpRequested("+91${uiState.phoneNumber}", uiState.vendorId) },
+                            onLoggedIn = onLoggedIn
+                        )
+                    }
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         // Error message
         if (uiState.error != null) {
@@ -141,9 +156,10 @@ fun LoginScreen(
         // Login button
         Button(
             onClick = {
-                viewModel.requestOtp {
-                    onOtpRequested("+91${uiState.phoneNumber}", uiState.vendorId)
-                }
+                viewModel.login(
+                    onOtpNeeded = { onOtpRequested("+91${uiState.phoneNumber}", uiState.vendorId) },
+                    onLoggedIn = onLoggedIn
+                )
             },
             enabled = !uiState.isLoading,
             modifier = Modifier
@@ -158,14 +174,27 @@ fun LoginScreen(
                     strokeWidth = 2.dp
                 )
             } else {
-                Text("Request OTP", style = MaterialTheme.typography.labelLarge)
+                if (uiState.isDeviceRegistered) {
+                    Icon(
+                        Icons.Default.Fingerprint,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Sign In with Device Key", style = MaterialTheme.typography.labelLarge)
+                } else {
+                    Text("Request OTP", style = MaterialTheme.typography.labelLarge)
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Your Vendor ID was sent to you via SMS by your employer",
+            text = if (uiState.isDeviceRegistered)
+                "This device is registered. No SMS needed."
+            else
+                "Your Vendor ID was sent to you via SMS by your employer",
             style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

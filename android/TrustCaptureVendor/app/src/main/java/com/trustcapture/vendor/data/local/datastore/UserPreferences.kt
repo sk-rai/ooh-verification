@@ -23,6 +23,7 @@ class UserPreferences @Inject constructor(
         private val KEY_PRIVACY_CONSENT = booleanPreferencesKey("privacy_consent")
         private val KEY_LOCATION_CONSENT = booleanPreferencesKey("location_consent")
         private val KEY_PRIVACY_MODE = booleanPreferencesKey("privacy_mode")
+        private val KEY_DEVICE_REGISTERED = booleanPreferencesKey("device_registered")
     }
 
     val authToken: Flow<String?> = dataStore.data.map { it[KEY_AUTH_TOKEN] }
@@ -36,6 +37,7 @@ class UserPreferences @Inject constructor(
     val hasPrivacyConsent: Flow<Boolean> = dataStore.data.map { it[KEY_PRIVACY_CONSENT] == true }
     val hasLocationConsent: Flow<Boolean> = dataStore.data.map { it[KEY_LOCATION_CONSENT] == true }
     val privacyModeEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_PRIVACY_MODE] == true }
+    val isDeviceRegistered: Flow<Boolean> = dataStore.data.map { it[KEY_DEVICE_REGISTERED] == true }
 
     suspend fun saveAuthData(token: String, tenantId: String) {
         dataStore.edit { prefs ->
@@ -63,6 +65,12 @@ class UserPreferences @Inject constructor(
     suspend fun setPrivacyMode(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[KEY_PRIVACY_MODE] = enabled
+        }
+    }
+
+    suspend fun setDeviceRegistered(registered: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_DEVICE_REGISTERED] = registered
         }
     }
 
