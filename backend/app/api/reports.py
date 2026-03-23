@@ -608,15 +608,16 @@ async def export_pdf(
 
     # Photo details table
     if rows:
+        pdf.add_page(orientation="L")  # Landscape for table
         pdf.set_font("Helvetica", "B", 14)
         pdf.cell(0, 10, "Photo Details", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(2)
 
-        # Table header
+        # Table header - landscape gives us 277mm width
         pdf.set_font("Helvetica", "B", 8)
         pdf.set_fill_color(59, 130, 246)
         pdf.set_text_color(255, 255, 255)
-        col_widths = [35, 30, 18, 15, 30, 22, 40]
+        col_widths = [40, 30, 20, 15, 35, 25, 92]
         headers = ["Campaign", "Vendor", "Status", "Conf", "Location", "Date", "Rejection Reasons"]
         for i, h in enumerate(headers):
             pdf.cell(col_widths[i], 7, h, border=1, fill=True, align="C")
@@ -649,7 +650,7 @@ async def export_pdf(
                 conf,
                 loc,
                 date_str,
-                reasons[:50],
+                reasons,
             ]
             for i, v in enumerate(vals):
                 pdf.cell(col_widths[i], 6, v, border=1, fill=bg, align="C" if i in [2, 3] else "L")
