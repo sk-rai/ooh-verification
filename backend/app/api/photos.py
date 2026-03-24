@@ -202,15 +202,6 @@ async def upload_photo(
     # Validate photo file
     photo_bytes = validate_photo_file(photo)
 
-    # Check quotas
-    enforcer = get_quota_enforcer(db)
-    try:
-        await enforcer.check_photo_quota(str(campaign.client_id))
-        file_size_mb = len(photo_bytes) / (1024 * 1024)
-        await enforcer.check_storage_quota(str(campaign.client_id), file_size_mb)
-    except QuotaExceededError as e:
-        raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=e.to_dict())
-
     # Parse sensor data JSON
     try:
         sensor_data_dict = json.loads(sensor_data)
@@ -237,6 +228,15 @@ async def upload_photo(
 
     # Verify campaign and vendor assignment
     campaign = await verify_campaign_and_vendor(campaign_code, vendor, db)
+
+    # Check quotas (must be after campaign lookup to access campaign.client_id)
+    enforcer = get_quota_enforcer(db)
+    file_size_mb = len(photo_bytes) / (1024 * 1024)
+    try:
+        await enforcer.check_photo_quota(str(campaign.client_id))
+        await enforcer.check_storage_quota(str(campaign.client_id), file_size_mb)
+    except QuotaExceededError as e:
+        raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=e.to_dict())
 
     # Verify signature
     photo_hash = calculate_photo_hash(photo_bytes)
