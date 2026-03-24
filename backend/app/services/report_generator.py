@@ -25,11 +25,13 @@ class ReportGenerator:
         self,
         db: AsyncSession,
         chart_generator: ChartGenerator,
-        map_generator: MapGenerator
+        map_generator: MapGenerator,
+        tenant_id=None
     ):
         self.db = db
         self.chart_generator = chart_generator
         self.map_generator = map_generator
+        self.tenant_id = tenant_id
 
     async def generate_csv_report(self, campaign_code: str) -> str:
         """Generate CSV report for a campaign."""
@@ -195,7 +197,7 @@ class ReportGenerator:
             },
             'raw_data': {
                 'confidence_scores': confidence_scores,
-                'timestamps': timestamps
+                'timestamps': [ts.isoformat() if hasattr(ts, 'isoformat') else str(ts) for ts in timestamps]
             }
         }
 

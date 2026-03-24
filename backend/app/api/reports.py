@@ -19,11 +19,14 @@ from app.services.map_generator import MapGenerator
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
 
-def get_report_generator(db: AsyncSession = Depends(get_db)) -> ReportGenerator:
-    """Dependency for report generator."""
+def get_report_generator(
+    db: AsyncSession = Depends(get_db),
+    client: Client = Depends(get_current_client)
+) -> ReportGenerator:
+    """Dependency for report generator with tenant scoping."""
     chart_gen = ChartGenerator()
     map_gen = MapGenerator()
-    return ReportGenerator(db, chart_gen, map_gen)
+    return ReportGenerator(db, chart_gen, map_gen, tenant_id=client.tenant_id)
 
 
 @router.get("/campaigns/{campaign_code}/csv")
@@ -248,13 +251,15 @@ async def get_campaign_dashboard(
         stats = await report_gen.get_campaign_statistics(campaign_code)
         geojson_data = await report_gen.generate_geojson_report(campaign_code)
         
-        # Generate all charts
+        # Generate all charts (parse JSON strings to dicts to avoid double-encoding)
+        import json as _json
         charts = {}
         for chart_type in ['verification', 'confidence', 'timeline']:
             try:
-                charts[chart_type] = await report_gen.generate_chart_data(
+                chart_json_str = await report_gen.generate_chart_data(
                     campaign_code, chart_type, 'json'
                 )
+                charts[chart_type] = _json.loads(chart_json_str) if isinstance(chart_json_str, str) else chart_json_str
             except:
                 charts[chart_type] = None
         
