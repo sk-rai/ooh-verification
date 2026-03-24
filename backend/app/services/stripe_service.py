@@ -244,7 +244,7 @@ class StripeService:
             return event
         except ValueError as e:
             raise ValueError(f"Invalid payload: {str(e)}")
-        except stripe.error.SignatureVerificationError as e:
+        except stripe.SignatureVerificationError as e:
             raise ValueError(f"Invalid signature: {str(e)}")
     
     async def handle_webhook_event(
@@ -314,9 +314,12 @@ class StripeService:
 _stripe_service: Optional[StripeService] = None
 
 
-def get_stripe_service() -> StripeService:
-    """Get or create Stripe service instance."""
+def get_stripe_service() -> Optional[StripeService]:
+    """Get or create Stripe service instance. Returns None if not configured."""
     global _stripe_service
     if _stripe_service is None:
-        _stripe_service = StripeService()
+        try:
+            _stripe_service = StripeService()
+        except ValueError:
+            return None
     return _stripe_service

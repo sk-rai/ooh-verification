@@ -270,14 +270,33 @@ async def upgrade_subscription(
             )
         
         new_tier = SubscriptionTier(request.tier)
-        result = await manager.upgrade_tier(
-            str(client.client_id),
-            new_tier,
-            request.billing_cycle
-        )
-        
-        return result
-        
+        gateway = request.payment_gateway
+
+        # Create payment checkout via the selected gateway
+        if gateway == "razorpay":
+            razorpay_svc = get_razorpay_service()
+            if not razorpay_svc:
+                raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Razorpay not configured")
+            checkout = await razorpay_svc.create_subscription(db=db, client_id=str(client.client_id), tier=new_tier, billing_cycle=request.billing_cycle)
+        else:
+            stripe_svc = get_stripe_service()
+            if not stripe_svc:
+                raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Stripe not configured")
+            checkout = await stripe_svc.create_subscription(db=db, client_id=str(client.client_id), tier=new_tier, billing_cycle=request.billing_cycle)
+
+        # Store gateway info on subscription for webhook routing
+        subscription = await manager.get_subscription(str(client.client_id))
+        subscription.payment_gateway = gateway
+        if checkout.get("subscription_id"):
+            subscription.gateway_subscription_id = checkout["subscription_id"]
+        if checkout.get("customer_id"):
+            subscription.gateway_customer_id = checkout["customer_id"]
+        await db.commit()
+
+        return {"payment_gateway": gateway, "checkout": checkout, "message": f"Complete payment to upgrade to {request.tier}"}
+
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -286,7 +305,7 @@ async def upgrade_subscription(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upgrade subscription: {str(e)}"
+            detail=f"Failed to create checkout: {str(e)}"
         )
 
 
@@ -443,3 +462,19 @@ async def change_billing_cycle(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to change billing cycle: {str(e)}"
         )
+
+
+
+@router.post("/reset-monthly-quotas")
+async def reset_monthly_quotas(
+    client: Client = Depends(get_current_active_client),
+    db: AsyncSession = Depends(get_db)
+):
+    """Reset monthly photo quota at billing cycle start."""
+    enforcer = get_quota_enforcer(db)
+    try:
+        await enforcer.reset_monthly_quotas(str(client.client_id))
+        usage = await enforcer.get_usage_stats(str(client.client_id))
+        return {"message": "Monthly photo quota reset", "usage": usage}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to reset quotas: {str(e)}")

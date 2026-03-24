@@ -8,6 +8,8 @@ import logging
 from app.core.deps import get_db
 from app.services.razorpay_service import get_razorpay_service
 from app.services.stripe_service import get_stripe_service
+from app.services.subscription_manager import get_subscription_manager
+from app.models.subscription import SubscriptionTier
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 logger = logging.getLogger(__name__)

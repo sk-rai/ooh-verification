@@ -309,9 +309,9 @@ class SubscriptionManager:
         """Get quota limits for a tier."""
         quotas = {
             "free": {
-                "vendors": 2,
-                "campaigns": 1,
-                "storage_mb": 500
+                "vendors": 5,
+                "campaigns": 3,
+                "storage_mb": 100
             },
             "pro": {
                 "vendors": 10,

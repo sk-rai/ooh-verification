@@ -241,7 +241,7 @@ class RazorpayService:
         if not self.webhook_secret:
             raise ValueError("Razorpay webhook secret not configured")
         
-        expected_signature = hmac.new(
+        expected_signature = hmac.HMAC(
             self.webhook_secret.encode(),
             payload,
             hashlib.sha256
@@ -357,9 +357,12 @@ class RazorpayService:
 _razorpay_service: Optional[RazorpayService] = None
 
 
-def get_razorpay_service() -> RazorpayService:
-    """Get or create Razorpay service instance."""
+def get_razorpay_service() -> Optional[RazorpayService]:
+    """Get or create Razorpay service instance. Returns None if not configured."""
     global _razorpay_service
     if _razorpay_service is None:
-        _razorpay_service = RazorpayService()
+        try:
+            _razorpay_service = RazorpayService()
+        except ValueError:
+            return None
     return _razorpay_service
