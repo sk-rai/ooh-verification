@@ -23,7 +23,7 @@ interface AuthApi {
     suspend fun verifyOtp(@Body request: OtpVerifyRequest): Response<AuthTokenResponse>
 
     @POST("api/auth/vendor/register-device")
-    suspend fun registerDevice(@Body request: RegisterDeviceRequest): Response<VendorProfileResponse>
+    suspend fun registerDevice(@Body request: RegisterDeviceRequest): Response<Any>
 
     @POST("api/auth/vendor/challenge")
     suspend fun requestChallenge(@Body request: ChallengeRequest): Response<ChallengeResponse>

@@ -67,9 +67,14 @@ class AuthRepository @Inject constructor(
                 val data = result.data
                 userPreferences.saveAuthData(data.accessToken, "")
                 userPreferences.saveVendorInfo(vendorId, phoneNumber)
+                Log.d(TAG, "OTP verified, token saved. Now registering device...")
 
                 // Generate Keystore key pair and register with backend
                 registerDeviceIfNeeded()
+
+                // Verify the flag was set
+                val isReg = userPreferences.isDeviceRegistered.first()
+                Log.d(TAG, "After registerDeviceIfNeeded: isDeviceRegistered=$isReg")
 
                 Resource.Success(Unit)
             }
@@ -89,16 +94,14 @@ class AuthRepository @Inject constructor(
         val deviceId = getDeviceId()
 
         try {
-            val result = safeApiCall {
-                authApi.registerDevice(
-                    RegisterDeviceRequest(deviceId = deviceId, publicKey = publicKeyPem)
-                )
-            }
-            if (result is Resource.Success) {
+            val response = authApi.registerDevice(
+                RegisterDeviceRequest(deviceId = deviceId, publicKey = publicKeyPem)
+            )
+            if (response.isSuccessful) {
                 userPreferences.setDeviceRegistered(true)
-                Log.i(TAG, "Device registered successfully (deviceId=$deviceId)")
+                Log.i(TAG, "Device registered successfully (deviceId=$deviceId, code=${response.code()})")
             } else {
-                Log.w(TAG, "Device registration failed: ${(result as? Resource.Error)?.message}")
+                Log.w(TAG, "Device registration failed: ${response.code()} ${response.errorBody()?.string()}")
             }
         } catch (e: Exception) {
             Log.w(TAG, "Device registration exception", e)
@@ -174,17 +177,9 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun logout() {
-        // Preserve device_registered flag and vendor info — the Keystore key survives logout
-        val wasDeviceRegistered = userPreferences.isDeviceRegistered.first()
-        val savedVendorId = userPreferences.vendorId.first()
-        val savedPhone = userPreferences.phoneNumber.first()
-        userPreferences.clear()
-        if (wasDeviceRegistered) {
-            userPreferences.setDeviceRegistered(true)
-        }
-        // Restore vendor info so device-login flow has the vendor ID pre-filled
-        if (!savedVendorId.isNullOrBlank()) {
-            userPreferences.saveVendorInfo(savedVendorId, savedPhone ?: "")
-        }
+        // Atomic logout: clears auth token but preserves device_registered + vendor info
+        // in a single DataStore transaction (avoids race condition with separate clear + re-set)
+        userPreferences.clearForLogout()
+        Log.d(TAG, "Logout complete. device_registered preserved=${userPreferences.isDeviceRegistered.first()}")
     }
 }

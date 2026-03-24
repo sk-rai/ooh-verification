@@ -37,6 +37,7 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             val registered = authRepository.isDeviceRegistered()
             val savedVendorId = authRepository.getSavedVendorId()
+            android.util.Log.d("LoginViewModel", "init: isDeviceRegistered=$registered, savedVendorId=$savedVendorId")
             _uiState.value = _uiState.value.copy(
                 isDeviceRegistered = registered,
                 vendorId = savedVendorId ?: ""

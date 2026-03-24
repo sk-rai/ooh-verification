@@ -77,4 +77,28 @@ class UserPreferences @Inject constructor(
     suspend fun clear() {
         dataStore.edit { it.clear() }
     }
+
+    /**
+     * Logout: clears auth token (so isLoggedIn becomes false) but preserves
+     * device_registered flag and vendor info in a single atomic transaction.
+     * This avoids the race condition where clear() + re-set are two separate writes.
+     */
+    suspend fun clearForLogout() {
+        dataStore.edit { prefs ->
+            val deviceRegistered = prefs[KEY_DEVICE_REGISTERED] == true
+            val vendorId = prefs[KEY_VENDOR_ID]
+            val phone = prefs[KEY_PHONE_NUMBER]
+
+            prefs.clear()
+
+            // Restore device registration and vendor info in the same transaction
+            if (deviceRegistered) {
+                prefs[KEY_DEVICE_REGISTERED] = true
+            }
+            if (!vendorId.isNullOrBlank()) {
+                prefs[KEY_VENDOR_ID] = vendorId
+                prefs[KEY_PHONE_NUMBER] = phone ?: ""
+            }
+        }
+    }
 }
