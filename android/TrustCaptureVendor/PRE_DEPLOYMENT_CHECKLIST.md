@@ -8,9 +8,11 @@ Items deferred during development that must be completed before Play Store relea
 - [x] Switch BASE_URL from `http://10.0.2.2:8000` to production HTTPS endpoint — now pointing to `https://ooh-verification.onrender.com/`
 - [ ] Replace placeholder certificate pins in `NetworkModule.kt` and `network_security_config.xml` with actual SHA-256 fingerprints
 - [ ] ProGuard/R8 code obfuscation enabled in release build
+- [ ] Remove debug Log.d statements from LoginViewModel, AuthRepository (keep Log.w/Log.e for production diagnostics)
 - [x] `android:usesCleartextTraffic` restricted to debug builds only via manifest placeholder
 - [x] `network_security_config.xml` enforces HTTPS-only for release, cleartext only for debug emulator
 - [x] Hybrid auth: Device attestation login via StrongBox/TEE ECDSA challenge-response (skips SMS OTP on subsequent logins)
+- [x] Atomic logout: device_registered flag + vendor info preserved in single DataStore transaction (no race condition)
 - [x] OkHttp logging reverted from BODY to HEADERS (no more photo binary spam in debug logs)
 - [x] Auto-detect country dial code from SIM/locale (editable, supports 50+ countries)
 
