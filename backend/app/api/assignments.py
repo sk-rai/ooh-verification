@@ -114,7 +114,9 @@ async def assign_vendors_to_campaign(
                 select(Vendor).where(
                     and_(
                         Vendor.vendor_id == vendor_id,
-                        Vendor.created_by_client_id == current_client.client_id
+                        Vendor.vendor_id == VendorClientAssociation.vendor_id,
+                        VendorClientAssociation.client_id == current_client.client_id,
+                        VendorClientAssociation.status == AssociationStatus.ACTIVE
                     )
                 )
             )
@@ -352,7 +354,9 @@ async def get_vendor_campaigns(
         select(Vendor).where(
             and_(
                 Vendor.vendor_id == vendor_id,
-                Vendor.created_by_client_id == current_client.client_id
+                Vendor.vendor_id == VendorClientAssociation.vendor_id,
+                VendorClientAssociation.client_id == current_client.client_id,
+                VendorClientAssociation.status == AssociationStatus.ACTIVE
             )
         )
     )

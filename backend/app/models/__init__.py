@@ -13,6 +13,7 @@ from app.models.campaign import Campaign, CampaignType, CampaignStatus
 from app.models.campaign_location import CampaignLocation
 from app.models.location_profile import LocationProfile
 from app.models.campaign_vendor_assignment import CampaignVendorAssignment
+from app.models.vendor_client_association import VendorClientAssociation, AssociationStatus
 from app.models.photo import Photo, VerificationStatus
 from app.models.sensor_data import SensorData
 from app.models.photo_signature import PhotoSignature
@@ -30,6 +31,8 @@ __all__ = [
     "CampaignLocation",
     "LocationProfile",
     "CampaignVendorAssignment",
+    "VendorClientAssociation",
+    "AssociationStatus",
     "Photo",
     "SensorData",
     "PhotoSignature",

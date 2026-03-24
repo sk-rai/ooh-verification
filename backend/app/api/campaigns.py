@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.core.deps import get_current_active_client
 from app.core.security import generate_campaign_code
 from app.core.sms import sms_service
+from app.models.vendor_client_association import VendorClientAssociation, AssociationStatus
 from app.models import Client, Campaign, LocationProfile, CampaignVendorAssignment, Vendor
 from app.models.campaign import CampaignStatus, CampaignType
 from app.schemas.campaign import (CampaignCreate, CampaignUpdate, CampaignResponse, CampaignListResponse, VendorAssignmentCreate, VendorAssignmentResponse)
@@ -183,7 +184,15 @@ async def assign_vendors_to_campaign(campaign_id: UUID, data: VendorAssignmentCr
     assignments = []
     errors = []
     for vendor_id in data.vendor_ids:
-        vendor_result = await db.execute(select(Vendor).where(Vendor.vendor_id == vendor_id, Vendor.created_by_client_id == client.client_id))
+        vendor_result = await db.execute(
+            select(Vendor).join(
+                VendorClientAssociation, Vendor.vendor_id == VendorClientAssociation.vendor_id
+            ).where(
+                Vendor.vendor_id == vendor_id,
+                VendorClientAssociation.client_id == client.client_id,
+                VendorClientAssociation.status == AssociationStatus.ACTIVE
+            )
+        )
         vendor = vendor_result.scalar_one_or_none()
         if not vendor:
             errors.append(f"Vendor {vendor_id} not found")

@@ -73,6 +73,7 @@ class Client(Base):
     
     # Relationships
     vendors = relationship("Vendor", back_populates="client", cascade="all, delete-orphan")
+    vendor_associations = relationship("VendorClientAssociation", back_populates="client", cascade="all, delete-orphan")
     campaigns = relationship("Campaign", back_populates="client", cascade="all, delete-orphan")
     subscription = relationship("Subscription", back_populates="client", uselist=False, cascade="all, delete-orphan")
 

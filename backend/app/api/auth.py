@@ -260,7 +260,7 @@ async def vendor_verify_otp(
     # Create access token
     access_token = create_access_token(
         data={
-            "sub": str(vendor.created_by_client_id),  # Client ID for authorization
+            "sub": vendor.vendor_id,
             "type": "vendor",
             "vendor_id": vendor.vendor_id
         }
@@ -434,7 +434,7 @@ async def vendor_device_login(
     # Issue JWT token
     access_token = create_access_token(
         data={
-            "sub": str(vendor.created_by_client_id),
+            "sub": vendor.vendor_id,
             "type": "vendor",
             "vendor_id": vendor.vendor_id,
             "auth_method": "device_attestation"

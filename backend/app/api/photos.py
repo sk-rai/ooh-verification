@@ -205,9 +205,9 @@ async def upload_photo(
     # Check quotas
     enforcer = get_quota_enforcer(db)
     try:
-        await enforcer.check_photo_quota(str(vendor.created_by_client_id))
+        await enforcer.check_photo_quota(str(campaign.client_id))
         file_size_mb = len(photo_bytes) / (1024 * 1024)
-        await enforcer.check_storage_quota(str(vendor.created_by_client_id), file_size_mb)
+        await enforcer.check_storage_quota(str(campaign.client_id), file_size_mb)
     except QuotaExceededError as e:
         raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=e.to_dict())
 
@@ -356,8 +356,8 @@ async def upload_photo(
 
     # Increment usage counters
     try:
-        await enforcer.increment_photo_usage(str(vendor.created_by_client_id))
-        await enforcer.increment_storage_usage(str(vendor.created_by_client_id), file_size_mb)
+        await enforcer.increment_photo_usage(str(campaign.client_id))
+        await enforcer.increment_storage_usage(str(campaign.client_id), file_size_mb)
     except Exception as e:
         logger.error(f"Failed to increment usage counters: {str(e)}")
 

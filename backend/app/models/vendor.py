@@ -74,6 +74,11 @@ class Vendor(Base):
         back_populates="vendor",
         cascade="all, delete-orphan"
     )
+    client_associations = relationship(
+        "VendorClientAssociation",
+        back_populates="vendor",
+        cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Vendor(vendor_id={self.vendor_id}, name={self.name}, status={self.status})>"

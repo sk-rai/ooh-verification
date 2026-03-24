@@ -14,6 +14,7 @@ from app.core.deps import get_current_active_client
 from app.core.security import generate_vendor_id
 from app.core.sms import sms_service
 from app.models import Client, Vendor
+from app.models.vendor_client_association import VendorClientAssociation, AssociationStatus
 from app.models.vendor import VendorStatus
 from app.schemas.vendor import (
     VendorCreate, VendorUpdate, VendorResponse, VendorListResponse
@@ -122,7 +123,13 @@ async def list_vendors(
         - Authorization: Clients can only see their own vendors
     """
     # Build query
-    query = select(Vendor).where(Vendor.created_by_client_id == client.client_id)
+    query = select(Vendor).join(
+        VendorClientAssociation,
+        Vendor.vendor_id == VendorClientAssociation.vendor_id
+    ).where(
+        VendorClientAssociation.client_id == client.client_id,
+        VendorClientAssociation.status == AssociationStatus.ACTIVE
+    )
     
     # Apply status filter if provided
     if status_filter:
@@ -166,9 +173,13 @@ async def update_vendor(
     """
     # Get vendor
     result = await db.execute(
-        select(Vendor).where(
+        select(Vendor).join(
+            VendorClientAssociation,
+            Vendor.vendor_id == VendorClientAssociation.vendor_id
+        ).where(
             Vendor.vendor_id == vendor_id,
-            Vendor.created_by_client_id == client.client_id
+            VendorClientAssociation.client_id == client.client_id,
+            VendorClientAssociation.status == AssociationStatus.ACTIVE
         )
     )
     vendor = result.scalar_one_or_none()
@@ -210,9 +221,13 @@ async def deactivate_vendor(
     """
     # Get vendor
     result = await db.execute(
-        select(Vendor).where(
+        select(Vendor).join(
+            VendorClientAssociation,
+            Vendor.vendor_id == VendorClientAssociation.vendor_id
+        ).where(
             Vendor.vendor_id == vendor_id,
-            Vendor.created_by_client_id == client.client_id
+            VendorClientAssociation.client_id == client.client_id,
+            VendorClientAssociation.status == AssociationStatus.ACTIVE
         )
     )
     vendor = result.scalar_one_or_none()
