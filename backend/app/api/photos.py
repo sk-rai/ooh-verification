@@ -24,6 +24,7 @@ from app.services.location_profile_matcher import LocationProfileMatcher
 from app.services.enhanced_verification import run_enhanced_verification, determine_status_from_verification
 from app.core.storage import get_storage_service
 from app.services.audit_logger import AuditLogger, AuditFlag
+from app.services.email_service import get_email_service
 from app.services.quota_enforcer import get_quota_enforcer, QuotaExceededError
 import logging
 
@@ -394,6 +395,39 @@ async def upload_photo(
         )
     except Exception as e:
         logger.error(f"Audit logging failed (non-critical): {str(e)}")
+
+    # Send photo verification email to vendor (fire-and-forget)
+    try:
+        if vendor.email:
+            email_svc = get_email_service(db)
+            # Determine template based on verification status
+            if verification_status == VerificationStatus.VERIFIED:
+                await email_svc.send_templated_email(
+                    tenant_id=str(vendor.tenant_id),
+                    template_name="photo_approved",
+                    to_email=vendor.email,
+                    variables={
+                        "vendor_name": vendor.name,
+                        "campaign_name": campaign.name or campaign_code,
+                        "submission_date": capture_dt.strftime("%Y-%m-%d %H:%M"),
+                    }
+                )
+            elif verification_status in (VerificationStatus.REJECTED, VerificationStatus.FLAGGED):
+                rejection_reasons = ", ".join(verification_result.flags) if verification_result.flags else "Verification failed"
+                await email_svc.send_templated_email(
+                    tenant_id=str(vendor.tenant_id),
+                    template_name="photo_rejected",
+                    to_email=vendor.email,
+                    variables={
+                        "vendor_name": vendor.name,
+                        "campaign_name": campaign.name or campaign_code,
+                        "submission_date": capture_dt.strftime("%Y-%m-%d %H:%M"),
+                        "status": verification_status.value,
+                        "rejection_reason": rejection_reasons,
+                    }
+                )
+    except Exception as e:
+        logger.warning(f"Photo notification email failed (non-critical): {str(e)}")
 
     return PhotoUploadResponse(
         photo_id=photo_id, verification_status=verification_status.value,

@@ -1,3 +1,4 @@
+import logging
 """
 Authentication API endpoints.
 
@@ -26,6 +27,9 @@ from app.schemas.auth import (
 )
 from app.middleware.tenant_context import get_current_tenant
 from app.core.sms import sms_service
+from app.services.email_service import get_email_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
