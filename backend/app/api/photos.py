@@ -384,7 +384,8 @@ async def upload_photo(
             audit_sensor_data['environmental'] = sensor_data_obj.environmental.model_dump()
         audit_signature_data = {
             'signature': signature_obj.signature, 'algorithm': signature_obj.algorithm,
-            'timestamp': signature_obj.timestamp, 'location_hash': signature_obj.location_hash, 'valid': signature_valid
+            'timestamp': signature_obj.timestamp.isoformat() if hasattr(signature_obj.timestamp, 'isoformat') else str(signature_obj.timestamp),
+            'location_hash': signature_obj.location_hash, 'valid': signature_valid
         }
         await audit_logger.log_photo_capture(
             photo_id=str(photo_id), vendor_id=vendor.vendor_id, campaign_code=campaign_code,
