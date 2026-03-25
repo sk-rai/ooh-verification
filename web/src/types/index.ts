@@ -15,6 +15,16 @@ export interface RegisterData {
   password: string
   company_name: string
   phone_number: string
+  title?: string
+  contact_person?: string
+  contact_phone?: string
+  designation?: string
+  address?: string
+  city?: string
+  state?: string
+  country: string
+  website?: string
+  industry?: string
 }
 
 export interface AuthResponse {

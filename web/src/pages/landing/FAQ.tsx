@@ -27,7 +27,15 @@ const faqs = [
   },
   {
     q: 'Can I use my own branding?',
-    a: "Enterprise plans include full white-label support — custom domain, logo, colors, and branded email templates. Your vendors and clients see your brand, not ours.",
+    a: "Enterprise plans include full white-label support — custom domain, logo, colors, and branded email templates. White-label deployments include custom workflow integration, SSO setup, and dedicated onboarding. Contact sales for pricing.",
+  },
+  {
+    q: 'What does the Android app do?',
+    a: "The purpose-built Android app handles the vendor side: OTP login, hardware key registration, camera-only photo capture (gallery blocked), sensor data collection, encrypted local storage, and background sync. Available for sideloading now, Play Store listing coming soon. iOS coming soon.",
+  },
+  {
+    q: 'What services power TrustCapture?',
+    a: "We're built on trusted infrastructure: Twilio (SMS), SendGrid (email), Google Maps (geocoding), NOAA World Magnetic Model (magnetic field baselines), Open-Meteo (elevation/pressure), and Razorpay (payments).",
   },
 ]
 
