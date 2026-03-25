@@ -79,7 +79,7 @@ export const VendorPerformanceChart: React.FC<VendorPerformanceChartProps> = ({
               borderRadius: '0.5rem',
               padding: '0.5rem',
             }}
-            formatter={(value: any, name: string) => {
+            formatter={(value: any, name: any) => {
               if (name === 'verification_rate') {
                 return [`${value.toFixed(1)}%`, 'Verification Rate'];
               }

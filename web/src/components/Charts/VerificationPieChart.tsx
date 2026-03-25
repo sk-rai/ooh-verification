@@ -84,7 +84,7 @@ export const VerificationPieChart: React.FC<VerificationPieChartProps> = ({
             ))}
           </Pie>
           <Tooltip
-            formatter={(value: number) => [value, 'Photos']}
+            formatter={(value: any) => [value, 'Photos']}
             contentStyle={{
               backgroundColor: 'white',
               border: '1px solid #e5e7eb',
@@ -95,7 +95,7 @@ export const VerificationPieChart: React.FC<VerificationPieChartProps> = ({
           <Legend
             verticalAlign="bottom"
             height={36}
-            formatter={(value, entry: any) => {
+            formatter={(value: any, entry: any) => {
               const percentage = ((entry.payload.value / total) * 100).toFixed(1);
               return `${value}: ${entry.payload.value} (${percentage}%)`;
             }}
