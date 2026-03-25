@@ -1,34 +1,63 @@
-__pycache__
+# Python
+__pycache__/
 *.pyc
 *.pyo
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+
+# Environment
 .env
 .env.*
-!.env.example
-.git
+
+# Git
+.git/
 .gitignore
-*.md
-tests/
-*.sh
-!start.sh
-*.sql
-*.csv
-*.bat
+
+# Helper scripts (not needed in container)
 fix_*.py
-write_*.py
 update_*.py
 check_*.py
 run_*.py
+run_*.sh
+setup_*.sh
 reset_*.py
+add_*.py
 create_*.py
 verify_*.py
 analyze_*.py
 integrate_*.py
-test_*.py
+apply_*.py
 quick_*.py
-clear_*.py
-setup_*.sh
+test_*.py
+*.sql
 git_*.sh
-.pytest_cache
-.mypy_cache
-htmlcov
-.coverage
+
+# Documentation (not needed in container)
+*.md
+!README.md
+
+# Misc
+*.log
+*.tmp
+*.bak
+scripts/
+requirements_payment.txt
