@@ -103,8 +103,23 @@ async def register_client(
     await db.commit()
     await db.refresh(client)
     
-    # TODO: Send welcome email via SendGrid
-    
+    # Send welcome email (fire-and-forget)
+    try:
+        email_svc = get_email_service(db)
+        await email_svc.send_templated_email(
+            tenant_id=str(tenant_id),
+            template_name="welcome_email",
+            to_email=data.email,
+            variables={
+                "user_name": data.company_name or data.email,
+                "user_email": data.email,
+                "login_url": "https://trustcapture-web.onrender.com/login",
+            }
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Welcome email failed (non-critical): {str(e)}")
+
     return client
 
 
