@@ -321,9 +321,9 @@ class EmailTemplateService:
         
         # Add tenant branding to variables
         variables.update({
-            "tenant_name": tenant.tenant_name,
-            "primary_color": tenant.primary_color or "#3B82F6",
-            "secondary_color": tenant.secondary_color or "#10B981",
+            "tenant_name": tenant.tenant_name if tenant else "TrustCapture",
+            "primary_color": (tenant.primary_color if tenant else None) or "#3B82F6",
+            "secondary_color": (tenant.secondary_color if tenant else None) or "#10B981",
         })
         
         # Add current year if not provided
