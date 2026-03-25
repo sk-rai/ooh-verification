@@ -52,7 +52,7 @@ async def seed():
         if not result.scalar_one_or_none():
             tenant = TenantConfig(
                 tenant_id=uuid.UUID("e27c6c7a-7f5b-43df-bdc4-abd76ebb99aa"),
-                tenant_name="Default Tenant",
+                tenant_name="TrustCapture",
                 subdomain="default",
                 is_active=True
             )
