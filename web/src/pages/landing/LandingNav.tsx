@@ -1,14 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
-const navLinks = [
-  { label: 'How It Works', href: '#how-it-works' },
-  { label: 'Use Cases', href: '#use-cases' },
-  { label: 'Features', href: '#features' },
-  { label: 'Pricing', href: '#pricing' },
-  { label: 'FAQ', href: '#faq' },
-]
-
 export default function LandingNav() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -16,16 +8,7 @@ export default function LandingNav() {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
-          <a href="#" className="text-xl font-bold text-gray-900">TrustCapture</a>
-
-          {/* Desktop links */}
-          <div className="hidden md:flex items-center space-x-6">
-            {navLinks.map(l => (
-              <a key={l.href} href={l.href} className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-                {l.label}
-              </a>
-            ))}
-          </div>
+          <a href="/" className="text-xl font-bold text-gray-900">TrustCapture</a>
 
           <div className="hidden md:flex items-center space-x-4">
             <Link to="/login" className="text-sm font-medium text-primary-600 hover:text-primary-700">Login</Link>
@@ -50,20 +33,12 @@ export default function LandingNav() {
         </div>
       </div>
 
-      {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 px-4 py-3 space-y-2">
-          {navLinks.map(l => (
-            <a key={l.href} href={l.href} onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-gray-600 hover:text-gray-900 py-2">
-              {l.label}
-            </a>
-          ))}
-          <div className="pt-2 border-t border-gray-100 space-y-2">
-            <Link to="/login" className="block text-sm font-medium text-primary-600 py-2">Login</Link>
-            <Link to="/register" className="block text-sm font-medium text-white bg-primary-600 text-center px-4 py-2 rounded-md">
-              Start Free Trial
-            </Link>
-          </div>
+          <Link to="/login" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-primary-600 py-2">Login</Link>
+          <Link to="/register" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-white bg-primary-600 text-center px-4 py-2 rounded-md">
+            Start Free Trial
+          </Link>
         </div>
       )}
     </nav>
