@@ -49,6 +49,16 @@ class Client(Base):
     # Company Information
     company_name = Column(String(255), nullable=False)
     phone_number = Column(String(20), nullable=False)
+    contact_person = Column(String(255), nullable=True)
+    contact_phone = Column(String(20), nullable=True)
+    designation = Column(String(100), nullable=True)
+    title = Column(String(10), nullable=True)
+    address = Column(String(500), nullable=True)
+    city = Column(String(100), nullable=True)
+    state = Column(String(100), nullable=True)
+    country = Column(String(100), nullable=True)
+    website = Column(String(500), nullable=True)
+    industry = Column(String(100), nullable=True)
     
     # Subscription
     subscription_tier = Column(

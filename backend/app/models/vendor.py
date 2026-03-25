@@ -38,6 +38,9 @@ class Vendor(Base):
     name = Column(String(255), nullable=False)
     phone_number = Column(String(20), nullable=False, index=True)
     email = Column(String(255), nullable=True)
+    city = Column(String(100), nullable=True)
+    state = Column(String(100), nullable=True)
+    country = Column(String(100), nullable=True)
 
     # Status
     status = Column(

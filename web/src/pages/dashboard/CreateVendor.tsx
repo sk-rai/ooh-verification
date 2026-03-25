@@ -13,6 +13,9 @@ export default function CreateVendor() {
     name: '',
     phone_number: '',
     email: '',
+    city: '',
+    state: '',
+    country: '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,6 +28,9 @@ export default function CreateVendor() {
         name: formData.name,
         phone_number: formData.phone_number,
         email: formData.email || undefined,
+        city: formData.city || undefined,
+        state: formData.state || undefined,
+        country: formData.country || undefined,
       })
 
       setCreatedVendor(response.data)
@@ -34,7 +40,7 @@ export default function CreateVendor() {
     }
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -117,7 +123,7 @@ export default function CreateVendor() {
                   <button
                     onClick={() => {
                       setCreatedVendor(null)
-                      setFormData({ name: '', phone_number: '', email: '' })
+                      setFormData({ name: '', phone_number: '', email: '', city: '', state: '', country: '' })
                     }}
                     className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                   >
@@ -198,6 +204,116 @@ export default function CreateVendor() {
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 placeholder="vendor@example.com"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="city" className="block text-sm font-medium text-gray-700">
+                  City
+                </label>
+                <input
+                  type="text"
+                  name="city"
+                  id="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  placeholder="City"
+                />
+              </div>
+              <div>
+                <label htmlFor="state" className="block text-sm font-medium text-gray-700">
+                  State / Province
+                </label>
+                <input
+                  type="text"
+                  name="state"
+                  id="state"
+                  value={formData.state}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  placeholder="State"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="country" className="block text-sm font-medium text-gray-700">
+                Country
+              </label>
+              <select
+                name="country"
+                id="country"
+                value={formData.country}
+                onChange={handleChange as any}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              >
+                <option value="">Select Country</option>
+                <option value="India">India</option>
+                <option value="United States">United States</option>
+                <option value="United Kingdom">United Kingdom</option>
+                <option value="Canada">Canada</option>
+                <option value="Australia">Australia</option>
+                <option value="UAE">UAE</option>
+                <option value="Saudi Arabia">Saudi Arabia</option>
+                <option value="Singapore">Singapore</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="city" className="block text-sm font-medium text-gray-700">
+                  City
+                </label>
+                <input
+                  type="text"
+                  name="city"
+                  id="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  placeholder="City"
+                />
+              </div>
+              <div>
+                <label htmlFor="state" className="block text-sm font-medium text-gray-700">
+                  State / Province
+                </label>
+                <input
+                  type="text"
+                  name="state"
+                  id="state"
+                  value={formData.state}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  placeholder="State"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="country" className="block text-sm font-medium text-gray-700">
+                Country
+              </label>
+              <select
+                name="country"
+                id="country"
+                value={formData.country}
+                onChange={handleChange as any}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              >
+                <option value="">Select Country</option>
+                <option value="India">India</option>
+                <option value="United States">United States</option>
+                <option value="United Kingdom">United Kingdom</option>
+                <option value="Canada">Canada</option>
+                <option value="Australia">Australia</option>
+                <option value="UAE">UAE</option>
+                <option value="Saudi Arabia">Saudi Arabia</option>
+                <option value="Singapore">Singapore</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
 
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">

@@ -11,6 +11,9 @@ class VendorCreate(BaseModel):
     name: str = Field(..., min_length=2, max_length=255, description="Vendor name")
     phone_number: str = Field(..., pattern=r'^\+?[1-9]\d{1,14}$', description="Phone number in E.164 format")
     email: Optional[str] = Field(None, max_length=255, description="Optional email address")
+    city: Optional[str] = Field(None, max_length=100, description="City where vendor operates")
+    state: Optional[str] = Field(None, max_length=100, description="State/Province")
+    country: Optional[str] = Field(None, max_length=100, description="Country")
 
     class Config:
         json_schema_extra = {

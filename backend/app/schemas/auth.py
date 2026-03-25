@@ -13,6 +13,16 @@ class ClientRegister(BaseModel):
     password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
     company_name: str = Field(..., min_length=2, max_length=255)
     phone_number: str = Field(..., pattern=r'^\+?[1-9]\d{1,14}$', description="Valid phone number with country code")
+    contact_person: Optional[str] = Field(None, max_length=255, description="Contact person name")
+    contact_phone: Optional[str] = Field(None, max_length=20, description="Contact person phone/cell")
+    designation: Optional[str] = Field(None, max_length=100, description="Designation in company")
+    title: Optional[str] = Field(None, max_length=10, description="Title/prefix e.g. Mr, Ms, Mrs, Dr")
+    address: Optional[str] = Field(None, max_length=500, description="Company address")
+    city: Optional[str] = Field(None, max_length=100, description="City")
+    state: Optional[str] = Field(None, max_length=100, description="State/Province")
+    country: str = Field(..., max_length=100, description="Country")
+    website: Optional[str] = Field(None, max_length=500, description="Company website URL")
+    industry: Optional[str] = Field(None, max_length=100, description="Industry sector")
 
     @field_validator('password')
     @classmethod

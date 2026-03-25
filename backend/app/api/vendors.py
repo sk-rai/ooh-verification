@@ -79,6 +79,9 @@ async def create_vendor(
         name=data.name,
         phone_number=data.phone_number,
         email=data.email,
+        city=getattr(data, 'city', None),
+        state=getattr(data, 'state', None),
+        country=getattr(data, 'country', None),
         created_by_client_id=client.client_id
     )
     
