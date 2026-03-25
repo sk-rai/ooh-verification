@@ -59,7 +59,7 @@ export default function Hero() {
                     <span className="text-sm font-bold text-primary-600">94%</span>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500">Real-time verification</p>
+                <p className="text-xs text-gray-500">Verified on upload</p>
               </div>
             </div>
           </div>
