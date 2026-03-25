@@ -73,10 +73,10 @@ class EmailService:
                 
                 if tenant:
                     from_name = from_name or tenant.email_from_name or "TrustCapture"
-                    from_email = from_email or tenant.email_from_address or "noreply@trustcapture.com"
+                    from_email = from_email or tenant.email_from_address or os.getenv("SENDGRID_FROM_EMAIL", "noreply@trustcapture.com")
                 else:
                     from_name = from_name or "TrustCapture"
-                    from_email = from_email or "noreply@trustcapture.com"
+                    from_email = from_email or os.getenv("SENDGRID_FROM_EMAIL", "noreply@trustcapture.com")
             
             # Send email
             success = await self._send_email(
