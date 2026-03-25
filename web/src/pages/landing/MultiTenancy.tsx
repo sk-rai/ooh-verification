@@ -20,6 +20,18 @@ export default function MultiTenancy() {
             </div>
           ))}
         </div>
+        <div className="mt-10 bg-gray-50 rounded-xl p-6 max-w-2xl mx-auto text-center">
+          <p className="text-sm text-gray-700">
+            White-label deployments include custom workflow integration, SSO setup, and dedicated onboarding.
+            Pricing is tailored to your organization's scale and requirements.
+          </p>
+          <a
+            href="mailto:sales@lynksavvy.com"
+            className="inline-block mt-4 px-6 py-2.5 text-sm font-medium text-primary-600 border border-primary-600 rounded-md hover:bg-primary-50 transition-colors"
+          >
+            Contact Sales for White-Label Pricing
+          </a>
+        </div>
       </div>
     </section>
   )

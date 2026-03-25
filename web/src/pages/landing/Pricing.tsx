@@ -38,7 +38,7 @@ const tiers = [
     yearlyINR: '₹49,990/year — save 17%',
     yearlyUSD: '$750/year — save 17%',
     desc: 'For large organizations',
-    features: ['Unlimited photos', 'Unlimited vendors', 'Unlimited campaigns', '100 GB storage', 'Dedicated support', 'Custom branding & domain', 'API access', 'White-label & deep-link SSO'],
+    features: ['Unlimited photos', 'Unlimited vendors', 'Unlimited campaigns', '100 GB storage', 'Dedicated support', 'Custom branding & domain', 'API access', 'White-label & deep-link SSO', 'Custom workflow integration'],
     cta: 'Contact Sales',
     ctaLink: 'mailto:sales@lynksavvy.com',
     badge: 'Best Value',
