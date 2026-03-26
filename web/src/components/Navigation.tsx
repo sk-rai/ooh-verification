@@ -47,6 +47,16 @@ export default function Navigation() {
                 Photos
               </Link>
               <Link
+                to="/subscription"
+                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                  isActive('/subscription')
+                    ? 'text-gray-900 bg-gray-100'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                Subscription
+              </Link>
+              <Link
                 to="/reports"
                 className={`px-3 py-2 rounded-md text-sm font-medium ${
                   isActive('/reports')

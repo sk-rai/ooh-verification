@@ -14,6 +14,7 @@ import VendorsList from './pages/dashboard/VendorsList'
 import CreateVendor from './pages/dashboard/CreateVendor'
 import PhotoGallery from './pages/dashboard/PhotoGallery'
 import Reports from './pages/dashboard/Reports'
+import Subscription from './pages/dashboard/Subscription'
 import MapView from './pages/dashboard/MapView'
 import MapViewEnhanced from './pages/dashboard/MapViewEnhanced'
 import Analytics from './pages/dashboard/Analytics'
@@ -99,6 +100,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Reports />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/subscription"
+              element={
+                <ProtectedRoute>
+                  <Subscription />
                 </ProtectedRoute>
               }
             />
