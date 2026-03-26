@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi import Request
 import os
 
-from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations, tenants, assignments, bulk, admin, vendor_campaigns, integrity
+from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations, tenants, assignments, bulk, admin, vendor_campaigns, integrity, analytics
 from app.core.database import close_db
 from app.core.config import settings
 from app.middleware.tenant_context import TenantContextMiddleware
@@ -79,6 +79,7 @@ app.include_router(subscriptions.router)
 app.include_router(webhooks.router)
 app.include_router(reports.router)
 app.include_router(integrity.router)
+    app.include_router(analytics.router)
 
 # Startup event
 @app.on_event("startup")

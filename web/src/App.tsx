@@ -19,6 +19,7 @@ import MapView from './pages/dashboard/MapView'
 import MapViewEnhanced from './pages/dashboard/MapViewEnhanced'
 import Analytics from './pages/dashboard/Analytics'
 import ProtectedRoute from './components/ProtectedRoute'
+import AnalyticsTracker from './components/AnalyticsTracker'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
 
@@ -36,6 +37,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Router>
+          <AnalyticsTracker />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />

@@ -412,3 +412,91 @@ async def get_dashboard_metrics(
         revenue=revenue,
         photos=photo_stats
     )
+
+
+@router.get("/analytics")
+async def get_analytics_dashboard(
+    days: int = 30,
+    db: AsyncSession = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin)
+):
+    """Get visitor analytics for admin dashboard."""
+    from app.models.page_view import PageView, DailyAnalyticsSummary
+    from datetime import date as date_type
+
+    now = datetime.now(tz=timezone.utc)
+    cutoff = now - timedelta(days=days)
+
+    # Today's live data from raw page_views
+    today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+    today_result = await db.execute(
+        select(
+            func.count(PageView.id).label('views'),
+            func.count(func.distinct(PageView.visitor_hash)).label('visitors'),
+        ).where(PageView.created_at >= today_start)
+    )
+    today = today_result.one()
+
+    # Historical summaries
+    summaries = await db.execute(
+        select(DailyAnalyticsSummary)
+        .where(DailyAnalyticsSummary.date >= cutoff.date())
+        .order_by(DailyAnalyticsSummary.date.desc())
+    )
+    summary_rows = summaries.scalars().all()
+
+    # Aggregate totals from summaries
+    total_views = sum(s.total_views for s in summary_rows) + (today[0] or 0)
+    total_visitors = sum(s.unique_visitors for s in summary_rows) + (today[1] or 0)
+
+    # Aggregate top pages across all summaries
+    all_pages = {}
+    for s in summary_rows:
+        if s.top_pages:
+            for page, count in s.top_pages.items():
+                all_pages[page] = all_pages.get(page, 0) + count
+
+    # Aggregate countries
+    all_countries = {}
+    for s in summary_rows:
+        if s.countries:
+            for c, count in s.countries.items():
+                all_countries[c] = all_countries.get(c, 0) + count
+
+    # Aggregate devices
+    all_devices = {}
+    for s in summary_rows:
+        if s.devices:
+            for d, count in s.devices.items():
+                all_devices[d] = all_devices.get(d, 0) + count
+
+    # Aggregate browsers
+    all_browsers = {}
+    for s in summary_rows:
+        if s.browsers:
+            for b, count in s.browsers.items():
+                all_browsers[b] = all_browsers.get(b, 0) + count
+
+    # Daily trend
+    daily_trend = [
+        {"date": s.date.isoformat(), "views": s.total_views, "visitors": s.unique_visitors}
+        for s in sorted(summary_rows, key=lambda x: x.date)
+    ]
+
+    # Add today
+    daily_trend.append({
+        "date": now.date().isoformat(),
+        "views": today[0] or 0,
+        "visitors": today[1] or 0,
+    })
+
+    return {
+        "period_days": days,
+        "today": {"views": today[0] or 0, "visitors": today[1] or 0},
+        "total": {"views": total_views, "visitors": total_visitors},
+        "daily_trend": daily_trend,
+        "top_pages": dict(sorted(all_pages.items(), key=lambda x: -x[1])[:20]),
+        "countries": dict(sorted(all_countries.items(), key=lambda x: -x[1])[:20]),
+        "devices": all_devices,
+        "browsers": all_browsers,
+    }
