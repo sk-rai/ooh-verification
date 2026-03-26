@@ -70,6 +70,21 @@ class Subscription(Base):
     current_period_end = Column(DateTime(timezone=True), nullable=True)
     trial_end_date = Column(DateTime(timezone=True), nullable=True)
     cancellation_date = Column(DateTime(timezone=True), nullable=True)
+    cancelled_reason = Column(String(500), nullable=True)
+
+    # GST fields (amounts in smallest currency unit: paise for INR, cents for USD)
+    base_amount = Column(Integer, nullable=True)  # Pre-tax amount
+    gst_rate = Column(Integer, nullable=True, default=18)  # GST percentage (18 for India, 0 for international)
+    gst_amount = Column(Integer, nullable=True)  # GST amount
+    total_amount = Column(Integer, nullable=True)  # base_amount + gst_amount
+    customer_gstin = Column(String(20), nullable=True)  # Customer's GSTIN for B2B invoicing
+    customer_state = Column(String(100), nullable=True)  # For CGST+SGST vs IGST determination
+
+    # Refund fields
+    refund_amount = Column(Integer, nullable=True)  # Refund amount in smallest currency unit
+    refund_status = Column(String(20), nullable=True)  # pending, processed, failed
+    refund_id = Column(String(255), nullable=True)  # Gateway refund ID
+    refund_initiated_at = Column(DateTime(timezone=True), nullable=True)
 
     # Usage Quotas
     photos_quota = Column(Integer, nullable=False)  # Monthly photo limit

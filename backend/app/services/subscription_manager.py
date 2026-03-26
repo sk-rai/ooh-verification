@@ -14,8 +14,64 @@ from app.models.client import Client
 class SubscriptionManager:
     """Manages subscription lifecycle operations."""
 
+    # GST rate for Indian customers (18%), 0 for international
+    GST_RATE_INDIA = 18
+
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    def calculate_gst(self, base_amount: int, currency: str) -> dict:
+        """Calculate GST for a given base amount.
+        
+        Args:
+            base_amount: Amount in smallest currency unit (paise/cents)
+            currency: 'INR' or 'USD'
+        
+        Returns:
+            dict with base_amount, gst_rate, gst_amount, total_amount
+        """
+        if currency == 'INR':
+            gst_rate = self.GST_RATE_INDIA
+            gst_amount = int(base_amount * gst_rate / 100)
+        else:
+            gst_rate = 0
+            gst_amount = 0
+        
+        return {
+            'base_amount': base_amount,
+            'gst_rate': gst_rate,
+            'gst_amount': gst_amount,
+            'total_amount': base_amount + gst_amount,
+        }
+
+    def calculate_prorata_refund(self, subscription) -> int:
+        """Calculate pro-rata refund for yearly subscription cancellation.
+        
+        Returns refund amount in smallest currency unit (paise/cents).
+        Only applies to yearly billing cycle.
+        """
+        if subscription.billing_cycle != 'yearly':
+            return 0
+        
+        if not subscription.current_period_start or not subscription.current_period_end:
+            return 0
+        
+        now = datetime.utcnow()
+        period_start = subscription.current_period_start.replace(tzinfo=None) if subscription.current_period_start.tzinfo else subscription.current_period_start
+        period_end = subscription.current_period_end.replace(tzinfo=None) if subscription.current_period_end.tzinfo else subscription.current_period_end
+        
+        total_days = (period_end - period_start).days
+        if total_days <= 0:
+            return 0
+        
+        used_days = (now - period_start).days
+        remaining_days = max(0, total_days - used_days)
+        
+        # Use total_amount (incl GST) if available, else amount
+        paid_amount = subscription.total_amount or subscription.amount or 0
+        
+        refund = int(paid_amount * remaining_days / total_days)
+        return refund
 
     async def get_subscription(self, client_id: str) -> Subscription:
         """Get subscription for a client."""
@@ -66,9 +122,14 @@ class SubscriptionManager:
         subscription.campaigns_quota = quotas["campaigns"]
         subscription.storage_quota_mb = quotas["storage_mb"]
         
-        # Set pricing
+        # Set pricing with GST
         pricing = self._get_tier_pricing(new_tier_value, billing_cycle)
-        subscription.amount = pricing["amount"]
+        gst_info = self.calculate_gst(pricing["amount"], pricing["currency"])
+        subscription.base_amount = gst_info["base_amount"]
+        subscription.gst_rate = gst_info["gst_rate"]
+        subscription.gst_amount = gst_info["gst_amount"]
+        subscription.total_amount = gst_info["total_amount"]
+        subscription.amount = gst_info["total_amount"]  # Total including GST
         subscription.currency = pricing["currency"]
         
         # Update period
@@ -167,47 +228,73 @@ class SubscriptionManager:
     async def cancel_subscription(
         self,
         client_id: str,
-        immediate: bool = False
+        immediate: bool = False,
+        reason: str = None
     ) -> Dict[str, Any]:
         """
-        Cancel subscription.
-        
-        Args:
-            client_id: Client UUID
-            immediate: If True, cancel immediately. If False, cancel at period end.
-            
-        Returns:
-            Dict with cancellation details
+        Cancel subscription with pro-rata refund for yearly plans.
+
+        - Monthly: access continues till period end, no refund.
+        - Yearly + immediate: pro-rata refund calculated, access till period end.
+        - Yearly + not immediate: cancel at period end, no refund.
         """
         subscription = await self.get_subscription(client_id)
-        
-        if (subscription.status if isinstance(subscription.status, str) else subscription.status.value) == "cancelled":
+
+        current_status = subscription.status if isinstance(subscription.status, str) else subscription.status.value
+        if current_status == "cancelled":
             raise ValueError("Subscription is already cancelled")
-        
+
+        current_tier = subscription.tier if isinstance(subscription.tier, str) else subscription.tier.value
+        if current_tier == "free":
+            raise ValueError("Cannot cancel a free subscription")
+
         subscription.cancellation_date = datetime.utcnow()
         subscription.auto_renew = False
-        
-        if immediate:
-            subscription.status = "cancelled"
-            subscription.current_period_end = datetime.utcnow()
-            message = "Subscription cancelled immediately"
+        if reason:
+            subscription.cancelled_reason = reason
+
+        refund_info = None
+
+        if immediate and subscription.billing_cycle == "yearly":
+            # Pro-rata refund for yearly plans cancelled mid-cycle
+            refund_amount = self.calculate_prorata_refund(subscription)
+            if refund_amount > 0:
+                subscription.refund_amount = refund_amount
+                subscription.refund_status = "pending"
+                subscription.refund_initiated_at = datetime.utcnow()
+                currency_symbol = "\u20b9" if subscription.currency == "INR" else "$"
+                refund_info = {
+                    "refund_amount_paise": refund_amount,
+                    "refund_amount_display": f"{currency_symbol}{refund_amount / 100:.2f}",
+                    "refund_status": "pending",
+                    "note": "Refund will be processed via your payment gateway within 5-7 business days."
+                }
+            message = f"Subscription cancelled. Access continues till {subscription.current_period_end.isoformat() if subscription.current_period_end else 'period end'}."
+        elif immediate:
+            # Monthly immediate cancel - no refund, access till period end
+            message = f"Subscription cancelled. Access continues till {subscription.current_period_end.isoformat() if subscription.current_period_end else 'period end'}."
         else:
-            # Cancel at end of period
-            message = f"Subscription will be cancelled on {subscription.current_period_end.isoformat()}"
-        
+            # Cancel at end of period - no refund
+            message = f"Subscription will be cancelled at period end ({subscription.current_period_end.isoformat() if subscription.current_period_end else 'N/A'}). No refund."
+
+        subscription.status = "cancelled"
         subscription.updated_at = datetime.utcnow()
-        
+
         await self.db.commit()
         await self.db.refresh(subscription)
-        
-        return {
+
+        result = {
             "message": message,
             "subscription": {
-                "status": subscription.status.value,
+                "status": "cancelled",
                 "cancellation_date": subscription.cancellation_date.isoformat(),
-                "access_until": subscription.current_period_end.isoformat() if subscription.current_period_end else None
+                "access_until": subscription.current_period_end.isoformat() if subscription.current_period_end else None,
+                "billing_cycle": subscription.billing_cycle,
             }
         }
+        if refund_info:
+            result["refund"] = refund_info
+        return result
 
     async def reactivate_subscription(
         self,
