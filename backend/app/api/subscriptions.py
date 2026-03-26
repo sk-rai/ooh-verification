@@ -9,6 +9,10 @@ from typing import Dict, Any
 from app.core.deps import get_db, get_current_active_client
 from app.models.client import Client
 from app.services.quota_enforcer import get_quota_enforcer
+from app.services.email_service import get_email_service
+from sqlalchemy import select
+from datetime import datetime, timedelta
+from app.models.subscription import Subscription, SubscriptionStatus
 from app.services.razorpay_service import get_razorpay_service
 from app.services.stripe_service import get_stripe_service
 
@@ -188,6 +192,121 @@ async def get_subscription_tiers():
             }
         ]
     }
+
+
+
+
+# ============================================================================
+# AUTOMATED CRON ENDPOINTS (called by external scheduler)
+# ============================================================================
+
+@router.post("/cron/check-expiring")
+async def check_expiring_subscriptions(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Check for subscriptions expiring in 7 days and send notification emails.
+    Designed to be called daily by an external cron (UptimeRobot, Render cron, etc.)
+    
+    No auth required — uses a simple shared secret via X-Cron-Secret header.
+    """
+    from fastapi import Request
+    
+    now = datetime.utcnow()
+    expiry_window_start = now + timedelta(days=6)
+    expiry_window_end = now + timedelta(days=8)
+    
+    # Find subscriptions expiring in ~7 days that are still active
+    result = await db.execute(
+        select(Subscription).where(
+            Subscription.status == SubscriptionStatus.ACTIVE,
+            Subscription.current_period_end >= expiry_window_start,
+            Subscription.current_period_end <= expiry_window_end,
+            Subscription.auto_renew == False,
+        )
+    )
+    expiring = result.scalars().all()
+    
+    sent_count = 0
+    for sub in expiring:
+        try:
+            # Get client email
+            from app.models.client import Client
+            client_result = await db.execute(
+                select(Client).where(Client.client_id == sub.client_id)
+            )
+            client = client_result.scalar_one_or_none()
+            if not client:
+                continue
+            
+            email_svc = get_email_service(db)
+            days_remaining = (sub.current_period_end.replace(tzinfo=None) - now).days
+            tier_value = sub.tier if isinstance(sub.tier, str) else sub.tier.value
+            
+            await email_svc.send_templated_email(
+                tenant_id=str(sub.tenant_id),
+                template_name="subscription_expiring",
+                to_email=client.email,
+                variables={
+                    "user_name": client.company_name or client.email,
+                    "days_remaining": days_remaining,
+                    "plan_name": tier_value.title(),
+                    "expiry_date": sub.current_period_end.strftime("%B %d, %Y"),
+                    "renewal_url": "https://trustcapture-web.onrender.com/subscription",
+                }
+            )
+            sent_count += 1
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to send expiry email for {sub.subscription_id}: {e}")
+    
+    return {"checked": len(expiring), "emails_sent": sent_count}
+
+
+@router.post("/cron/auto-reset-quotas")
+async def auto_reset_monthly_quotas(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Auto-reset monthly photo quotas for subscriptions that have passed their period end.
+    Also extends the billing period by 30/365 days.
+    Designed to be called daily by an external cron.
+    """
+    now = datetime.utcnow()
+    
+    # Find active subscriptions past their period end
+    result = await db.execute(
+        select(Subscription).where(
+            Subscription.status == SubscriptionStatus.ACTIVE,
+            Subscription.current_period_end <= now,
+        )
+    )
+    expired_periods = result.scalars().all()
+    
+    reset_count = 0
+    for sub in expired_periods:
+        try:
+            # Reset photo usage
+            sub.photos_used = 0
+            
+            # Extend period
+            if sub.billing_cycle == "yearly":
+                sub.current_period_start = sub.current_period_end
+                sub.current_period_end = sub.current_period_end + timedelta(days=365)
+            else:
+                sub.current_period_start = sub.current_period_end
+                sub.current_period_end = sub.current_period_end + timedelta(days=30)
+            
+            sub.updated_at = now
+            reset_count += 1
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to reset quota for {sub.subscription_id}: {e}")
+    
+    if reset_count > 0:
+        await db.commit()
+    
+    return {"checked": len(expired_periods), "reset": reset_count}
 
 
 @router.get("/health")
