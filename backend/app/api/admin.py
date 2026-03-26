@@ -26,7 +26,7 @@ from app.schemas.admin import (
     AdminLogin, AdminToken, AdminUserResponse,
     AdminDashboardResponse, PlatformOverview, ClientMetrics,
     TierBreakdown, SubscriptionBreakdown, SignupTrend,
-    UsageMetrics, TopClient
+    UsageMetrics, TopClient, RevenueMetrics, PhotoStats
 )
 import logging
 
@@ -323,8 +323,92 @@ async def get_dashboard_metrics(
         recently_active=recently_active
     )
 
+    # ---- Revenue Metrics ----
+    try:
+        # Total revenue (sum of total_amount for active/cancelled paid subs)
+        rev_inr = (await db.execute(
+            select(func.coalesce(func.sum(Subscription.total_amount), 0))
+            .where(Subscription.currency == 'INR', Subscription.total_amount > 0)
+        )).scalar() or 0
+
+        rev_usd = (await db.execute(
+            select(func.coalesce(func.sum(Subscription.total_amount), 0))
+            .where(Subscription.currency == 'USD', Subscription.total_amount > 0)
+        )).scalar() or 0
+
+        gst_collected = (await db.execute(
+            select(func.coalesce(func.sum(Subscription.gst_amount), 0))
+            .where(Subscription.gst_amount > 0)
+        )).scalar() or 0
+
+        pending_refunds_result = await db.execute(
+            select(
+                func.count(Subscription.subscription_id),
+                func.coalesce(func.sum(Subscription.refund_amount), 0)
+            ).where(Subscription.refund_status == 'pending')
+        )
+        pr_row = pending_refunds_result.one()
+        pending_refund_count = pr_row[0] or 0
+        pending_refund_amount = pr_row[1] or 0
+
+        # MRR: sum of monthly-equivalent amounts for active paid subs
+        mrr = (await db.execute(
+            select(func.coalesce(func.sum(
+                case(
+                    (Subscription.billing_cycle == 'yearly', Subscription.total_amount / 12),
+                    else_=Subscription.total_amount
+                )
+            ), 0))
+            .where(Subscription.status == SubscriptionStatus.ACTIVE, Subscription.total_amount > 0)
+        )).scalar() or 0
+
+        paying = (await db.execute(
+            select(func.count()).select_from(Subscription)
+            .where(Subscription.total_amount > 0)
+        )).scalar() or 0
+
+        revenue = RevenueMetrics(
+            total_revenue_inr=rev_inr, total_revenue_usd=rev_usd,
+            total_gst_collected=gst_collected,
+            pending_refunds=pending_refund_count,
+            pending_refund_amount=pending_refund_amount,
+            mrr_inr=int(mrr), paying_customers=paying
+        )
+    except Exception as e:
+        logger.warning(f"Revenue metrics query failed: {e}")
+        revenue = RevenueMetrics()
+
+    # ---- Photo Verification Stats ----
+    try:
+        from app.models.photo import VerificationStatus
+        photo_stats_result = await db.execute(
+            select(
+                Photo.verification_status,
+                func.count(Photo.photo_id)
+            ).group_by(Photo.verification_status)
+        )
+        photo_counts = {row[0].value if hasattr(row[0], 'value') else str(row[0]): row[1] for row in photo_stats_result.all()}
+
+        total_storage = (await db.execute(
+            select(func.coalesce(func.sum(Subscription.storage_used_mb), 0))
+        )).scalar() or 0
+
+        photo_stats = PhotoStats(
+            total=sum(photo_counts.values()),
+            verified=photo_counts.get('verified', 0),
+            flagged=photo_counts.get('flagged', 0),
+            rejected=photo_counts.get('rejected', 0) + photo_counts.get('failed', 0),
+            pending=photo_counts.get('pending', 0),
+            total_storage_mb=total_storage
+        )
+    except Exception as e:
+        logger.warning(f"Photo stats query failed: {e}")
+        photo_stats = PhotoStats(total=total_photos)
+
     return AdminDashboardResponse(
         overview=overview,
         clients=client_metrics,
-        usage=usage
+        usage=usage,
+        revenue=revenue,
+        photos=photo_stats
     )

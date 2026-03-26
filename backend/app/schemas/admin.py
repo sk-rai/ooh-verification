@@ -83,7 +83,28 @@ class UsageMetrics(BaseModel):
     recently_active: List[TopClient]
 
 
+class RevenueMetrics(BaseModel):
+    total_revenue_inr: int = 0  # in paise
+    total_revenue_usd: int = 0  # in cents
+    total_gst_collected: int = 0  # in paise
+    pending_refunds: int = 0  # count
+    pending_refund_amount: int = 0  # in paise
+    mrr_inr: int = 0  # monthly recurring revenue in paise
+    paying_customers: int = 0
+
+
+class PhotoStats(BaseModel):
+    total: int = 0
+    verified: int = 0
+    flagged: int = 0
+    rejected: int = 0
+    pending: int = 0
+    total_storage_mb: int = 0
+
+
 class AdminDashboardResponse(BaseModel):
     overview: PlatformOverview
     clients: ClientMetrics
     usage: UsageMetrics
+    revenue: RevenueMetrics
+    photos: PhotoStats

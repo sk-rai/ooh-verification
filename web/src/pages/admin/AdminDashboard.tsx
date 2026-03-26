@@ -39,6 +39,23 @@ interface DashboardData {
     inactive_users: TopClient[]
     recently_active: TopClient[]
   }
+  revenue: {
+    total_revenue_inr: number
+    total_revenue_usd: number
+    total_gst_collected: number
+    pending_refunds: number
+    pending_refund_amount: number
+    mrr_inr: number
+    paying_customers: number
+  }
+  photos: {
+    total: number
+    verified: number
+    flagged: number
+    rejected: number
+    pending: number
+    total_storage_mb: number
+  }
 }
 
 type ViewType = 'dashboard' | 'clients' | 'vendors' | 'campaigns'
@@ -259,6 +276,35 @@ export default function AdminDashboard() {
         <StatCard label="Assignments" value={ov.total_assignments} />
         <StatCard label="Photos" value={ov.total_photos} />
       </div>
+
+      {/* Revenue Metrics */}
+      {data.revenue && (
+        <div style={{ marginBottom: 32 }}>
+          <h3 style={{ color: '#e2e8f0', fontSize: 16, marginBottom: 12 }}>Revenue</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+            <StatCard label="MRR (INR)" value={`₹${(data.revenue.mrr_inr / 100).toLocaleString()}`} />
+            <StatCard label="Total Revenue (INR)" value={`₹${(data.revenue.total_revenue_inr / 100).toLocaleString()}`} />
+            <StatCard label="GST Collected" value={`₹${(data.revenue.total_gst_collected / 100).toLocaleString()}`} />
+            <StatCard label="Paying Customers" value={data.revenue.paying_customers} />
+            <StatCard label="Pending Refunds" value={data.revenue.pending_refunds} sub={data.revenue.pending_refund_amount > 0 ? `₹${(data.revenue.pending_refund_amount / 100).toLocaleString()}` : undefined} />
+          </div>
+        </div>
+      )}
+
+      {/* Photo Verification Stats */}
+      {data.photos && (
+        <div style={{ marginBottom: 32 }}>
+          <h3 style={{ color: '#e2e8f0', fontSize: 16, marginBottom: 12 }}>Photo Verification</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+            <StatCard label="Total Photos" value={data.photos.total} />
+            <StatCard label="Verified" value={data.photos.verified} sub={data.photos.total > 0 ? `${((data.photos.verified / data.photos.total) * 100).toFixed(1)}%` : undefined} />
+            <StatCard label="Flagged" value={data.photos.flagged} />
+            <StatCard label="Rejected" value={data.photos.rejected} />
+            <StatCard label="Pending" value={data.photos.pending} />
+            <StatCard label="Total Storage" value={`${data.photos.total_storage_mb} MB`} />
+          </div>
+        </div>
+      )}
 
       {/* Subscription Tiers - Clickable */}
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 28 }}>
