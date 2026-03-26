@@ -48,6 +48,11 @@ export default function Subscription() {
   const [cancelLoading, setCancelLoading] = useState(false)
   const [cancelResult, setCancelResult] = useState<any>(null)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [upgradeLoading, setUpgradeLoading] = useState(false)
+  const [upgradeError, setUpgradeError] = useState('')
+  const [selectedTier, setSelectedTier] = useState('')
+  const [selectedCycle, setSelectedCycle] = useState('monthly')
 
   useEffect(() => {
     loadData()
@@ -80,6 +85,35 @@ export default function Subscription() {
       setError(err.response?.data?.detail || 'Failed to cancel subscription')
     } finally {
       setCancelLoading(false)
+    }
+  }
+
+  const handleUpgrade = async () => {
+    setUpgradeLoading(true)
+    setUpgradeError('')
+    try {
+      const res = await api.post('/api/subscriptions/upgrade', {
+        tier: selectedTier,
+        billing_cycle: selectedCycle,
+        payment_gateway: 'razorpay',
+      })
+      const data = res.data
+      // Redirect to payment link
+      const paymentUrl = data.checkout?.short_url || data.checkout?.payment_link_url
+      if (paymentUrl) {
+        window.location.href = paymentUrl
+      } else {
+        setUpgradeError('Payment gateway not configured yet. Please contact support.')
+        setUpgradeLoading(false)
+      }
+    } catch (err: any) {
+      const detail = err.response?.data?.detail || 'Upgrade failed'
+      if (detail.includes('not configured')) {
+        setUpgradeError('Payment gateway is being set up. Please try again later or contact support@lynksavvy.com.')
+      } else {
+        setUpgradeError(detail)
+      }
+      setUpgradeLoading(false)
     }
   }
 
@@ -170,7 +204,7 @@ export default function Subscription() {
           <div className="flex flex-wrap gap-3">
             {sub && sub.tier !== 'enterprise' && (
               <button
-                onClick={() => navigate('/register')}
+                onClick={() => setShowUpgradeModal(true)}
                 className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700"
               >
                 Upgrade Plan
@@ -195,6 +229,83 @@ export default function Subscription() {
             </button>
           </div>
         </div>
+
+        {/* Upgrade Modal */}
+        {showUpgradeModal && sub && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 max-w-lg w-full space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Upgrade Your Plan</h3>
+              {upgradeError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">{upgradeError}</div>
+              )}
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600">Select a plan:</p>
+                {sub.tier === 'free' && (
+                  <button
+                    onClick={() => setSelectedTier('pro')}
+                    className={`w-full text-left p-4 border rounded-lg ${selectedTier === 'pro' ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-semibold text-gray-900">Pro</p>
+                        <p className="text-xs text-gray-500">1,000 photos, 10 vendors, 5 campaigns, 10 GB</p>
+                      </div>
+                      <p className="font-bold text-gray-900">₹999<span className="text-xs text-gray-400">/mo + GST</span></p>
+                    </div>
+                  </button>
+                )}
+                {(sub.tier === 'free' || sub.tier === 'pro') && (
+                  <button
+                    onClick={() => setSelectedTier('enterprise')}
+                    className={`w-full text-left p-4 border rounded-lg ${selectedTier === 'enterprise' ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-semibold text-gray-900">Enterprise</p>
+                        <p className="text-xs text-gray-500">Unlimited photos, vendors, campaigns, 100 GB</p>
+                      </div>
+                      <p className="font-bold text-gray-900">₹4,999<span className="text-xs text-gray-400">/mo + GST</span></p>
+                    </div>
+                  </button>
+                )}
+              </div>
+              {selectedTier && (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">Billing cycle:</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setSelectedCycle('monthly')}
+                      className={`flex-1 py-2 text-sm font-medium rounded-md border ${selectedCycle === 'monthly' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-600'}`}
+                    >
+                      Monthly
+                    </button>
+                    <button
+                      onClick={() => setSelectedCycle('yearly')}
+                      className={`flex-1 py-2 text-sm font-medium rounded-md border ${selectedCycle === 'yearly' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-600'}`}
+                    >
+                      Yearly (save 17%)
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleUpgrade}
+                  disabled={!selectedTier || upgradeLoading}
+                  className="flex-1 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 disabled:opacity-50"
+                >
+                  {upgradeLoading ? 'Redirecting to payment...' : 'Proceed to Payment'}
+                </button>
+                <button
+                  onClick={() => { setShowUpgradeModal(false); setSelectedTier(''); setUpgradeError(''); }}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Cancel Confirmation Modal */}
         {showCancelConfirm && sub && (
