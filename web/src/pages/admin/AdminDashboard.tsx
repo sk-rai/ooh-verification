@@ -171,11 +171,13 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [view, setView] = useState<ViewType>('dashboard')
+  const [analytics, setAnalytics] = useState<any>(null)
 
   useEffect(() => {
     const token = localStorage.getItem('admin_token')
     if (!token) { navigate('/admin/login'); return }
     fetchDashboard(token)
+    fetchAnalytics(token)
   }, [navigate])
 
   const fetchDashboard = async (token: string) => {
@@ -200,6 +202,20 @@ export default function AdminDashboard() {
   const handleLogout = () => {
     localStorage.removeItem('admin_token')
     navigate('/admin/login')
+  }
+
+
+  const fetchAnalytics = async (token: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/analytics?days=30`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (res.ok) {
+        setAnalytics(await res.json())
+      }
+    } catch (e) {
+      console.error('Analytics fetch failed:', e)
+    }
   }
 
   if (loading) return (
@@ -303,6 +319,88 @@ export default function AdminDashboard() {
             <StatCard label="Pending" value={data.photos.pending} />
             <StatCard label="Total Storage" value={`${data.photos.total_storage_mb} MB`} />
           </div>
+        </div>
+      )}
+
+      {/* Visitor Analytics */}
+      {analytics && (
+        <div style={{ marginBottom: 32 }}>
+          <h3 style={{ color: '#e2e8f0', fontSize: 16, marginBottom: 12 }}>Visitor Analytics (Last 30 Days)</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+            <StatCard label="Today Views" value={analytics.today?.views || 0} />
+            <StatCard label="Today Visitors" value={analytics.today?.visitors || 0} />
+            <StatCard label="Total Views (30d)" value={analytics.total?.views || 0} />
+            <StatCard label="Total Visitors (30d)" value={analytics.total?.visitors || 0} />
+          </div>
+
+          {/* Top Pages */}
+          {analytics.top_pages && Object.keys(analytics.top_pages).length > 0 && (
+            <div style={{ background: '#1e293b', borderRadius: 10, padding: '16px 20px', marginBottom: 12 }}>
+              <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}>Top Pages</div>
+              {Object.entries(analytics.top_pages).slice(0, 10).map(([page, count]: [string, any]) => (
+                <div key={page} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #334155' }}>
+                  <span style={{ color: '#e2e8f0', fontSize: 13 }}>{page}</span>
+                  <span style={{ color: '#94a3b8', fontSize: 13 }}>{count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Devices + Browsers */}
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {analytics.devices && Object.keys(analytics.devices).length > 0 && (
+              <div style={{ background: '#1e293b', borderRadius: 10, padding: '16px 20px', flex: '1 1 200px' }}>
+                <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}>Devices</div>
+                {Object.entries(analytics.devices).map(([device, count]: [string, any]) => (
+                  <div key={device} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                    <span style={{ color: '#e2e8f0', fontSize: 13 }}>{device}</span>
+                    <span style={{ color: '#94a3b8', fontSize: 13 }}>{count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {analytics.browsers && Object.keys(analytics.browsers).length > 0 && (
+              <div style={{ background: '#1e293b', borderRadius: 10, padding: '16px 20px', flex: '1 1 200px' }}>
+                <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}>Browsers</div>
+                {Object.entries(analytics.browsers).map(([browser, count]: [string, any]) => (
+                  <div key={browser} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                    <span style={{ color: '#e2e8f0', fontSize: 13 }}>{browser}</span>
+                    <span style={{ color: '#94a3b8', fontSize: 13 }}>{count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {analytics.countries && Object.keys(analytics.countries).length > 0 && (
+              <div style={{ background: '#1e293b', borderRadius: 10, padding: '16px 20px', flex: '1 1 200px' }}>
+                <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}>Countries</div>
+                {Object.entries(analytics.countries).map(([country, count]: [string, any]) => (
+                  <div key={country} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                    <span style={{ color: '#e2e8f0', fontSize: 13 }}>{country}</span>
+                    <span style={{ color: '#94a3b8', fontSize: 13 }}>{count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Daily Trend */}
+          {analytics.daily_trend && analytics.daily_trend.length > 1 && (
+            <div style={{ background: '#1e293b', borderRadius: 10, padding: '16px 20px', marginTop: 12 }}>
+              <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}>Daily Trend</div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 80 }}>
+                {analytics.daily_trend.map((d: any, i: number) => {
+                  const maxViews = Math.max(...analytics.daily_trend.map((x: any) => x.views || 1))
+                  const height = Math.max(4, (d.views / maxViews) * 70)
+                  return (
+                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <div style={{ background: '#3b82f6', width: '100%', maxWidth: 24, height, borderRadius: 3 }} title={`${d.date}: ${d.views} views`} />
+                      {i % 7 === 0 && <span style={{ color: '#64748b', fontSize: 9, marginTop: 4 }}>{d.date.slice(5)}</span>}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
