@@ -1,32 +1,19 @@
-FROM python:3.10-slim AS builder
-
-WORKDIR /app
-
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python dependencies (cached layer - only rebuilds when requirements change)
-COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
-
-# --- Runtime stage ---
 FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install only runtime system deps (no gcc needed)
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
+    gcc \
+    libpq-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy installed packages from builder
-COPY --from=builder /install /usr/local
+# Install Python dependencies (cached layer)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy only application code (respects .dockerignore)
+# Copy only application code
 COPY alembic.ini .
 COPY alembic/ alembic/
 COPY app/ app/
