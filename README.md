@@ -1,82 +1,91 @@
-# OOH Vendor Photo Fraud Prevention
+# TrustCapture
 
-A tamper-proof photo verification system for Out-of-Home (OOH) advertising campaigns.
+Tamper-proof photo verification platform for field operations. Prevents vendor fraud in OOH advertising, delivery/logistics, construction, and agriculture through GPS-stamped, sensor-validated, cryptographically signed photos.
 
-## 🎯 Problem Statement
+## Architecture
 
-OOH agencies lose 15-20% of campaign budgets when vendors submit edited/reused photos with spoofed GPS/timestamps. Manual verification of 800+ images per campaign is impossible at scale.
+```
+┌─────────────┐     ┌──────────────┐     ┌──────────────┐
+│  Web App     │     │  Backend API │     │  Android App │
+│  (React/TS)  │────▶│  (FastAPI)   │◀────│  (Kotlin)    │
+│  Tailwind    │     │  PostgreSQL  │     │  StrongBox   │
+└─────────────┘     └──────────────┘     └──────────────┘
+```
 
-## ✨ Solution
+- **Web App** — React + TypeScript + Tailwind CSS. Landing page, dashboard, campaign/vendor management, reports.
+- **Backend API** — FastAPI + SQLAlchemy + PostgreSQL. Multi-tenant, async, with Alembic migrations.
+- **Android App** — Kotlin, camera-only capture, hardware-backed signatures (StrongBox/TEE), offline-first with SQLCipher + WorkManager.
 
-Prevent fraud at capture — not detect it after upload. Force vendors to take live photos only with tamper-proof proof burned visibly into the image.
+## Key Features
 
-## 📱 Features
+- 5-layer photo verification: GPS + pressure + magnetic field + tremor + cryptographic signature
+- Tamper-proof watermarks burned into image pixels
+- Hardware-backed photo signatures (Android StrongBox/TEE)
+- Offline-first Android app with encrypted local storage
+- Bidirectional geocoding (Google Maps + Nominatim fallback)
+- Auto-populated pressure/magnetic baselines (Open-Meteo + NOAA)
+- Hash-chained, append-only audit trail
+- Multi-tenant white-label architecture
+- Bulk CSV operations (campaigns, vendors, assignments)
+- PDF, CSV, GeoJSON report exports
+- SMS (Twilio) + Email (SendGrid) notifications
 
-- **Campaign Code Authentication**: Vendors must enter valid campaign code before capture
-- **Forced Live Capture**: Gallery uploads blocked — only live camera capture allowed
-- **Tamper-Proof Watermark**: GPS + timestamp + campaign code burned into pixels
-- **Visible Verification**: Any edit visibly corrupts the watermark
 
-## 🚀 Quick Start
+## Subscription Tiers
 
-### View Locally
+| | Free | Pro | Enterprise |
+|---|---|---|---|
+| Photos/month | 50 | 1,000 | Unlimited |
+| Vendors | 5 | 10 | Unlimited |
+| Campaigns | 3 | 5 | Unlimited |
+| Storage | 100 MB | 10 GB | 100 GB |
+| Price (INR) | ₹0 | ₹999/mo | ₹4,999/mo |
+| Price (USD) | $0 | $15/mo | $75/mo |
 
-1. Clone or download this repository
-2. Open `index.html` in your browser
-3. Navigate through the 3-screen flow
+## Deployment
 
-### Deploy to GitHub Pages
+- **Backend**: Docker on Render (Singapore) — `ooh-verification.onrender.com`
+- **Web**: Static site on Render (Global) — `trustcapture-web.onrender.com`
+- **Database**: PostgreSQL 18 on Render (Singapore)
 
-1. Create a new GitHub repository
-2. Push these files to the repository:
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-   git push -u origin main
-   ```
-3. Go to repository Settings → Pages
-4. Select "main" branch as source
-5. Your app will be live at: `https://YOUR_USERNAME.github.io/YOUR_REPO/`
+## Tech Stack
 
-## 📸 How It Works
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, TypeScript, Tailwind CSS, Vite |
+| Backend | FastAPI, SQLAlchemy 2.0, asyncpg, Alembic |
+| Database | PostgreSQL 18 |
+| Android | Kotlin, Jetpack, Room (SQLCipher), WorkManager |
+| Auth | JWT + OTP (Twilio) + StrongBox device attestation |
+| Storage | Cloudinary |
+| Email | SendGrid |
+| SMS | Twilio |
+| Payments | Razorpay |
+| Geocoding | Google Maps + Nominatim |
+| Verification | Open-Meteo (pressure) + NOAA WMM (magnetic) |
 
-1. **Screen 1**: Vendor enters campaign code (e.g., RURAL-MP-2026)
-2. **Screen 2**: Camera-only view — gallery access blocked
-3. **Screen 3**: Photo captured with visible watermark containing:
-   - GPS coordinates with accuracy
-   - Timestamp (IST timezone)
-   - Campaign code
+## Project Structure
 
-## 🔒 Security Features
+```
+├── android/          # Android vendor app (Kotlin)
+├── backend/          # FastAPI backend
+│   ├── alembic/      # Database migrations
+│   ├── app/
+│   │   ├── api/      # Route handlers
+│   │   ├── core/     # Config, auth, deps
+│   │   ├── models/   # SQLAlchemy models
+│   │   ├── schemas/  # Pydantic schemas
+│   │   └── services/ # Business logic
+│   └── tests/        # Backend tests
+├── web/              # React web app
+│   └── src/
+│       ├── pages/    # Page components
+│       ├── components/
+│       ├── contexts/ # Auth context
+│       └── services/ # API client
+└── tests/            # Integration tests
+```
 
-- GPS + timestamp burned into pixels (not EXIF metadata)
-- Visible watermark makes tampering obvious
-- No gallery access during capture
-- Real-time location verification
+## License
 
-## 💡 Value Proposition
-
-"GPS + timestamp burned visibly into pixels — not hidden in EXIF metadata. Any edit visibly corrupts the watermark, making fraud obvious in 3 seconds."
-
-## 🛠️ Tech Stack
-
-- Pure HTML5, CSS3, JavaScript
-- No dependencies or frameworks
-- Works on all modern browsers
-- Mobile-first Android Material Design
-
-## 📝 Next Steps
-
-This is a frontend prototype for client review. Full production app would include:
-- Backend API for campaign validation
-- Photo upload and storage
-- Admin dashboard for verification
-- Vendor management system
-- Analytics and reporting
-
-## 📄 License
-
-Proprietary - All rights reserved
+Proprietary — LynkSavvy Technologies © 2026

@@ -4,6 +4,8 @@ import { AuthProvider } from './contexts/AuthContext'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import LandingPage from './pages/LandingPage'
+import PrivacyPolicy from './pages/legal/PrivacyPolicy'
+import TermsOfService from './pages/legal/TermsOfService'
 import Dashboard from './pages/dashboard/Dashboard'
 import CampaignsList from './pages/dashboard/CampaignsList'
 import CreateCampaign from './pages/dashboard/CreateCampaign'
@@ -127,6 +129,8 @@ function App() {
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
             <Route path="/" element={<LandingPage />} />
           </Routes>
         </Router>
