@@ -248,6 +248,17 @@ class QuotaEnforcer:
 
         subscription.vendors_used = actual_vendors
         subscription.campaigns_used = actual_campaigns
+
+        # Sync photo count
+        photo_count = await self.db.execute(
+            select(func.count(Photo.photo_id)).where(Photo.tenant_id == subscription.tenant_id)
+        )
+        actual_photos = photo_count.scalar() or 0
+        subscription.photos_used = actual_photos
+
+        # Estimate storage (~0.5 MB per photo avg)
+        subscription.storage_used_mb = int(actual_photos * 0.5)
+
         await self.db.commit()
 
 
