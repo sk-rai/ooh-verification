@@ -222,7 +222,7 @@ async def check_expiring_subscriptions(
             Subscription.status == SubscriptionStatus.ACTIVE,
             Subscription.current_period_end >= expiry_window_start,
             Subscription.current_period_end <= expiry_window_end,
-            Subscription.auto_renew == False,
+            Subscription.auto_renew == 0,
         )
     )
     expiring = result.scalars().all()
