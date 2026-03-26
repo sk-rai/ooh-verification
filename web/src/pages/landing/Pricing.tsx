@@ -20,7 +20,7 @@ const tiers = [
     priceINR: '₹999',
     priceUSD: '$15',
     period: '/month',
-    yearlyINR: '₹9,990/year — save 17%',
+    yearlyINR: '₹9,990/year + GST — save 17%',
     yearlyUSD: '$150/year — save 17%',
     desc: 'For growing teams',
     features: ['1,000 photos/month', '10 vendors', '5 campaigns', '10 GB storage', 'Priority support', 'PDF, CSV, GeoJSON exports', 'Bulk CSV operations'],
@@ -35,7 +35,7 @@ const tiers = [
     priceINR: '₹4,999',
     priceUSD: '$75',
     period: '/month',
-    yearlyINR: '₹49,990/year — save 17%',
+    yearlyINR: '₹49,990/year + GST — save 17%',
     yearlyUSD: '$750/year — save 17%',
     desc: 'For large organizations',
     features: ['Unlimited photos', 'Unlimited vendors', 'Unlimited campaigns', '100 GB storage', 'Dedicated support', 'Custom branding & domain', 'API access', 'White-label & deep-link SSO', 'Custom workflow integration'],
@@ -71,6 +71,10 @@ export default function Pricing() {
             $ USD
           </button>
         </div>
+
+        {currency === 'INR' && (
+          <p className="mt-3 text-xs text-gray-400">Prices exclusive of 18% GST for Indian customers</p>
+        )}
 
         <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           {tiers.map(t => (

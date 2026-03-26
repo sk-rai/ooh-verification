@@ -148,9 +148,9 @@ async def get_subscription_tiers():
                 "billing_cycles": ["monthly"],
                 "features": {
                     "photos_per_month": 50,
-                    "vendors": 2,
-                    "campaigns": 1,
-                    "storage_mb": 500
+                    "vendors": 5,
+                    "campaigns": 3,
+                    "storage_mb": 100
                 },
                 "description": "Perfect for trying out TrustCapture"
             },
@@ -219,6 +219,7 @@ class UpgradeRequest(BaseModel):
     """Request model for tier upgrade."""
     tier: str  # "pro" or "enterprise"
     billing_cycle: str = "monthly"  # "monthly" or "yearly"
+    payment_gateway: str = "razorpay"  # "razorpay" or "stripe"
 
 
 class DowngradeRequest(BaseModel):
