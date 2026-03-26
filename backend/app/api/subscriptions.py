@@ -200,7 +200,7 @@ async def get_subscription_tiers():
 # AUTOMATED CRON ENDPOINTS (called by external scheduler)
 # ============================================================================
 
-@router.post("/cron/check-expiring")
+@router.api_route("/cron/check-expiring", methods=["GET", "POST"])
 async def check_expiring_subscriptions(
     db: AsyncSession = Depends(get_db)
 ):
@@ -263,7 +263,7 @@ async def check_expiring_subscriptions(
     return {"checked": len(expiring), "emails_sent": sent_count}
 
 
-@router.post("/cron/auto-reset-quotas")
+@router.api_route("/cron/auto-reset-quotas", methods=["GET", "POST"])
 async def auto_reset_monthly_quotas(
     db: AsyncSession = Depends(get_db)
 ):
