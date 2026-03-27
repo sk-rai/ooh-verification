@@ -293,44 +293,7 @@ export default function AdminDashboard() {
           </p>
         </div>
 
-      {/* Client Detail Modal */}
-      {selectedClient && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}
-          onClick={() => setSelectedClient(null)}>
-          <div style={{ background: '#1e293b', borderRadius: 12, padding: 24, maxWidth: 600, width: '100%', maxHeight: '80vh', overflow: 'auto', color: '#e2e8f0' }}
-            onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 700 }}>Client Details</h3>
-              <button onClick={() => setSelectedClient(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 20, cursor: 'pointer' }}>✕</button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Company</span><p style={{ fontWeight: 600 }}>{selectedClient.company_name}</p></div>
-              <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Email</span><p>{selectedClient.email}</p></div>
-              <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Phone</span><p>{selectedClient.phone_number}</p></div>
-              <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Tier</span><p style={{ textTransform: 'uppercase', fontWeight: 600 }}>{selectedClient.subscription_tier}</p></div>
-              {selectedClient.contact_person && <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Contact Person</span><p>{selectedClient.title} {selectedClient.contact_person}</p></div>}
-              {selectedClient.designation && <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Designation</span><p>{selectedClient.designation}</p></div>}
-              {selectedClient.country && <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Location</span><p>{[selectedClient.city, selectedClient.state, selectedClient.country].filter(Boolean).join(', ')}</p></div>}
-              {selectedClient.industry && <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Industry</span><p>{selectedClient.industry}</p></div>}
-              {selectedClient.website && <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Website</span><p><a href={selectedClient.website} target="_blank" rel="noopener" style={{ color: '#3b82f6' }}>{selectedClient.website}</a></p></div>}
-              <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Registered</span><p>{new Date(selectedClient.created_at).toLocaleDateString()}</p></div>
-            </div>
-            {selectedClient.subscription && (
-              <div style={{ marginTop: 16, padding: 12, background: '#0f172a', borderRadius: 8 }}>
-                <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Subscription</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
-                  <div><span style={{ color: '#94a3b8' }}>Status: </span>{selectedClient.subscription.status}</div>
-                  <div><span style={{ color: '#94a3b8' }}>Billing: </span>{selectedClient.subscription.billing_cycle}</div>
-                  <div><span style={{ color: '#94a3b8' }}>Photos: </span>{selectedClient.subscription.photos_used}/{selectedClient.subscription.photos_quota}</div>
-                  <div><span style={{ color: '#94a3b8' }}>Vendors: </span>{selectedClient.subscription.vendors_used}/{selectedClient.subscription.vendors_quota}</div>
-                  <div><span style={{ color: '#94a3b8' }}>Campaigns: </span>{selectedClient.subscription.campaigns_used}/{selectedClient.subscription.campaigns_quota}</div>
-                  <div><span style={{ color: '#94a3b8' }}>Storage: </span>{selectedClient.subscription.storage_used_mb}/{selectedClient.subscription.storage_quota_mb} MB</div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+
 
         <button onClick={handleLogout} style={{
           background: '#334155', color: '#cbd5e1', border: 'none',
@@ -573,6 +536,46 @@ export default function AdminDashboard() {
         <StatCard label="Recently Active" value={usage.recently_active.length}
           sub="Most recent activity" onClick={() => setView('recent')} />
       </div>
+    
+
+      {/* Client Detail Modal */}
+      {selectedClient && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}
+          onClick={() => setSelectedClient(null)}>
+          <div style={{ background: '#1e293b', borderRadius: 12, padding: 24, maxWidth: 600, width: '100%', maxHeight: '80vh', overflow: 'auto', color: '#e2e8f0' }}
+            onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700 }}>Client Details</h3>
+              <button onClick={() => setSelectedClient(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 20, cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Company</span><p style={{ fontWeight: 600 }}>{selectedClient.company_name}</p></div>
+              <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Email</span><p>{selectedClient.email}</p></div>
+              <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Phone</span><p>{selectedClient.phone_number}</p></div>
+              <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Tier</span><p style={{ textTransform: 'uppercase', fontWeight: 600 }}>{selectedClient.subscription_tier}</p></div>
+              {selectedClient.contact_person && <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Contact Person</span><p>{selectedClient.title} {selectedClient.contact_person}</p></div>}
+              {selectedClient.designation && <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Designation</span><p>{selectedClient.designation}</p></div>}
+              {selectedClient.country && <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Location</span><p>{[selectedClient.city, selectedClient.state, selectedClient.country].filter(Boolean).join(', ')}</p></div>}
+              {selectedClient.industry && <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Industry</span><p>{selectedClient.industry}</p></div>}
+              {selectedClient.website && <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Website</span><p><a href={selectedClient.website} target="_blank" rel="noopener" style={{ color: '#3b82f6' }}>{selectedClient.website}</a></p></div>}
+              <div><span style={{ color: '#94a3b8', fontSize: 12 }}>Registered</span><p>{new Date(selectedClient.created_at).toLocaleDateString()}</p></div>
+            </div>
+            {selectedClient.subscription && (
+              <div style={{ marginTop: 16, padding: 12, background: '#0f172a', borderRadius: 8 }}>
+                <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Subscription</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
+                  <div><span style={{ color: '#94a3b8' }}>Status: </span>{selectedClient.subscription.status}</div>
+                  <div><span style={{ color: '#94a3b8' }}>Billing: </span>{selectedClient.subscription.billing_cycle}</div>
+                  <div><span style={{ color: '#94a3b8' }}>Photos: </span>{selectedClient.subscription.photos_used}/{selectedClient.subscription.photos_quota}</div>
+                  <div><span style={{ color: '#94a3b8' }}>Vendors: </span>{selectedClient.subscription.vendors_used}/{selectedClient.subscription.vendors_quota}</div>
+                  <div><span style={{ color: '#94a3b8' }}>Campaigns: </span>{selectedClient.subscription.campaigns_used}/{selectedClient.subscription.campaigns_quota}</div>
+                  <div><span style={{ color: '#94a3b8' }}>Storage: </span>{selectedClient.subscription.storage_used_mb}/{selectedClient.subscription.storage_quota_mb} MB</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
