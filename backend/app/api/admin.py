@@ -500,3 +500,106 @@ async def get_analytics_dashboard(
         "devices": all_devices,
         "browsers": all_browsers,
     }
+
+
+@router.get("/clients/{client_id}")
+async def get_client_detail(
+    client_id: str,
+    db: AsyncSession = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin)
+):
+    """Get full client detail including subscription, vendors, campaigns."""
+    from app.models.vendor import Vendor
+    from app.models.campaign import Campaign
+    from app.models.subscription import Subscription
+    from app.models.photo import Photo
+
+    # Client
+    result = await db.execute(select(Client).where(Client.client_id == client_id))
+    client = result.scalar_one_or_none()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    # Subscription
+    sub_result = await db.execute(select(Subscription).where(Subscription.client_id == client_id))
+    sub = sub_result.scalar_one_or_none()
+
+    # Counts
+    vendor_count = (await db.execute(
+        select(func.count(Vendor.vendor_id)).where(Vendor.created_by_client_id == client_id)
+    )).scalar() or 0
+
+    campaign_count = (await db.execute(
+        select(func.count(Campaign.campaign_id)).where(Campaign.client_id == client_id)
+    )).scalar() or 0
+
+    photo_count = (await db.execute(
+        select(func.count(Photo.photo_id)).where(Photo.tenant_id == client.tenant_id)
+    )).scalar() or 0
+
+    # Recent vendors
+    vendors_result = await db.execute(
+        select(Vendor).where(Vendor.created_by_client_id == client_id).order_by(Vendor.created_at.desc()).limit(10)
+    )
+    vendors = vendors_result.scalars().all()
+
+    # Recent campaigns
+    campaigns_result = await db.execute(
+        select(Campaign).where(Campaign.client_id == client_id).order_by(Campaign.created_at.desc()).limit(10)
+    )
+    campaigns = campaigns_result.scalars().all()
+
+    return {
+        "client": {
+            "client_id": str(client.client_id),
+            "email": client.email,
+            "company_name": client.company_name,
+            "phone_number": client.phone_number,
+            "contact_person": getattr(client, 'contact_person', None),
+            "contact_phone": getattr(client, 'contact_phone', None),
+            "title": getattr(client, 'title', None),
+            "designation": getattr(client, 'designation', None),
+            "address": getattr(client, 'address', None),
+            "city": getattr(client, 'city', None),
+            "state": getattr(client, 'state', None),
+            "country": getattr(client, 'country', None),
+            "website": getattr(client, 'website', None),
+            "industry": getattr(client, 'industry', None),
+            "subscription_tier": client.subscription_tier.value if hasattr(client.subscription_tier, 'value') else str(client.subscription_tier),
+            "subscription_status": client.subscription_status.value if hasattr(client.subscription_status, 'value') else str(client.subscription_status),
+            "created_at": client.created_at.isoformat() if client.created_at else None,
+        },
+        "subscription": {
+            "tier": sub.tier.value if sub and hasattr(sub.tier, 'value') else (sub.tier if sub else 'free'),
+            "status": sub.status.value if sub and hasattr(sub.status, 'value') else (sub.status if sub else 'active'),
+            "billing_cycle": sub.billing_cycle if sub else 'monthly',
+            "amount": sub.amount if sub else 0,
+            "currency": sub.currency if sub else 'INR',
+            "base_amount": sub.base_amount if sub else None,
+            "gst_amount": sub.gst_amount if sub else None,
+            "photos_quota": sub.photos_quota if sub else 50,
+            "photos_used": sub.photos_used if sub else 0,
+            "vendors_quota": sub.vendors_quota if sub else 5,
+            "vendors_used": sub.vendors_used if sub else 0,
+            "campaigns_quota": sub.campaigns_quota if sub else 3,
+            "campaigns_used": sub.campaigns_used if sub else 0,
+            "storage_quota_mb": sub.storage_quota_mb if sub else 100,
+            "storage_used_mb": sub.storage_used_mb if sub else 0,
+            "current_period_end": sub.current_period_end.isoformat() if sub and sub.current_period_end else None,
+            "refund_status": sub.refund_status if sub else None,
+            "refund_amount": sub.refund_amount if sub else None,
+        } if sub else None,
+        "counts": {
+            "vendors": vendor_count,
+            "campaigns": campaign_count,
+            "photos": photo_count,
+        },
+        "recent_vendors": [
+            {"vendor_id": v.vendor_id, "name": v.name, "phone": v.phone_number, "status": v.status.value if hasattr(v.status, 'value') else str(v.status), "city": getattr(v, 'city', None)}
+            for v in vendors
+        ],
+        "recent_campaigns": [
+            {"campaign_id": str(c.campaign_id), "name": c.name, "code": c.campaign_code, "status": c.status.value if hasattr(c.status, 'value') else str(c.status)}
+            for c in campaigns
+        ],
+    }

@@ -102,8 +102,8 @@ function StatCard({ label, value, sub, onClick }: {
   )
 }
 
-function ClientTable({ title, clients, onBack }: {
-  title: string; clients: TopClient[]; onBack: () => void
+function ClientTable({ title, clients, onBack, onClientClick }: {
+  title: string; clients: TopClient[]; onBack: () => void; onClientClick?: (id: string) => void
 }) {
   return (
     <div>
@@ -135,7 +135,7 @@ function ClientTable({ title, clients, onBack }: {
             </thead>
             <tbody>
               {clients.map((c, i) => (
-                <tr key={c.client_id} style={{
+                <tr key={c.client_id} onClick={() => onClientClick?.(c.client_id)} style={{ cursor: 'pointer',
                   color: '#cbd5e1',
                   background: i % 2 === 0 ? 'transparent' : '#1a2332'
                 }}>
@@ -172,6 +172,8 @@ export default function AdminDashboard() {
   const [error, setError] = useState('')
   const [view, setView] = useState<ViewType>('dashboard')
   const [analytics, setAnalytics] = useState<any>(null)
+  const [selectedClient, setSelectedClient] = useState<any>(null)
+  const [clientLoading, setClientLoading] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('admin_token')
@@ -215,6 +217,24 @@ export default function AdminDashboard() {
       }
     } catch (e) {
       console.error('Analytics fetch failed:', e)
+    }
+  }
+
+  const fetchClientDetail = async (clientId: string) => {
+    const token = localStorage.getItem('admin_token')
+    if (!token) return
+    setClientLoading(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/clients/${clientId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (res.ok) {
+        setSelectedClient(await res.json())
+      }
+    } catch (e) {
+      console.error('Client detail fetch failed:', e)
+    } finally {
+      setClientLoading(false)
     }
   }
 

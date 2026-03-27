@@ -15,6 +15,7 @@ export default function Navigation() {
   const { user, logout } = useAuth()
   const location = useLocation()
   const [profileOpen, setProfileOpen] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [stats, setStats] = useState<QuickStats | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -80,6 +81,20 @@ export default function Navigation() {
               ))}
             </div>
           </div>
+
+          {/* Mobile hamburger */}
+          <button
+            className="md:hidden p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 mr-2"
+            onClick={() => setMobileNavOpen(!mobileNavOpen)}
+            aria-label="Toggle navigation"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {mobileNavOpen
+                ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              }
+            </svg>
+          </button>
 
           {/* Profile dropdown */}
           <div className="flex items-center" ref={dropdownRef}>
@@ -174,6 +189,25 @@ export default function Navigation() {
           </div>
         </div>
       </div>
+      {/* Mobile nav menu */}
+      {mobileNavOpen && (
+        <div className="md:hidden border-t border-gray-100 px-4 py-2 space-y-1 bg-white">
+          {navLinks.map(l => (
+            <Link
+              key={l.to + '-mobile'}
+              to={l.to}
+              onClick={() => setMobileNavOpen(false)}
+              className={`block px-3 py-2 rounded-md text-sm font-medium ${
+                l.exact
+                  ? (location.pathname === l.to ? 'text-gray-900 bg-gray-100' : 'text-gray-700 hover:bg-gray-50')
+                  : (isActive(l.to) ? 'text-gray-900 bg-gray-100' : 'text-gray-700 hover:bg-gray-50')
+              }`}
+            >
+              {l.label}
+            </Link>
+          ))}
+        </div>
+      )}
     </nav>
   )
 }
