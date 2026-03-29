@@ -10,6 +10,7 @@ from app.core.deps import get_db, get_current_active_client
 from app.models.client import Client
 from app.services.quota_enforcer import get_quota_enforcer
 from app.services.email_service import get_email_service
+from app.services.queue import enqueue
 from sqlalchemy import select
 from datetime import datetime, timedelta
 from app.models.subscription import Subscription, SubscriptionStatus
@@ -239,22 +240,20 @@ async def check_expiring_subscriptions(
             if not client:
                 continue
             
-            email_svc = get_email_service(db)
             days_remaining = (sub.current_period_end.replace(tzinfo=None) - now).days
             tier_value = sub.tier if isinstance(sub.tier, str) else sub.tier.value
-            
-            await email_svc.send_templated_email(
-                tenant_id=str(sub.tenant_id),
-                template_name="subscription_expiring",
-                to_email=client.email,
-                variables={
+            await enqueue(db, "send_email", {
+                "tenant_id": str(sub.tenant_id),
+                "template_name": "subscription_expiring",
+                "to_email": client.email,
+                "variables": {
                     "user_name": client.company_name or client.email,
                     "days_remaining": days_remaining,
                     "plan_name": tier_value.title(),
                     "expiry_date": sub.current_period_end.strftime("%B %d, %Y"),
                     "renewal_url": "https://trustcapture-web.onrender.com/subscription",
                 }
-            )
+            }, max_retries=5, tenant_id=sub.tenant_id)
             sent_count += 1
         except Exception as e:
             import logging

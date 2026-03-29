@@ -27,6 +27,7 @@ from app.services.audit_logger import AuditLogger, AuditFlag
 from app.services.email_service import get_email_service
 from app.services.quota_enforcer import get_quota_enforcer, QuotaExceededError
 import logging
+from app.services.queue import enqueue
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/photos", tags=["photos"])
@@ -362,15 +363,13 @@ async def upload_photo(
     except Exception as e:
         logger.error(f"Failed to increment usage counters: {str(e)}")
 
-    # Audit logging
+    # Queue audit logging (non-blocking)
     try:
-        audit_logger = AuditLogger(db)
         audit_flags = []
         if location_match_result and location_match_result.get('match_score', 100) < 80:
             audit_flags.append(AuditFlag.LOCATION_MISMATCH.value)
         if sensor_data_obj.gps.accuracy and sensor_data_obj.gps.accuracy > 50:
             audit_flags.append(AuditFlag.LOW_GPS_ACCURACY.value)
-        # Add enhanced verification flags to audit
         audit_flags.extend(verification_result.flags)
         device_info = {'device_id': signature_obj.device_id, 'vendor_id': vendor.vendor_id}
         audit_sensor_data = {
@@ -388,46 +387,44 @@ async def upload_photo(
             'timestamp': signature_obj.timestamp.isoformat() if hasattr(signature_obj.timestamp, 'isoformat') else str(signature_obj.timestamp),
             'location_hash': signature_obj.location_hash, 'valid': signature_valid
         }
-        await audit_logger.log_photo_capture(
-            photo_id=str(photo_id), vendor_id=vendor.vendor_id, campaign_code=campaign_code,
-            sensor_data=audit_sensor_data, signature=audit_signature_data,
-            device_info=device_info, flags=audit_flags if audit_flags else None
-        )
+        await enqueue(db, "write_audit_log", {
+            "photo_id": str(photo_id), "vendor_id": vendor.vendor_id, "campaign_code": campaign_code,
+            "sensor_data": audit_sensor_data, "signature": audit_signature_data,
+            "device_info": device_info, "flags": audit_flags if audit_flags else None
+        }, max_retries=3, tenant_id=vendor.tenant_id)
     except Exception as e:
-        logger.error(f"Audit logging failed (non-critical): {str(e)}")
+        logger.error(f"Audit enqueue failed (non-critical): {str(e)}")
 
-    # Send photo verification email to vendor (fire-and-forget)
+    # Queue photo verification email (non-blocking)
     try:
         if vendor.email:
-            email_svc = get_email_service(db)
-            # Determine template based on verification status
             if verification_status == VerificationStatus.VERIFIED:
-                await email_svc.send_templated_email(
-                    tenant_id=str(vendor.tenant_id),
-                    template_name="photo_approved",
-                    to_email=vendor.email,
-                    variables={
+                await enqueue(db, "send_email", {
+                    "tenant_id": str(vendor.tenant_id),
+                    "template_name": "photo_approved",
+                    "to_email": vendor.email,
+                    "variables": {
                         "vendor_name": vendor.name,
                         "campaign_name": campaign.name or campaign_code,
                         "submission_date": capture_dt.strftime("%Y-%m-%d %H:%M"),
                     }
-                )
+                }, max_retries=5, tenant_id=vendor.tenant_id)
             elif verification_status in (VerificationStatus.REJECTED, VerificationStatus.FLAGGED):
                 rejection_reasons = ", ".join(verification_result.flags) if verification_result.flags else "Verification failed"
-                await email_svc.send_templated_email(
-                    tenant_id=str(vendor.tenant_id),
-                    template_name="photo_rejected",
-                    to_email=vendor.email,
-                    variables={
+                await enqueue(db, "send_email", {
+                    "tenant_id": str(vendor.tenant_id),
+                    "template_name": "photo_rejected",
+                    "to_email": vendor.email,
+                    "variables": {
                         "vendor_name": vendor.name,
                         "campaign_name": campaign.name or campaign_code,
                         "submission_date": capture_dt.strftime("%Y-%m-%d %H:%M"),
                         "status": verification_status.value,
                         "rejection_reason": rejection_reasons,
                     }
-                )
+                }, max_retries=5, tenant_id=vendor.tenant_id)
     except Exception as e:
-        logger.warning(f"Photo notification email failed (non-critical): {str(e)}")
+        logger.warning(f"Photo email enqueue failed (non-critical): {str(e)}")
 
     return PhotoUploadResponse(
         photo_id=photo_id, verification_status=verification_status.value,

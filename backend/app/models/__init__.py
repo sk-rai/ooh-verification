@@ -20,6 +20,7 @@ from app.models.photo_signature import PhotoSignature
 from app.models.subscription import Subscription
 from app.models.audit_log import AuditLog
 from app.models.admin_user import AdminUser
+from app.models.task_queue import TaskQueue, TaskStatus
 
 # Export all models and enums
 __all__ = [
@@ -39,6 +40,8 @@ __all__ = [
     "Subscription",
     "AuditLog",
     "AdminUser",
+    "TaskQueue",
+    "TaskStatus",
     # Enums
     "SubscriptionTier",
     "SubscriptionStatus",

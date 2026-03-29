@@ -4,6 +4,7 @@ Webhook handlers for payment gateways (Razorpay and Stripe).
 from fastapi import APIRouter, Request, HTTPException, Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 import logging
+from app.services.queue import enqueue
 
 from app.core.deps import get_db
 from app.services.razorpay_service import get_razorpay_service
@@ -49,10 +50,14 @@ async def razorpay_webhook(
         
         logger.info(f"Received Razorpay webhook: {event_type}")
         
-        # Handle event
-        await razorpay_service.handle_webhook_event(db, event_type, payload.get("payload", {}))
-        
-        return {"status": "success"}
+        # Enqueue for background processing
+        task_id = await enqueue(db, "process_webhook", {
+            "event_type": event_type,
+            "payload": payload.get("payload", {}),
+        }, max_retries=5)
+        await db.commit()
+
+        return {"status": "queued", "task_id": str(task_id)}
     
     except HTTPException:
         raise
@@ -87,10 +92,14 @@ async def stripe_webhook(
         
         logger.info(f"Received Stripe webhook: {event.type}")
         
-        # Handle event
-        await stripe_service.handle_webhook_event(db, event)
-        
-        return {"status": "success"}
+        # Enqueue for background processing
+        task_id = await enqueue(db, "process_webhook", {
+            "event_type": event_type,
+            "payload": payload.get("payload", {}),
+        }, max_retries=5)
+        await db.commit()
+
+        return {"status": "queued", "task_id": str(task_id)}
     
     except ValueError as e:
         logger.warning(f"Invalid Stripe webhook: {str(e)}")

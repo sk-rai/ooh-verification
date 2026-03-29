@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone, date
 from typing import Optional
 import hashlib
 import logging
+from app.services.queue import enqueue
 
 from app.core.database import get_db
 from app.models.page_view import PageView, DailyAnalyticsSummary
@@ -112,9 +113,20 @@ async def track_page_view(
 @router.api_route("/cron/summarize", methods=["GET", "POST"])
 async def summarize_and_purge(db: AsyncSession = Depends(get_db)):
     """
-    Daily cron: summarize yesterday's data into daily_analytics_summary,
-    then purge raw page_views older than 30 days.
+    Daily cron: enqueue analytics summarization as a background task.
     """
+    try:
+        from datetime import date as date_type
+        target = (datetime.now(tz=timezone.utc) - timedelta(days=1)).date()
+        task_id = await enqueue(db, "summarize_analytics", {
+            "target_date": target.isoformat()
+        }, max_retries=3)
+        await db.commit()
+        return {"status": "queued", "task_id": str(task_id), "target_date": target.isoformat()}
+    except Exception as e:
+        logger.warning(f"Failed to enqueue analytics, falling back to inline: {e}")
+
+    # Fallback: run inline if queue fails
     yesterday = (datetime.now(tz=timezone.utc) - timedelta(days=1)).date()
     cutoff = datetime.now(tz=timezone.utc) - timedelta(days=30)
 

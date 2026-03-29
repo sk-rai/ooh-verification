@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi import Request
 import os
 
-from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations, tenants, assignments, bulk, admin, vendor_campaigns, integrity, analytics
+from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations, tenants, assignments, bulk, admin, vendor_campaigns, integrity, analytics, admin_queue
 from app.core.database import close_db
 from app.core.config import settings
 from app.middleware.tenant_context import TenantContextMiddleware
@@ -80,11 +80,24 @@ app.include_router(webhooks.router)
 app.include_router(reports.router)
 app.include_router(integrity.router)
 app.include_router(analytics.router)
+app.include_router(admin_queue.router)
 
 # Startup event
 @app.on_event("startup")
 async def startup_event():
     """Initialize application on startup."""
+    # Start task queue worker
+    from app.services.queue.worker import task_worker
+    # Import handlers to register them
+    import app.services.queue.handlers.email_handler
+    import app.services.queue.handlers.audit_handler
+    import app.services.queue.handlers.webhook_handler
+    import app.services.queue.handlers.pdf_handler
+    import app.services.queue.handlers.analytics_handler
+    try:
+        await task_worker.start()
+    except Exception as e:
+        print(f"Warning: Task worker failed to start: {e}")
     print("🚀 TrustCapture API starting up...")
     print(f"📚 API Documentation: http://localhost:8000/api/docs")
     print(f"🔐 Authentication endpoints available at /api/auth")
@@ -102,6 +115,11 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on shutdown."""
     print("👋 TrustCapture API shutting down...")
+    from app.services.queue.worker import task_worker
+    try:
+        await task_worker.stop()
+    except Exception as e:
+        print(f"Warning: Task worker stop error: {e}")
     await close_db()
 
 
