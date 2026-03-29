@@ -86,15 +86,44 @@ app.include_router(admin_queue.router)
 @app.on_event("startup")
 async def startup_event():
     """Initialize application on startup."""
-    # Create task_queue table if it doesn't exist
+    # Create task_queue table if it doesn't exist (raw SQL for reliability)
     from app.core.database import engine
-    from app.models.task_queue import TaskQueue
     try:
         async with engine.begin() as conn:
-            await conn.run_sync(TaskQueue.__table__.create, checkfirst=True)
+            from sqlalchemy import text
+            # Create enum type if not exists
+            await conn.execute(text(
+                "DO $$ BEGIN "
+                "CREATE TYPE taskstatus AS ENUM ('pending','running','completed','failed','dead'); "
+                "EXCEPTION WHEN duplicate_object THEN NULL; END $$;"
+            ))
+            # Create table if not exists
+            await conn.execute(text('''
+                CREATE TABLE IF NOT EXISTS task_queue (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    task_type VARCHAR(100) NOT NULL,
+                    payload JSONB NOT NULL DEFAULT '{}',
+                    status taskstatus NOT NULL DEFAULT 'pending',
+                    priority INTEGER NOT NULL DEFAULT 0,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    scheduled_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    started_at TIMESTAMPTZ,
+                    completed_at TIMESTAMPTZ,
+                    retry_count INTEGER NOT NULL DEFAULT 0,
+                    max_retries INTEGER NOT NULL DEFAULT 3,
+                    last_error TEXT,
+                    tenant_id UUID
+                );
+            '''))
+            # Create indexes if not exist
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_task_queue_task_type ON task_queue (task_type);"))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_task_queue_status ON task_queue (status);"))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_task_queue_tenant_id ON task_queue (tenant_id);"))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_task_queue_poll ON task_queue (status, scheduled_at, priority);"))
         print("✅ Task queue table ready")
     except Exception as e:
-        print(f"Warning: Could not create task_queue table: {e}")
+        print(f"⚠️ Task queue table creation warning: {e}")
 
     # Start task queue worker
     from app.services.queue.worker import task_worker
