@@ -86,6 +86,16 @@ app.include_router(admin_queue.router)
 @app.on_event("startup")
 async def startup_event():
     """Initialize application on startup."""
+    # Create task_queue table if it doesn't exist
+    from app.core.database import engine
+    from app.models.task_queue import TaskQueue
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(TaskQueue.__table__.create, checkfirst=True)
+        print("✅ Task queue table ready")
+    except Exception as e:
+        print(f"Warning: Could not create task_queue table: {e}")
+
     # Start task queue worker
     from app.services.queue.worker import task_worker
     # Import handlers to register them
