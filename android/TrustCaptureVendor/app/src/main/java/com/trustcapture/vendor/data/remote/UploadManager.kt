@@ -96,7 +96,6 @@ class UploadManager @Inject constructor(
 
     private suspend fun processAllPending() {
         val pendingPhotos = photoRepository.getPendingUploads().first()
-        Log.d(TAG, "processAllPending: ${pendingPhotos.size} photos queued")
         _state.value = _state.value.copy(pendingCount = pendingPhotos.size)
 
         if (pendingPhotos.isEmpty()) return
@@ -117,12 +116,10 @@ class UploadManager @Inject constructor(
     }
 
     private suspend fun uploadSinglePhoto(photo: PhotoEntity) {
-        Log.d(TAG, "Uploading photo ${photo.id} (campaign=${photo.campaignCode}, retry=${photo.retryCount})")
         try {
             photoRepository.markUploading(photo.id)
 
             val photoBytes = photoRepository.decryptForUpload(photo.encryptedPath)
-            Log.d(TAG, "Photo ${photo.id} decrypted (${photoBytes.size} bytes)")
 
             val photoBody = photoBytes.toRequestBody("image/jpeg".toMediaType())
             val photoPart = MultipartBody.Part.createFormData("photo", "photo.jpg", photoBody)
@@ -144,14 +141,12 @@ class UploadManager @Inject constructor(
             val campaignCodeBody = photo.campaignCode.toRequestBody("text/plain".toMediaType())
             val timestampBody = formatTimestamp(photo.capturedAt).toRequestBody("text/plain".toMediaType())
 
-            Log.d(TAG, "Photo ${photo.id} sending to backend...")
             val response = photoApi.uploadPhoto(
                 photo = photoPart, sensorData = sensorDataBody, signature = signatureBody,
                 campaignCode = campaignCodeBody, captureTimestamp = timestampBody
             )
 
             if (response.isSuccessful) {
-                Log.d(TAG, "Photo ${photo.id} uploaded OK — server id=${response.body()?.photoId}")
                 photoRepository.markUploaded(photo.id)
                 photoRepository.deleteAfterUpload(photo.id)
                 auditRepository.log(

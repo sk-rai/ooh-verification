@@ -96,7 +96,6 @@ object LocationHelper {
         // Emit cached location immediately if available
         getCachedLocation()?.let {
             trySend(it)
-            Log.d(TAG, "Emitted cached location: ${it.latitude}, ${it.longitude}")
         }
 
         // Also try last known location from fused provider
@@ -128,7 +127,6 @@ object LocationHelper {
                     )
                     updateCache(update)
                     trySend(update)
-                    Log.d(TAG, "[${currentMode.name}] ${loc.latitude}, ${loc.longitude} ±${loc.accuracy}m")
                 }
             }
         }
@@ -209,7 +207,6 @@ object LocationHelper {
                     altitude = if (it.hasAltitude()) it.altitude else null
                 )
                 updateCache(update)
-                Log.d(TAG, "Network fallback: ${it.latitude}, ${it.longitude}")
                 update
             }
         } catch (e: Exception) {

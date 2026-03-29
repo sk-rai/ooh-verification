@@ -67,14 +67,9 @@ class AuthRepository @Inject constructor(
                 val data = result.data
                 userPreferences.saveAuthData(data.accessToken, "")
                 userPreferences.saveVendorInfo(vendorId, phoneNumber)
-                Log.d(TAG, "OTP verified, token saved. Now registering device...")
 
                 // Generate Keystore key pair and register with backend
                 registerDeviceIfNeeded()
-
-                // Verify the flag was set
-                val isReg = userPreferences.isDeviceRegistered.first()
-                Log.d(TAG, "After registerDeviceIfNeeded: isDeviceRegistered=$isReg")
 
                 Resource.Success(Unit)
             }
@@ -119,7 +114,6 @@ class AuthRepository @Inject constructor(
         val deviceId = getDeviceId()
 
         // Step 1: Request challenge nonce from backend
-        Log.d(TAG, "Requesting challenge for device login (vendorId=$vendorId)")
         val challengeResult = safeApiCall {
             authApi.requestChallenge(ChallengeRequest(vendorId = vendorId, deviceId = deviceId))
         }
@@ -142,7 +136,6 @@ class AuthRepository @Inject constructor(
         }
 
         // Step 3: Send signed challenge to backend
-        Log.d(TAG, "Sending signed challenge for device login")
         val loginResult = safeApiCall {
             authApi.deviceLogin(
                 DeviceLoginRequest(
@@ -180,6 +173,5 @@ class AuthRepository @Inject constructor(
         // Atomic logout: clears auth token but preserves device_registered + vendor info
         // in a single DataStore transaction (avoids race condition with separate clear + re-set)
         userPreferences.clearForLogout()
-        Log.d(TAG, "Logout complete. device_registered preserved=${userPreferences.isDeviceRegistered.first()}")
     }
 }
