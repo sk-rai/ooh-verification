@@ -396,7 +396,21 @@ async def upgrade_subscription(
             razorpay_svc = get_razorpay_service()
             if not razorpay_svc:
                 raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Razorpay not configured")
-            checkout = await razorpay_svc.create_subscription(db=db, client_id=str(client.client_id), tier=new_tier, billing_cycle=request.billing_cycle)
+            # Calculate amount based on tier and billing cycle
+            tier_prices = {"pro": 99900, "enterprise": 499900}  # paise (999 INR, 4999 INR)
+            base_amount = tier_prices.get(request.tier, 99900)
+            if request.billing_cycle == "yearly":
+                amount = int(base_amount * 12 * 0.83)  # 17% discount
+            else:
+                amount = base_amount
+            # Add 18% GST
+            gst = int(amount * 0.18)
+            total_amount = amount + gst
+            checkout = await razorpay_svc.create_payment_link(
+                amount=total_amount,
+                currency="INR",
+                description=f"TrustCapture {request.tier.title()} Plan - {request.billing_cycle.title()} (incl. GST)",
+            )
         else:
             stripe_svc = get_stripe_service()
             if not stripe_svc:
@@ -408,6 +422,8 @@ async def upgrade_subscription(
         subscription.payment_gateway = gateway
         if checkout.get("subscription_id"):
             subscription.gateway_subscription_id = checkout["subscription_id"]
+        if checkout.get("payment_link_id"):
+            subscription.gateway_subscription_id = checkout["payment_link_id"]
         if checkout.get("customer_id"):
             subscription.gateway_customer_id = checkout["customer_id"]
         await db.commit()
