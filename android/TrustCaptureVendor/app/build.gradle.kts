@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -15,11 +17,26 @@ android {
         minSdk = 24
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "BASE_URL", "\"https://ooh-verification.onrender.com/\"")
         manifestPlaceholders["cleartextTrafficPermitted"] = "false"
+    }
+
+    signingConfigs {
+        create("release") {
+            val propsFile = project.rootProject.file("local.properties")
+            if (propsFile.exists()) {
+                val localProps = Properties()
+                localProps.load(propsFile.inputStream())
+                val sf = localProps.getProperty("RELEASE_STORE_FILE")
+                if (sf != null) storeFile = rootProject.file(sf)
+                storePassword = localProps.getProperty("RELEASE_STORE_PASSWORD")
+                keyAlias = localProps.getProperty("RELEASE_KEY_ALIAS")
+                keyPassword = localProps.getProperty("RELEASE_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -27,11 +44,13 @@ android {
             manifestPlaceholders["cleartextTrafficPermitted"] = "false"
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
             buildConfigField("String", "BASE_URL", "\"https://api.trustcapture.com/\"")
             manifestPlaceholders["cleartextTrafficPermitted"] = "false"
         }

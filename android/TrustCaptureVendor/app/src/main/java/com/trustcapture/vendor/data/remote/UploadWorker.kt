@@ -18,16 +18,13 @@ class UploadWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        Log.d(TAG, "UploadWorker started (attempt $runAttemptCount, id=${id})")
         return try {
             uploadManager.processQueueBlocking()
             val pending = uploadManager.state.value.pendingCount
             val lastError = uploadManager.state.value.lastError
             if (pending > 0) {
-                Log.d(TAG, "UploadWorker done — $pending still pending (error=$lastError). Will retry.")
                 Result.retry()
             } else {
-                Log.d(TAG, "UploadWorker done — all uploads complete")
                 Result.success()
             }
         } catch (e: Exception) {
