@@ -226,3 +226,61 @@ async def remove_vendor_from_campaign(campaign_id: UUID, vendor_id: str, client:
     await db.delete(assignment)
     await db.commit()
     return None
+
+
+@router.get("/{campaign_id}/photos")
+async def get_campaign_photos(
+    campaign_id: UUID,
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    client: Client = Depends(get_current_active_client),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get photos for a specific campaign."""
+    from app.models import Photo, SensorData as SD, Vendor as Ven
+    from app.core.storage import get_storage_service
+
+    result = await db.execute(
+        select(Campaign).where(
+            Campaign.campaign_id == campaign_id,
+            Campaign.tenant_id == client.tenant_id
+        )
+    )
+    campaign = result.scalar_one_or_none()
+    if not campaign:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+
+    query = (
+        select(Photo, SD.gps_latitude, SD.gps_longitude, SD.gps_accuracy,
+               Ven.name.label("vendor_name"))
+        .join(SD, SD.photo_id == Photo.photo_id, isouter=True)
+        .join(Ven, Ven.vendor_id == Photo.vendor_id, isouter=True)
+        .where(Photo.campaign_id == campaign_id, Photo.tenant_id == client.tenant_id)
+        .order_by(Photo.created_at.desc())
+        .offset(offset).limit(limit)
+    )
+    result = await db.execute(query)
+    rows = result.all()
+
+    storage = get_storage_service()
+    return [
+        {
+            "photo_id": str(row[0].photo_id),
+            "campaign_id": str(row[0].campaign_id),
+            "vendor_id": str(row[0].vendor_id) if row[0].vendor_id else None,
+            "vendor_name": row.vendor_name or "",
+            "photo_url": storage.get_photo_url(row[0].s3_key) if row[0].s3_key else None,
+            "thumbnail_url": storage.get_thumbnail_url(row[0].s3_key) if row[0].s3_key else None,
+            "status": row[0].verification_status.value if hasattr(row[0].verification_status, 'value') else str(row[0].verification_status),
+            "verification_status": row[0].verification_status.value if hasattr(row[0].verification_status, 'value') else str(row[0].verification_status),
+            "verification_confidence": row[0].verification_confidence or 0,
+            "gps_latitude": float(row.gps_latitude) if row.gps_latitude else 0,
+            "gps_longitude": float(row.gps_longitude) if row.gps_longitude else 0,
+            "gps_accuracy": float(row.gps_accuracy) if row.gps_accuracy else 0,
+            "captured_at": row[0].capture_timestamp.isoformat() if row[0].capture_timestamp else (row[0].created_at.isoformat() if row[0].created_at else None),
+            "created_at": row[0].created_at.isoformat() if row[0].created_at else None,
+            "verification_flags": row[0].verification_flags or [],
+        }
+        for row in rows
+    ]
+

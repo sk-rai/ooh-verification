@@ -122,6 +122,16 @@ async def startup_event():
             await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_task_queue_tenant_id ON task_queue (tenant_id);"))
             await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_task_queue_poll ON task_queue (status, scheduled_at, priority);"))
         print("✅ Task queue table ready")
+
+            # Add motion sensor columns if missing (migration 019)
+            await conn.execute(text(
+                "DO $$ BEGIN "
+                "ALTER TABLE sensor_data ADD COLUMN IF NOT EXISTS accelerometer_data JSONB; "
+                "ALTER TABLE sensor_data ADD COLUMN IF NOT EXISTS gyroscope_data JSONB; "
+                "ALTER TABLE sensor_data ADD COLUMN IF NOT EXISTS orientation_data JSONB; "
+                "EXCEPTION WHEN others THEN NULL; END $$;"
+            ))
+            print("✅ Sensor data columns ready")
     except Exception as e:
         print(f"⚠️ Task queue table creation warning: {e}")
 
