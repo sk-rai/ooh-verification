@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.trustcapture.vendor.data.local.datastore.UserPreferences
+import com.trustcapture.vendor.util.AxisData
 import com.trustcapture.vendor.util.CellTowerData
 import com.trustcapture.vendor.util.CellTowerEntryData
 import com.trustcapture.vendor.util.CellTowerScanner
@@ -285,6 +286,27 @@ class CameraViewModel @Inject constructor(
                                 y = env.magneticY!!,
                                 z = env.magneticZ!!,
                                 magnitude = env.magneticMagnitude ?: 0f
+                            )
+                        } else null,
+                        accelerometer = if (env.accelerometerX != null) {
+                            AxisData(
+                                x = env.accelerometerX!!,
+                                y = env.accelerometerY!!,
+                                z = env.accelerometerZ!!
+                            )
+                        } else null,
+                        gyroscope = if (env.gyroscopeX != null) {
+                            AxisData(
+                                x = env.gyroscopeX!!,
+                                y = env.gyroscopeY!!,
+                                z = env.gyroscopeZ!!
+                            )
+                        } else null,
+                        orientation = if (env.orientationX != null) {
+                            AxisData(
+                                x = env.orientationX!!,
+                                y = env.orientationY!!,
+                                z = env.orientationZ!!
                             )
                         } else null,
                         tremorDetected = env.tremorDetected,

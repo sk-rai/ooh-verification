@@ -24,6 +24,15 @@ data class EnvironmentalData(
     val magneticMagnitude: Float? = null,
     val tremorDetected: Boolean = false,
     val accelerometerMagnitude: Float? = null,
+    val accelerometerX: Float? = null,
+    val accelerometerY: Float? = null,
+    val accelerometerZ: Float? = null,
+    val gyroscopeX: Float? = null,
+    val gyroscopeY: Float? = null,
+    val gyroscopeZ: Float? = null,
+    val orientationX: Float? = null,
+    val orientationY: Float? = null,
+    val orientationZ: Float? = null,
     val tremorFrequencyHz: Float? = null,
     val tremorIsHuman: Boolean? = null,
     val tremorConfidence: Float? = null
@@ -65,6 +74,15 @@ class EnvironmentalSensors @Inject constructor() {
         var magY: Float? = null
         var magZ: Float? = null
         var accelMag: Float? = null
+        var accelX: Float? = null
+        var accelY: Float? = null
+        var accelZ: Float? = null
+        var gyroX: Float? = null
+        var gyroY: Float? = null
+        var gyroZ: Float? = null
+        var orientX: Float? = null
+        var orientY: Float? = null
+        var orientZ: Float? = null
         var tremor = false
         var lastEmitTime = 0L
 
@@ -93,6 +111,9 @@ class EnvironmentalSensors @Inject constructor() {
                         val x = event.values[0]
                         val y = event.values[1]
                         val z = event.values[2]
+                        accelX = x
+                        accelY = y
+                        accelZ = z
                         val mag = kotlin.math.sqrt(x * x + y * y + z * z)
                         accelMag = mag
                         val deviation = mag - SensorManager.GRAVITY_EARTH
@@ -123,6 +144,21 @@ class EnvironmentalSensors @Inject constructor() {
                         }
                         lastDeviationSign = sign
                     }
+                    Sensor.TYPE_GYROSCOPE -> {
+                        gyroX = event.values[0]
+                        gyroY = event.values[1]
+                        gyroZ = event.values[2]
+                    }
+                    Sensor.TYPE_ROTATION_VECTOR -> {
+                        // Convert rotation vector to orientation angles (degrees)
+                        val rotMatrix = FloatArray(9)
+                        SensorManager.getRotationMatrixFromVector(rotMatrix, event.values)
+                        val orientation = FloatArray(3)
+                        SensorManager.getOrientation(rotMatrix, orientation)
+                        orientX = Math.toDegrees(orientation[0].toDouble()).toFloat() // azimuth
+                        orientY = Math.toDegrees(orientation[1].toDouble()).toFloat() // pitch
+                        orientZ = Math.toDegrees(orientation[2].toDouble()).toFloat() // roll
+                    }
                 }
 
                 // Throttle emissions to reduce CPU/UI overhead
@@ -149,6 +185,15 @@ class EnvironmentalSensors @Inject constructor() {
                         magneticMagnitude = magMagnitude,
                         tremorDetected = tremor,
                         accelerometerMagnitude = accelMag,
+                        accelerometerX = accelX,
+                        accelerometerY = accelY,
+                        accelerometerZ = accelZ,
+                        gyroscopeX = gyroX,
+                        gyroscopeY = gyroY,
+                        gyroscopeZ = gyroZ,
+                        orientationX = orientX,
+                        orientationY = orientY,
+                        orientationZ = orientZ,
                         tremorFrequencyHz = tremorFreq,
                         tremorIsHuman = tremorHuman,
                         tremorConfidence = tremorConf
@@ -166,6 +211,8 @@ class EnvironmentalSensors @Inject constructor() {
         val lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
         val magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        val gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+        val rotationVector = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
 
         barometer?.let {
             sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
@@ -178,6 +225,12 @@ class EnvironmentalSensors @Inject constructor() {
         }
         accelerometer?.let {
             sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME)
+        }
+        gyroscope?.let {
+            sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
+        }
+        rotationVector?.let {
+            sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
         }
 
         awaitClose {

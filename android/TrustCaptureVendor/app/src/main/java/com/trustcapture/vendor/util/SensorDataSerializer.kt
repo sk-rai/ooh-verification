@@ -18,7 +18,7 @@ import java.time.format.DateTimeFormatter
  */
 object SensorDataSerializer {
 
-    private const val SCHEMA_VERSION = "2.0"
+    private const val SCHEMA_VERSION = "2.1"
     private val isoFormatter = DateTimeFormatter.ISO_INSTANT.withZone(ZoneOffset.UTC)
     private val gson = GsonBuilder().setPrettyPrinting().serializeNulls().create()
 
@@ -88,6 +88,27 @@ object SensorDataSerializer {
                 magObj.addProperty("z", mag.z)
                 magObj.addProperty("magnitude", mag.magnitude)
                 envObj.add("magnetic_field", magObj)
+            }
+            env.accelerometer?.let { accel ->
+                val accelObj = JsonObject()
+                accelObj.addProperty("x", accel.x)
+                accelObj.addProperty("y", accel.y)
+                accelObj.addProperty("z", accel.z)
+                envObj.add("accelerometer", accelObj)
+            }
+            env.gyroscope?.let { gyro ->
+                val gyroObj = JsonObject()
+                gyroObj.addProperty("x", gyro.x)
+                gyroObj.addProperty("y", gyro.y)
+                gyroObj.addProperty("z", gyro.z)
+                envObj.add("gyroscope", gyroObj)
+            }
+            env.orientation?.let { orient ->
+                val orientObj = JsonObject()
+                orientObj.addProperty("x", orient.x)
+                orientObj.addProperty("y", orient.y)
+                orientObj.addProperty("z", orient.z)
+                envObj.add("orientation", orientObj)
             }
             envObj.addProperty("tremor_detected", env.tremorDetected)
             root.add("environmental", envObj)
