@@ -71,6 +71,11 @@ class SensorData(Base):
     hand_tremor_is_human = Column(Boolean, nullable=True)  # 8-12Hz range check
     hand_tremor_confidence = Column(Float, nullable=True)  # 0-1 confidence score
     
+    # Motion Sensors (schema v2.1) — stored as JSONB {x, y, z}
+    accelerometer_data = Column(JSONB, nullable=True)  # {x, y, z} in m/s²
+    gyroscope_data = Column(JSONB, nullable=True)  # {x, y, z} in rad/s
+    orientation_data = Column(JSONB, nullable=True)  # {x, y, z} in degrees
+
     # Location Hash and Confidence
     location_hash = Column(String(64), nullable=True)  # SHA-256 hash of combined sensor data
     confidence_score = Column(Float, nullable=True)  # 0-1 overall confidence

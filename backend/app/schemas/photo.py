@@ -54,6 +54,10 @@ class EnvironmentalData(BaseModel):
     light_lux: Optional[float] = Field(None, description="Light in lux (Android format)")
     magnetic_field: Optional[Dict[str, Any]] = Field(None, description="Magnetic field object (Android format)")
     tremor_detected: Optional[bool] = Field(None, description="Tremor detected flag (Android format)")
+    # New in schema v2.1 — raw motion sensors from Android
+    accelerometer: Optional[Dict[str, Any]] = Field(None, description="Accelerometer {x, y, z} in m/s²")
+    gyroscope: Optional[Dict[str, Any]] = Field(None, description="Gyroscope {x, y, z} in rad/s")
+    orientation: Optional[Dict[str, Any]] = Field(None, description="Orientation {x, y, z} in degrees (azimuth, pitch, roll)")
 
     def normalize(self):
         """Normalize Android field names to backend field names."""

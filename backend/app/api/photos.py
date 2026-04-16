@@ -343,6 +343,13 @@ async def upload_photo(
         sensor_record.hand_tremor_frequency = env.hand_tremor_frequency
         sensor_record.hand_tremor_is_human = env.hand_tremor_is_human
         sensor_record.hand_tremor_confidence = env.hand_tremor_confidence
+        # Schema v2.1 motion sensors
+        if env.accelerometer:
+            sensor_record.accelerometer_data = env.accelerometer
+        if env.gyroscope:
+            sensor_record.gyroscope_data = env.gyroscope
+        if env.orientation:
+            sensor_record.orientation_data = env.orientation
     db.add(sensor_record)
 
     # Create PhotoSignature record
