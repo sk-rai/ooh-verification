@@ -157,6 +157,7 @@ fun CameraScreen(
                 CameraPreviewContent(
                     gpsStatus = uiState.gpsStatus,
                     gpsWarning = uiState.gpsWarning,
+                    gpsAccuracy = uiState.accuracy,
                     sensorSummary = uiState.sensorSummary,
                     wifiCount = uiState.wifiCount,
                     cellTowerCount = uiState.cellTowerCount,
@@ -208,6 +209,7 @@ fun CameraScreen(
 private fun CameraPreviewContent(
     gpsStatus: String,
     gpsWarning: String?,
+    gpsAccuracy: Float?,
     sensorSummary: String,
     wifiCount: Int,
     cellTowerCount: Int,
@@ -223,6 +225,19 @@ private fun CameraPreviewContent(
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
             .build()
     }
+
+    // GPS gate: allow capture when accuracy ≤ 50m, or after 30s timeout
+    val gpsReady = gpsAccuracy != null && gpsAccuracy <= 50f
+    var gpsTimedOut by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(30_000L)
+        gpsTimedOut = true
+    }
+    // Reset timeout if GPS becomes ready
+    LaunchedEffect(gpsReady) {
+        if (gpsReady) gpsTimedOut = false
+    }
+    val captureEnabled = gpsReady || gpsTimedOut
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
@@ -307,11 +322,44 @@ private fun CameraPreviewContent(
 
         // Capture button
         Box(modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(bottom = 48.dp), contentAlignment = Alignment.Center) {
-            IconButton(
-                onClick = { capturePhoto(context, imageCapture, onPhotoCaptured) },
-                modifier = Modifier.size(72.dp),
-                colors = IconButtonDefaults.iconButtonColors(containerColor = Color.White, contentColor = Color.Black)
-            ) { Icon(Icons.Default.CameraAlt, contentDescription = "Capture Photo", modifier = Modifier.size(36.dp)) }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (!captureEnabled) {
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.7f),
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Text(
+                            text = "Waiting for GPS...",
+                            color = Color.Yellow,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                } else if (gpsTimedOut && !gpsReady) {
+                    Surface(
+                        color = Color(0xFFFF6D00).copy(alpha = 0.9f),
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Text(
+                            text = "⚠ Low GPS accuracy — photo may be flagged",
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                IconButton(
+                    onClick = { capturePhoto(context, imageCapture, onPhotoCaptured) },
+                    enabled = captureEnabled,
+                    modifier = Modifier.size(72.dp),
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = if (captureEnabled) Color.White else Color.Gray.copy(alpha = 0.5f),
+                        contentColor = if (captureEnabled) Color.Black else Color.DarkGray
+                    )
+                ) { Icon(Icons.Default.CameraAlt, contentDescription = "Capture Photo", modifier = Modifier.size(36.dp)) }
+            }
         }
     }
 }
