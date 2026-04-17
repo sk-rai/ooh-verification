@@ -94,14 +94,18 @@ object UploadPayloadTransformer {
                 mag.get("z")?.let { e.addProperty("magnetic_field_z", it.asFloat) }
                 mag.get("magnitude")?.let { e.addProperty("magnetic_field_magnitude", it.asFloat) }
             }
-            env.get("tremor_detected")?.let { e.addProperty("hand_tremor_is_human", it.asBoolean) }
-            env.get("tremor_frequency")?.let { e.addProperty("hand_tremor_frequency", it.asFloat) }
             env.get("tremor_is_human")?.let { e.addProperty("hand_tremor_is_human", it.asBoolean) }
+                ?: env.get("tremor_detected")?.let { e.addProperty("hand_tremor_is_human", it.asBoolean) }
+            env.get("tremor_frequency")?.let { e.addProperty("hand_tremor_frequency", it.asFloat) }
             env.get("tremor_confidence")?.let { e.addProperty("hand_tremor_confidence", it.asFloat) }
+            // Pass through new v2.1 motion sensor fields
+            env.getAsJsonObject("accelerometer")?.let { e.add("accelerometer_data", it) }
+            env.getAsJsonObject("gyroscope")?.let { e.add("gyroscope_data", it) }
+            env.getAsJsonObject("orientation")?.let { e.add("orientation_data", it) }
             out.add("environmental", e)
         }
 
-        out.addProperty("schema_version", "2.0")
+        out.addProperty("schema_version", "2.1")
 
         // Normalize confidence_score from Android 0-100 int to backend 0-1 float
         confidenceScore?.let { out.addProperty("confidence_score", it / 100.0) }

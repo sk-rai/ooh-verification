@@ -42,10 +42,12 @@ class PhotoSigner @Inject constructor(
      *
      * The signing process:
      * 1. Read photo bytes and compute SHA-256 hash
-     * 2. Generate location hash from GPS coordinates
-     * 3. Combine photo hash + location hash + timestamp into signing payload
-     * 4. Sign the combined payload with the device's ECDSA private key
-     * 5. Return the SignaturePayload as a JSON string
+     * 2. Sign the photo hash with the device's ECDSA private key
+     * 3. Generate location hash from GPS coordinates (included in payload, not signed data)
+     * 4. Return the SignaturePayload as a JSON string
+     *
+     * IMPORTANT: The backend verifies the signature against the raw photo hash only.
+     * The location_hash and timestamp are metadata — not part of the signed data.
      */
     fun signPhoto(
         context: Context,
@@ -59,19 +61,17 @@ class PhotoSigner @Inject constructor(
         // 1. Hash the photo bytes
         val photoHash = hashPhotoFromUri(context, photoUri) ?: return null
 
-        // 2. Generate location hash
+        // 2. Sign the photo hash directly (backend verifies against photo_hash)
+        val signature = keystoreManager.sign(photoHash.toByteArray()) ?: return null
+
+        // 3. Generate location hash (metadata, not part of signed data)
         val locationHash = generateLocationHash(latitude, longitude, timestamp)
 
-        // 3. Build the data to sign: photoHash + locationHash + timestamp
         val timestampStr = DateTimeFormatter.ISO_INSTANT
             .withZone(ZoneOffset.UTC)
             .format(timestamp)
-        val dataToSign = "$photoHash|$locationHash|$timestampStr"
 
-        // 4. Sign with Keystore
-        val signature = keystoreManager.sign(dataToSign.toByteArray()) ?: return null
-
-        // 5. Build payload
+        // 4. Build payload
         val deviceId = Settings.Secure.getString(
             context.contentResolver, Settings.Secure.ANDROID_ID
         )
@@ -135,10 +135,7 @@ class PhotoSigner @Inject constructor(
         longitude: Double?
     ): Boolean {
         val payload = gson.fromJson(signatureJson, SignaturePayload::class.java)
-        val timestamp = Instant.parse(payload.timestamp)
-        val locationHash = generateLocationHash(latitude, longitude, timestamp)
         val photoHash = hashPhotoFromUri(context, photoUri) ?: return false
-        val dataToVerify = "$photoHash|$locationHash|${payload.timestamp}"
-        return keystoreManager.verify(dataToVerify.toByteArray(), payload.signature)
+        return keystoreManager.verify(photoHash.toByteArray(), payload.signature)
     }
 }
