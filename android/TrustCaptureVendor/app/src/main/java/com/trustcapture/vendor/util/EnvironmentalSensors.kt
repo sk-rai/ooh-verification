@@ -135,10 +135,8 @@ class EnvironmentalSensors @Inject constructor() {
                                 if (durationSec > 0) {
                                     tremorFreq = (crossings / 2.0f) / durationSec
                                     tremorHuman = tremorFreq!! in HUMAN_TREMOR_MIN_HZ..HUMAN_TREMOR_MAX_HZ
-                                    // Confidence based on consistency of crossings
-                                    tremorConf = if (tremor) {
-                                        (crossings.toFloat() / TREMOR_WINDOW_SIZE).coerceIn(0f, 1f)
-                                    } else 0f
+                                    // Confidence based on sample quality — more crossings = more reliable
+                                    tremorConf = (crossings.toFloat() / TREMOR_WINDOW_SIZE).coerceIn(0.1f, 1f)
                                 }
                             }
                         }
