@@ -276,8 +276,8 @@ async def vendor_verify_otp(
             detail="Vendor not found"
         )
     
-    # Update device ID if provided (first-time login)
-    if data.device_id and not vendor.device_id:
+    # Update device ID if provided (always update to latest device)
+    if data.device_id:
         vendor.device_id = data.device_id
     
     # Mark device as verified (first OTP login completes registration)
