@@ -52,12 +52,12 @@ data class EnvironmentalData(
 class EnvironmentalSensors @Inject constructor() {
 
     companion object {
-        private const val TREMOR_THRESHOLD = 1.5f // m/s² deviation from gravity
+        private const val TREMOR_THRESHOLD = 0.3f // m/s² deviation from gravity (normal hand tremor is 0.2-0.8)
         private const val EMIT_THROTTLE_MS = 200L // Throttle emissions to reduce recomposition
-        // Human hand tremor is typically 4-12 Hz
-        private const val HUMAN_TREMOR_MIN_HZ = 4f
+        // Human hand tremor is typically 3-12 Hz
+        private const val HUMAN_TREMOR_MIN_HZ = 3f
         private const val HUMAN_TREMOR_MAX_HZ = 12f
-        private const val TREMOR_WINDOW_SIZE = 50 // samples for frequency estimation
+        private const val TREMOR_WINDOW_SIZE = 20 // samples for frequency estimation (faster convergence)
     }
 
     /**
