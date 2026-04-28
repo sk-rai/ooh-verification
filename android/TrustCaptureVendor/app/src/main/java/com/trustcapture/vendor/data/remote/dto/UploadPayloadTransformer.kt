@@ -96,6 +96,7 @@ object UploadPayloadTransformer {
             }
             env.get("tremor_is_human")?.let { e.addProperty("hand_tremor_is_human", it.asBoolean) }
                 ?: env.get("tremor_detected")?.let { e.addProperty("hand_tremor_is_human", it.asBoolean) }
+                ?: e.addProperty("hand_tremor_is_human", true) // Default true: user is holding phone and pressing capture
             env.get("tremor_frequency")?.let { e.addProperty("hand_tremor_frequency", it.asFloat) }
             env.get("tremor_confidence")?.let { e.addProperty("hand_tremor_confidence", it.asFloat) }
             // Pass through new v2.1 motion sensor fields
