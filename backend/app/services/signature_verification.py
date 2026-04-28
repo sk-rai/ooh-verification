@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta
 from typing import Dict
 from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import utils
 from cryptography.hazmat.primitives.asymmetric import rsa, ec, padding
 from cryptography.hazmat.backends import default_backend
 from cryptography.exceptions import InvalidSignature
@@ -59,7 +60,7 @@ class SignatureVerificationService:
                         mgf=padding.MGF1(hashes.SHA256()),
                         salt_length=padding.PSS.MAX_LENGTH
                     ),
-                    hashes.SHA256()
+                    utils.Prehashed(hashes.SHA256())
                 )
                 return True
 
@@ -69,7 +70,7 @@ class SignatureVerificationService:
                 public_key_obj.verify(
                     signature,
                     photo_hash,
-                    ec.ECDSA(hashes.SHA256())
+                    ec.ECDSA(utils.Prehashed(hashes.SHA256()))
                 )
                 return True
 
