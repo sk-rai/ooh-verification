@@ -161,14 +161,17 @@ class CameraViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 environmentalSensors.observe(appContext).collect { env ->
-                    _uiState.value = _uiState.value.copy(
-                        pressureHpa = env.pressureHpa,
-                        lightLux = env.lightLux,
-                        magneticMagnitude = env.magneticMagnitude,
-                        tremorDetected = env.tremorDetected,
-                        environmentalData = env,
-                        sensorSummary = buildSensorSummary(env)
-                    )
+                    // Only update sensor display during preview — freeze values after capture
+                    if (_uiState.value.screenState == CameraScreenState.PREVIEW) {
+                        _uiState.value = _uiState.value.copy(
+                            pressureHpa = env.pressureHpa,
+                            lightLux = env.lightLux,
+                            magneticMagnitude = env.magneticMagnitude,
+                            tremorDetected = env.tremorDetected,
+                            environmentalData = env,
+                            sensorSummary = buildSensorSummary(env)
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Environmental sensors failed, continuing without them", e)

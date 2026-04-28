@@ -227,17 +227,19 @@ private fun CameraPreviewContent(
     }
 
     // GPS gate: allow capture when accuracy ≤ 50m, or after 30s timeout
+    // Also wait for WiFi scan to complete (wifiCount > 0) for better sensor data
     val gpsReady = gpsAccuracy != null && gpsAccuracy <= 50f
+    val sensorsReady = gpsReady && wifiCount > 0
     var gpsTimedOut by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay(30_000L)
         gpsTimedOut = true
     }
-    // Reset timeout if GPS becomes ready
-    LaunchedEffect(gpsReady) {
-        if (gpsReady) gpsTimedOut = false
+    // Reset timeout if sensors become ready
+    LaunchedEffect(sensorsReady) {
+        if (sensorsReady) gpsTimedOut = false
     }
-    val captureEnabled = gpsReady || gpsTimedOut
+    val captureEnabled = sensorsReady || gpsTimedOut
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
@@ -328,15 +330,22 @@ private fun CameraPreviewContent(
                         color = Color.Black.copy(alpha = 0.7f),
                         shape = MaterialTheme.shapes.small
                     ) {
+                        val waitMsg = when {
+                            gpsAccuracy == null -> "Waiting for GPS..."
+                            gpsAccuracy > 50f && wifiCount == 0 -> "Waiting for GPS & WiFi..."
+                            gpsAccuracy > 50f -> "Waiting for GPS..."
+                            wifiCount == 0 -> "Waiting for WiFi scan..."
+                            else -> "Preparing..."
+                        }
                         Text(
-                            text = "Waiting for GPS...",
+                            text = waitMsg,
                             color = Color.Yellow,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                } else if (gpsTimedOut && !gpsReady) {
+                } else if (gpsTimedOut && !sensorsReady) {
                     Surface(
                         color = Color(0xFFFF6D00).copy(alpha = 0.9f),
                         shape = MaterialTheme.shapes.small
