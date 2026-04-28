@@ -412,7 +412,7 @@ async def get_time_series(
     """Get photo upload time series data."""
     from sqlalchemy import func, cast, Date
     from app.models import Photo
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timedelta
 
     query = select(
         cast(Photo.created_at, Date).label("date"),
@@ -422,7 +422,7 @@ async def get_time_series(
     if start:
         query = query.where(Photo.created_at >= datetime.fromisoformat(start))
     if end:
-        query = query.where(Photo.created_at <= datetime.fromisoformat(end))
+        query = query.where(Photo.created_at <= datetime.fromisoformat(end) + timedelta(days=1))
 
     query = query.group_by(cast(Photo.created_at, Date)).order_by(cast(Photo.created_at, Date))
     result = await db.execute(query)
@@ -438,7 +438,7 @@ async def export_csv(
 ):
     """Export all photos as CSV."""
     from app.models import Photo, Campaign, Vendor, SensorData
-    from datetime import datetime
+    from datetime import datetime, timedelta
 
     query = (
         select(Photo, Campaign.name.label("campaign_name"), Campaign.campaign_code,
@@ -452,7 +452,7 @@ async def export_csv(
     if start_date:
         query = query.where(Photo.created_at >= datetime.fromisoformat(start_date))
     if end_date:
-        query = query.where(Photo.created_at <= datetime.fromisoformat(end_date))
+        query = query.where(Photo.created_at <= datetime.fromisoformat(end_date) + timedelta(days=1))
     query = query.order_by(Photo.created_at.desc())
 
     result = await db.execute(query)
@@ -495,7 +495,7 @@ async def get_table_data(
 ):
     """Get photo data as JSON for the reports table view."""
     from app.models import Photo, Campaign, Vendor, SensorData
-    from datetime import datetime
+    from datetime import datetime, timedelta
 
     query = (
         select(Photo, Campaign.name.label("campaign_name"), Campaign.campaign_code,
@@ -509,7 +509,7 @@ async def get_table_data(
     if start_date:
         query = query.where(Photo.created_at >= datetime.fromisoformat(start_date))
     if end_date:
-        query = query.where(Photo.created_at <= datetime.fromisoformat(end_date))
+        query = query.where(Photo.created_at <= datetime.fromisoformat(end_date) + timedelta(days=1))
     query = query.order_by(Photo.created_at.desc())
 
     result = await db.execute(query)
@@ -545,7 +545,7 @@ async def export_pdf(
     from sqlalchemy import func
     from app.models import Photo, Campaign, Vendor, SensorData
     from app.models.photo import VerificationStatus
-    from datetime import datetime
+    from datetime import datetime, timedelta
     from fpdf import FPDF
 
     # Gather stats
@@ -569,7 +569,7 @@ async def export_pdf(
     if start_date:
         query = query.where(Photo.created_at >= datetime.fromisoformat(start_date))
     if end_date:
-        query = query.where(Photo.created_at <= datetime.fromisoformat(end_date))
+        query = query.where(Photo.created_at <= datetime.fromisoformat(end_date) + timedelta(days=1))
     query = query.order_by(Photo.created_at.desc())
     result = await db.execute(query)
     rows = result.all()
