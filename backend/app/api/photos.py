@@ -257,13 +257,16 @@ async def upload_photo(
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Vendor public key not registered.")
 
-    # Get location profile if exists
+    # Get ALL location profiles for this campaign (multi-location support)
     result = await db.execute(select(LocationProfile).where(LocationProfile.campaign_id == campaign.campaign_id))
-    location_profile = result.scalar_one_or_none()
+    all_location_profiles = result.scalars().all()
 
-    # Match location profile if exists
+    # Find best matching location profile
+    location_profile = None
     location_match_result = None
-    if location_profile:
+    best_score = -1
+
+    for lp in all_location_profiles:
         matcher = LocationProfileMatcher()
         captured_data = {
             'latitude': sensor_data_obj.gps.latitude,
@@ -278,7 +281,18 @@ async def upload_photo(
                 captured_data['pressure'] = sensor_data_obj.environmental.barometer_pressure
             if sensor_data_obj.environmental.ambient_light_lux:
                 captured_data['light_level'] = sensor_data_obj.environmental.ambient_light_lux
-        location_match_result = matcher.match_location(captured_data, location_profile)
+        match_result = matcher.match_location(captured_data, lp)
+        score = match_result.get('match_score', 0) if match_result else 0
+        if score > best_score:
+            best_score = score
+            location_profile = lp
+            location_match_result = match_result
+
+    # Legacy single-location fallback (if no profiles found via multi-location query)
+    if not all_location_profiles:
+        location_match_result = None
+    elif location_profile:
+        pass  # Location matching done in multi-location loop above
 
     # Task C: Enhanced verification (includes delivery window check)
     verification_result = run_enhanced_verification(

@@ -74,7 +74,8 @@ class CampaignCreate(BaseModel):
     campaign_type: str = Field(..., description="Campaign type (ooh, construction, insurance, delivery, healthcare, property_management)")
     start_date: datetime = Field(..., description="Campaign start date")
     end_date: datetime = Field(..., description="Campaign end date")
-    location_profile: Optional[LocationProfileCreate] = Field(None, description="Optional location profile")
+    location_profile: Optional[LocationProfileCreate] = Field(None, description="Single location (backward compat)")
+    locations: Optional[list] = Field(None, description="Multiple locations [{expected_latitude, expected_longitude, tolerance_meters, address}]")
 
     @field_validator('campaign_type')
     @classmethod
@@ -144,7 +145,8 @@ class CampaignResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
-    location_profile: Optional[LocationProfileResponse]
+    location_profile: Optional[LocationProfileResponse] = None
+    location_profiles: Optional[list] = Field(None, description="All locations for this campaign")
 
     class Config:
         from_attributes = True

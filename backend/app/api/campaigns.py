@@ -43,90 +43,100 @@ async def create_campaign(data: CampaignCreate, client: Client = Depends(get_cur
     campaign = Campaign(campaign_code=campaign_code, tenant_id=client.tenant_id, name=data.name, campaign_type=data.campaign_type.value if hasattr(data.campaign_type, "value") else data.campaign_type, client_id=client.client_id, start_date=data.start_date, end_date=data.end_date)
     db.add(campaign)
     await db.flush()
-    if data.location_profile:
+    # Multi-location support: accept locations array or single location_profile
+    all_locations = []
+    if data.locations:
+        all_locations = data.locations
+    elif data.location_profile:
         lp = data.location_profile
-        # Bidirectional geocoding resolution
-        geocoding_service = get_geocoding_service()
-        address = getattr(lp, 'address', None)
+        all_locations = [{
+            "expected_latitude": lp.expected_latitude,
+            "expected_longitude": lp.expected_longitude,
+            "tolerance_meters": lp.tolerance_meters,
+            "address": getattr(lp, "address", None),
+            "expected_wifi_bssids": lp.expected_wifi_bssids,
+            "expected_cell_tower_ids": lp.expected_cell_tower_ids,
+            "expected_pressure_min": lp.expected_pressure_min,
+            "expected_pressure_max": lp.expected_pressure_max,
+            "expected_light_min": lp.expected_light_min,
+            "expected_light_max": lp.expected_light_max,
+            "expected_magnetic_min": lp.expected_magnetic_min,
+            "expected_magnetic_max": lp.expected_magnetic_max,
+            "delivery_window_start": getattr(lp, "delivery_window_start", None),
+            "delivery_window_end": getattr(lp, "delivery_window_end", None),
+        }]
+
+    # Tier-based location limits
+    from app.models.subscription import Subscription, SubscriptionTier
+    sub_result = await db.execute(select(Subscription).where(Subscription.client_id == client.client_id))
+    sub = sub_result.scalar_one_or_none()
+    tier = sub.tier if sub else SubscriptionTier.FREE
+    tier_limits = {SubscriptionTier.FREE: 5, SubscriptionTier.PRO: 500, SubscriptionTier.ENTERPRISE: 99999}
+    max_locations = tier_limits.get(tier, 5)
+    if len(all_locations) > max_locations:
+        raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=f"Your {tier.value} plan allows {max_locations} locations per campaign. Upgrade to add more.")
+
+    geocoding_service = get_geocoding_service()
+    for loc_data in all_locations:
+        loc_lat = loc_data.get('expected_latitude')
+        loc_lon = loc_data.get('expected_longitude')
+        loc_address = loc_data.get('address')
         resolved_address = None
-
-        has_coords = lp.expected_latitude is not None and lp.expected_longitude is not None
-        has_address = address and address.strip()
-
+        tolerance = loc_data.get('tolerance_meters', 100)
+        has_coords = loc_lat is not None and loc_lon is not None
+        has_address = loc_address and str(loc_address).strip()
         if has_address and not has_coords:
-            # Forward geocode: address -> coordinates
             try:
-                # Try DB cache first
-                geo_result = await geocoding_service.lookup_address_from_db(address, db)
-                if not geo_result:
-                    geo_result = await geocoding_service.geocode_address(address)
+                geo_result = await geocoding_service.geocode_address(str(loc_address))
                 if geo_result:
-                    lp.expected_latitude = geo_result.latitude
-                    lp.expected_longitude = geo_result.longitude
+                    loc_lat = geo_result.latitude
+                    loc_lon = geo_result.longitude
                     resolved_address = geo_result.formatted_address
                     has_coords = True
-                    logger.info(f"Geocoded address '{address}' -> ({geo_result.latitude}, {geo_result.longitude})")
-            except GeocodingError as e:
-                logger.warning(f"Failed to geocode address '{address}': {e}")
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Could not geocode address: {address}. Please provide coordinates directly.")
-
+            except Exception as e:
+                logger.warning(f"Geocoding failed for location: {e}")
         elif has_coords and not has_address:
-            # Reverse geocode: coordinates -> address
             try:
-                geo_result = await geocoding_service.lookup_coords_from_db(lp.expected_latitude, lp.expected_longitude, db)
-                if not geo_result:
-                    geo_result = await geocoding_service.reverse_geocode(lp.expected_latitude, lp.expected_longitude)
+                geo_result = await geocoding_service.reverse_geocode(float(loc_lat), float(loc_lon))
                 if geo_result:
                     resolved_address = geo_result.formatted_address
-                    logger.info(f"Reverse geocoded ({lp.expected_latitude}, {lp.expected_longitude}) -> '{resolved_address}'")
-            except GeocodingError as e:
-                logger.warning(f"Reverse geocoding failed: {e}")
-                # Non-fatal: coordinates are still valid without an address
-
+            except Exception:
+                pass
         elif has_address and has_coords:
-            # Both provided, just store the address
-            resolved_address = address
-
+            resolved_address = str(loc_address)
         if not has_coords:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Location profile requires either coordinates or a valid address.")
-        pressure_min = lp.expected_pressure_min
-        pressure_max = lp.expected_pressure_max
-        if pressure_min is None and pressure_max is None and has_coords:
+            continue  # Skip locations without coordinates
+        # Auto-populate pressure and magnetic ranges
+        pressure_min = loc_data.get('expected_pressure_min')
+        pressure_max = loc_data.get('expected_pressure_max')
+        if pressure_min is None and pressure_max is None:
             try:
-                pr = await get_pressure_range(lp.expected_latitude, lp.expected_longitude)
-                if pr:
-                    pressure_min, pressure_max = pr
-                    logger.info(f"Auto-populated pressure for {campaign_code}: [{pressure_min}, {pressure_max}] hPa")
-            except Exception as e:
-                logger.warning(f"Failed to auto-populate pressure: {e}")
-        magnetic_min = lp.expected_magnetic_min
-        magnetic_max = lp.expected_magnetic_max
-        if magnetic_min is None and magnetic_max is None and has_coords:
+                pr = await get_pressure_range(float(loc_lat), float(loc_lon))
+                if pr: pressure_min, pressure_max = pr
+            except Exception: pass
+        magnetic_min = loc_data.get('expected_magnetic_min')
+        magnetic_max = loc_data.get('expected_magnetic_max')
+        if magnetic_min is None and magnetic_max is None:
             try:
-                mr = await get_magnetic_field_range(lp.expected_latitude, lp.expected_longitude)
-                if mr:
-                    magnetic_min, magnetic_max = mr
-                    logger.info(f"Auto-populated magnetic for {campaign_code}: [{magnetic_min}, {magnetic_max}] uT")
-            except Exception as e:
-                logger.warning(f"Failed to auto-populate magnetic field: {e}")
-        # For delivery campaigns, use tighter geofence default if not specified
-        tolerance = lp.tolerance_meters
+                mr = await get_magnetic_field_range(float(loc_lat), float(loc_lon))
+                if mr: magnetic_min, magnetic_max = mr
+            except Exception: pass
         if data.campaign_type in ('delivery', 'DELIVERY') and tolerance == 50.0:
-            tolerance = 150.0  # Delivery needs wider radius (driver at doorstep vs exact billboard)
-        loc_profile = LocationProfile(campaign_id=campaign.campaign_id, expected_latitude=lp.expected_latitude, expected_longitude=lp.expected_longitude, tolerance_meters=tolerance, expected_wifi_bssids=lp.expected_wifi_bssids, expected_cell_tower_ids=lp.expected_cell_tower_ids, expected_pressure_min=pressure_min, expected_pressure_max=pressure_max, expected_light_min=lp.expected_light_min, expected_light_max=lp.expected_light_max, expected_magnetic_min=magnetic_min, expected_magnetic_max=magnetic_max, delivery_window_start=getattr(lp, 'delivery_window_start', None), delivery_window_end=getattr(lp, 'delivery_window_end', None), resolved_address=resolved_address)
+            tolerance = 150.0
+        loc_profile = LocationProfile(campaign_id=campaign.campaign_id, expected_latitude=float(loc_lat), expected_longitude=float(loc_lon), tolerance_meters=float(tolerance), expected_pressure_min=pressure_min, expected_pressure_max=pressure_max, expected_magnetic_min=magnetic_min, expected_magnetic_max=magnetic_max, resolved_address=resolved_address, expected_wifi_bssids=loc_data.get('expected_wifi_bssids'), expected_cell_tower_ids=loc_data.get('expected_cell_tower_ids'), expected_light_min=loc_data.get('expected_light_min'), expected_light_max=loc_data.get('expected_light_max'), delivery_window_start=loc_data.get('delivery_window_start'), delivery_window_end=loc_data.get('delivery_window_end'))
         db.add(loc_profile)
     await db.commit()
     try:
         await enforcer.increment_campaign_usage(str(client.client_id))
     except Exception as e:
         logger.error(f"Failed to increment campaign usage: {str(e)}")
-    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign.campaign_id).options(selectinload(Campaign.location_profile)))
+    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign.campaign_id).options(selectinload(Campaign.location_profiles)))
     campaign = result.scalar_one()
     return campaign
 @router.get("", response_model=CampaignListResponse)
 async def list_campaigns(status_filter: Optional[str] = Query(None), campaign_type: Optional[str] = Query(None), skip: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=1000), client: Client = Depends(get_current_active_client), db: AsyncSession = Depends(get_db)):
     """List all campaigns for the authenticated client."""
-    query = select(Campaign).where(Campaign.client_id == client.client_id).options(selectinload(Campaign.location_profile))
+    query = select(Campaign).where(Campaign.client_id == client.client_id).options(selectinload(Campaign.location_profiles))
     if status_filter:
         try:
             status_enum = CampaignStatus(status_filter.lower())
@@ -149,7 +159,7 @@ async def list_campaigns(status_filter: Optional[str] = Query(None), campaign_ty
 @router.get("/{campaign_id}", response_model=CampaignResponse)
 async def get_campaign(campaign_id: UUID, client: Client = Depends(get_current_active_client), db: AsyncSession = Depends(get_db)):
     """Get campaign details by ID."""
-    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign_id, Campaign.client_id == client.client_id).options(selectinload(Campaign.location_profile)))
+    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign_id, Campaign.client_id == client.client_id).options(selectinload(Campaign.location_profiles)))
     campaign = result.scalar_one_or_none()
     if not campaign:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
@@ -157,7 +167,7 @@ async def get_campaign(campaign_id: UUID, client: Client = Depends(get_current_a
 @router.patch("/{campaign_id}", response_model=CampaignResponse)
 async def update_campaign(campaign_id: UUID, data: CampaignUpdate, client: Client = Depends(get_current_active_client), db: AsyncSession = Depends(get_db)):
     """Update campaign information."""
-    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign_id, Campaign.client_id == client.client_id).options(selectinload(Campaign.location_profile)))
+    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign_id, Campaign.client_id == client.client_id).options(selectinload(Campaign.location_profiles)))
     campaign = result.scalar_one_or_none()
     if not campaign:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
@@ -171,7 +181,7 @@ async def update_campaign(campaign_id: UUID, data: CampaignUpdate, client: Clien
         campaign.end_date = data.end_date
     campaign.updated_at = datetime.utcnow()
     await db.commit()
-    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign.campaign_id).options(selectinload(Campaign.location_profile)))
+    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign.campaign_id).options(selectinload(Campaign.location_profiles)))
     campaign = result.scalar_one()
     return campaign
 @router.post("/{campaign_id}/vendors", response_model=list[VendorAssignmentResponse], status_code=status.HTTP_201_CREATED)
