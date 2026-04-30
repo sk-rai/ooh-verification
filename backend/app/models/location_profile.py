@@ -36,8 +36,7 @@ class LocationProfile(Base):
         UUID(as_uuid=True),
         ForeignKey("campaigns.campaign_id", ondelete="CASCADE"),
         nullable=False,
-        unique=True,  # One profile per campaign
-        index=True
+        index=True  # Multiple profiles per campaign (multi-location)
     )
 
     # GPS Expected Location (7 decimal precision = ~1.1cm accuracy)
