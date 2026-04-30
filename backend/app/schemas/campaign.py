@@ -145,7 +145,7 @@ class CampaignResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
-    location_profile: Optional[list] = Field(None, description="Location profiles for this campaign")
+    location_profile: Optional[List[LocationProfileResponse]] = Field(None, description="Location profiles for this campaign")
 
     class Config:
         from_attributes = True
