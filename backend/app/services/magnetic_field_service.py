@@ -16,8 +16,9 @@ logger = logging.getLogger(__name__)
 NOAA_WMM_URL = "https://www.ngdc.noaa.gov/geomag-web/calculators/calculateIgrfwmm"
 NOAA_API_KEY = "EAU2y"
 
-# ±10 µT tolerance (10,000 nT since API returns nT)
-MAGNETIC_TOLERANCE_UT = 10.0
+# ±25 µT tolerance — indoor/urban environments have significant variance
+# from metal structures, electronics, rebar in concrete
+MAGNETIC_TOLERANCE_UT = 25.0
 
 
 async def get_magnetic_field_intensity(

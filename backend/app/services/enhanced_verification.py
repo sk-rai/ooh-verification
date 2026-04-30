@@ -54,7 +54,8 @@ def check_pressure(
     flags = []
     
     if captured_pressure is None:
-        return 0.5, ["PRESSURE_DATA_MISSING"]
+        # No barometer on device — neutral score, no flag (not the vendor's fault)
+        return 0.5, []
     
     if expected_min is None or expected_max is None:
         # No expected range configured, neutral score
@@ -134,13 +135,14 @@ def check_magnetic_field(
     
     score = max(0.0, 1.0 - deviation_ratio)
     
-    if deviation > 20:  # More than 20 uT off
+    if deviation > 40:  # More than 40 uT off — likely spoofed or very different location
         flags.append("MAGNETIC_SEVERE_MISMATCH")
         score = 0.0
-    elif deviation > 10:
+    elif deviation > 25:  # Significant but possible in urban/indoor environments
         flags.append("MAGNETIC_MISMATCH")
     else:
-        flags.append("MAGNETIC_SLIGHT_DEVIATION")
+        # Minor deviation — common indoors, don't flag
+        score = max(0.5, score)
     
     logger.info(
         f"Magnetic check: captured={captured_magnitude}, "
