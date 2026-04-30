@@ -145,8 +145,7 @@ class CampaignResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
-    location_profile: Optional[LocationProfileResponse] = None
-    location_profiles: Optional[list] = Field(None, description="All locations for this campaign")
+    location_profile: Optional[list] = Field(None, description="Location profiles for this campaign")
 
     class Config:
         from_attributes = True
@@ -165,7 +164,7 @@ class CampaignResponse(BaseModel):
                 "status": "active",
                 "created_at": "2026-03-04T12:00:00Z",
                 "updated_at": "2026-03-04T12:00:00Z",
-                "location_profile": None
+                "location_profile": []
             }
         }
 
