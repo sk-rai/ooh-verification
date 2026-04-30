@@ -67,14 +67,17 @@ async def create_campaign(data: CampaignCreate, client: Client = Depends(get_cur
         }]
 
     # Tier-based location limits
-    from app.models.subscription import Subscription, SubscriptionTier
+    from app.models.subscription import Subscription
     sub_result = await db.execute(select(Subscription).where(Subscription.client_id == client.client_id))
     sub = sub_result.scalar_one_or_none()
-    tier = sub.tier if sub else SubscriptionTier.FREE
-    tier_limits = {SubscriptionTier.FREE: 5, SubscriptionTier.PRO: 500, SubscriptionTier.ENTERPRISE: 99999}
-    max_locations = tier_limits.get(tier, 5)
+    tier_str = "free"
+    if sub and sub.tier:
+        tier_str = sub.tier.value if hasattr(sub.tier, 'value') else str(sub.tier)
+    tier_limits = {"free": 5, "pro": 500, "enterprise": 99999}
+    max_locations = tier_limits.get(tier_str.lower(), 5)
+    logger.info(f"Location limit check: tier={tier_str}, locations={len(all_locations)}, max={max_locations}")
     if len(all_locations) > max_locations:
-        raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=f"Your {tier.value} plan allows {max_locations} locations per campaign. Upgrade to add more.")
+        raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=f"Your {tier_str} plan allows {max_locations} locations per campaign. Upgrade to add more.")
 
     geocoding_service = get_geocoding_service()
     for loc_data in all_locations:

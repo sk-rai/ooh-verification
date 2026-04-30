@@ -325,7 +325,7 @@ export default function CampaignDetails() {
                   <div className="ml-5 w-0 flex-1">
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">Tolerance</dt>
-                      <dd className="text-lg font-medium text-gray-900">{campaign.location_profile?.tolerance_meters || 0}m</dd>
+                      <dd className="text-lg font-medium text-gray-900">{(Array.isArray(campaign.location_profile) ? campaign.location_profile[0]?.tolerance_meters : campaign.location_profile?.tolerance_meters) || 0}m</dd>
                     </dl>
                   </div>
                 </div>
@@ -385,9 +385,9 @@ export default function CampaignDetails() {
                     {campaign.location_profile ? (
                       <>
                         <p className="text-sm text-gray-600">
-                          Latitude: {campaign.location_profile.expected_latitude}, Longitude: {campaign.location_profile.expected_longitude}
+                          Latitude: {(Array.isArray(campaign.location_profile) ? campaign.location_profile[0]?.expected_latitude : campaign.location_profile?.expected_latitude)}, Longitude: {(Array.isArray(campaign.location_profile) ? campaign.location_profile[0]?.expected_longitude : campaign.location_profile?.expected_longitude)}
                         </p>
-                        <p className="text-sm text-gray-600 mt-1">Tolerance: {campaign.location_profile.tolerance_meters} meters</p>
+                        <p className="text-sm text-gray-600 mt-1">Tolerance: {(Array.isArray(campaign.location_profile) ? campaign.location_profile[0]?.tolerance_meters : campaign.location_profile?.tolerance_meters)} meters</p>
                       </>
                     ) : (
                       <p className="text-sm text-gray-500">No location profile set</p>
