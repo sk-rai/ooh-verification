@@ -603,3 +603,13 @@ async def get_client_detail(
             for c in campaigns
         ],
     }
+
+
+@router.post("/fix-quotas")
+async def fix_quotas(db: AsyncSession = Depends(get_db)):
+    """One-time fix: bump free tier campaign quota to 10."""
+    from sqlalchemy import text
+    result = await db.execute(text("UPDATE subscriptions SET campaigns_quota = 10 WHERE campaigns_quota <= 3"))
+    await db.commit()
+    return {"updated": result.rowcount, "new_quota": 10}
+
