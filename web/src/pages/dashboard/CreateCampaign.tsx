@@ -509,9 +509,10 @@ export default function CreateCampaign() {
               </div>
 
               {locations.length > 1 && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Note:</strong> Currently creating campaign with first location only. Multiple location support coming soon!
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>{locations.length} locations</strong> will be created for this campaign.
+                    Free plan: up to 5 locations | Pro: up to 500 | Enterprise: unlimited
                   </p>
                 </div>
               )}
