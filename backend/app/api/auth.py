@@ -99,7 +99,7 @@ async def register_client(
         photos_used=0,
         vendors_quota=5,  # Free tier: 5 vendors
         vendors_used=0,
-        campaigns_quota=3,  # Free tier: 3 campaigns
+        campaigns_quota=10,  # Free tier: 10 campaigns
         campaigns_used=0,
         storage_quota_mb=100,  # Free tier: 100 MB storage
         storage_used_mb=0,
