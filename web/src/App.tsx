@@ -10,6 +10,7 @@ import Dashboard from './pages/dashboard/Dashboard'
 import CampaignsList from './pages/dashboard/CampaignsList'
 import CreateCampaign from './pages/dashboard/CreateCampaign'
 import CampaignDetails from './pages/dashboard/CampaignDetails'
+import EditCampaign from './pages/dashboard/EditCampaign'
 import VendorsList from './pages/dashboard/VendorsList'
 import CreateVendor from './pages/dashboard/CreateVendor'
 import PhotoGallery from './pages/dashboard/PhotoGallery'
@@ -70,6 +71,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <CampaignDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/campaigns/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <EditCampaign />
                 </ProtectedRoute>
               }
             />
