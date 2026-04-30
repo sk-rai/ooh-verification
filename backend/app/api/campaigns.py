@@ -130,13 +130,13 @@ async def create_campaign(data: CampaignCreate, client: Client = Depends(get_cur
         await enforcer.increment_campaign_usage(str(client.client_id))
     except Exception as e:
         logger.error(f"Failed to increment campaign usage: {str(e)}")
-    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign.campaign_id).options(selectinload(Campaign.location_profiles)))
+    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign.campaign_id).options(selectinload(Campaign.location_profile)))
     campaign = result.scalar_one()
     return campaign
 @router.get("", response_model=CampaignListResponse)
 async def list_campaigns(status_filter: Optional[str] = Query(None), campaign_type: Optional[str] = Query(None), skip: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=1000), client: Client = Depends(get_current_active_client), db: AsyncSession = Depends(get_db)):
     """List all campaigns for the authenticated client."""
-    query = select(Campaign).where(Campaign.client_id == client.client_id).options(selectinload(Campaign.location_profiles))
+    query = select(Campaign).where(Campaign.client_id == client.client_id).options(selectinload(Campaign.location_profile))
     if status_filter:
         try:
             status_enum = CampaignStatus(status_filter.lower())
@@ -159,7 +159,7 @@ async def list_campaigns(status_filter: Optional[str] = Query(None), campaign_ty
 @router.get("/{campaign_id}", response_model=CampaignResponse)
 async def get_campaign(campaign_id: UUID, client: Client = Depends(get_current_active_client), db: AsyncSession = Depends(get_db)):
     """Get campaign details by ID."""
-    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign_id, Campaign.client_id == client.client_id).options(selectinload(Campaign.location_profiles)))
+    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign_id, Campaign.client_id == client.client_id).options(selectinload(Campaign.location_profile)))
     campaign = result.scalar_one_or_none()
     if not campaign:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
@@ -167,7 +167,7 @@ async def get_campaign(campaign_id: UUID, client: Client = Depends(get_current_a
 @router.patch("/{campaign_id}", response_model=CampaignResponse)
 async def update_campaign(campaign_id: UUID, data: CampaignUpdate, client: Client = Depends(get_current_active_client), db: AsyncSession = Depends(get_db)):
     """Update campaign information."""
-    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign_id, Campaign.client_id == client.client_id).options(selectinload(Campaign.location_profiles)))
+    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign_id, Campaign.client_id == client.client_id).options(selectinload(Campaign.location_profile)))
     campaign = result.scalar_one_or_none()
     if not campaign:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
@@ -181,7 +181,7 @@ async def update_campaign(campaign_id: UUID, data: CampaignUpdate, client: Clien
         campaign.end_date = data.end_date
     campaign.updated_at = datetime.utcnow()
     await db.commit()
-    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign.campaign_id).options(selectinload(Campaign.location_profiles)))
+    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign.campaign_id).options(selectinload(Campaign.location_profile)))
     campaign = result.scalar_one()
     return campaign
 @router.post("/{campaign_id}/vendors", response_model=list[VendorAssignmentResponse], status_code=status.HTTP_201_CREATED)

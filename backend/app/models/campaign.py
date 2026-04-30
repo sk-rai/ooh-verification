@@ -88,7 +88,7 @@ class Campaign(Base):
     location_profile = relationship(
         "LocationProfile",
         back_populates="campaign",
-        uselist=False,
+        uselist=True,
         cascade="all, delete-orphan"
     )
     locations = relationship(
