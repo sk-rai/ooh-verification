@@ -613,3 +613,31 @@ async def fix_quotas(db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"updated": result.rowcount, "new_quota": 10}
 
+
+@router.post("/fix-location-constraint")
+async def fix_location_constraint(db: AsyncSession = Depends(get_db)):
+    """Drop unique constraint on location_profiles.campaign_id for multi-location support."""
+    from sqlalchemy import text
+    results = []
+    # Try all possible constraint names
+    for name in ['location_profiles_campaign_id_key', 'uq_location_profiles_campaign_id', 'location_profiles_campaign_id_idx']:
+        try:
+            await db.execute(text(f"ALTER TABLE location_profiles DROP CONSTRAINT IF EXISTS {name}"))
+            results.append(f"Dropped {name}")
+        except Exception as e:
+            results.append(f"Skip {name}: {e}")
+    # Also try dropping unique index
+    try:
+        await db.execute(text("DROP INDEX IF EXISTS location_profiles_campaign_id_key"))
+        results.append("Dropped index location_profiles_campaign_id_key")
+    except Exception as e:
+        results.append(f"Skip index drop: {e}")
+    # Create non-unique index
+    try:
+        await db.execute(text("CREATE INDEX IF NOT EXISTS ix_location_profiles_campaign_id ON location_profiles (campaign_id)"))
+        results.append("Created non-unique index")
+    except Exception as e:
+        results.append(f"Skip index create: {e}")
+    await db.commit()
+    return {"results": results}
+
