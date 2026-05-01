@@ -381,20 +381,25 @@ export default function CampaignDetails() {
                     </div>
                   )}
                   <div>
-                    <h3 className="text-sm font-medium text-gray-900 mb-2">Target Location</h3>
-                    {campaign.location_profile ? (
-                      <>
-                        <p className="text-sm text-gray-600">
-                          Latitude: {(Array.isArray(campaign.location_profile) ? campaign.location_profile[0]?.expected_latitude : campaign.location_profile?.expected_latitude)}, Longitude: {(Array.isArray(campaign.location_profile) ? campaign.location_profile[0]?.expected_longitude : campaign.location_profile?.expected_longitude)}
-                        </p>
-                        <p className="text-sm text-gray-600 mt-1">Tolerance: {(Array.isArray(campaign.location_profile) ? campaign.location_profile[0]?.tolerance_meters : campaign.location_profile?.tolerance_meters)} meters</p>
-                      </>
-                    ) : (
-                      <p className="text-sm text-gray-500">No location profile set</p>
+                    <h3 className="text-sm font-medium text-gray-900 mb-2">Target Locations</h3>
+              {Array.isArray(campaign.location_profile) && campaign.location_profile.length > 0 ? (
+                campaign.location_profile.map((loc: any, idx: number) => (
+                  <div key={idx} className="mb-3 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm font-medium text-gray-700">Location {idx + 1}</p>
+                    <p className="text-sm text-gray-600">
+                      Latitude: {loc.expected_latitude?.toFixed(6)}, Longitude: {loc.expected_longitude?.toFixed(6)}
+                    </p>
+                    <p className="text-sm text-gray-600">Tolerance: {loc.tolerance_meters} meters</p>
+                    {loc.resolved_address && (
+                      <p className="text-sm text-gray-500">{loc.resolved_address}</p>
                     )}
                   </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-900 mb-2">Campaign Period</h3>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">No locations configured</p>
+              )}
+
+              <h4 className="text-md font-semibold text-gray-800 mt-4">Campaign Period</h4>
                     <p className="text-sm text-gray-600">
                       {new Date(campaign.start_date).toLocaleDateString()} - {new Date(campaign.end_date).toLocaleDateString()}
                     </p>
