@@ -114,6 +114,7 @@ class CampaignUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=2, max_length=255)
     status: Optional[str] = Field(None, description="Campaign status (active, completed, cancelled)")
     end_date: Optional[datetime] = Field(None, description="Campaign end date")
+    locations: Optional[list] = Field(None, description="Replace all locations [{expected_latitude, expected_longitude, tolerance_meters, address}]")
 
     @field_validator('status')
     @classmethod
