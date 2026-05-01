@@ -320,6 +320,8 @@ async def update_campaign(campaign_id: UUID, data: CampaignUpdate, client: Clien
 
     campaign.updated_at = datetime.utcnow()
     await db.commit()
+    # Expire cached data to get fresh location profiles after delete+insert
+    db.expire_all()
     result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign.campaign_id).options(selectinload(Campaign.location_profile)))
     campaign = result.scalar_one()
     return campaign
