@@ -397,12 +397,12 @@ class SubscriptionManager:
         quotas = {
             "free": {
                 "vendors": 5,
-                "campaigns": 3,
+                "campaigns": 10,
                 "storage_mb": 100
             },
             "pro": {
                 "vendors": 10,
-                "campaigns": 5,
+                "campaigns": 50,
                 "storage_mb": 10240
             },
             "enterprise": {

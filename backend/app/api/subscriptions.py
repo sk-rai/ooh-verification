@@ -154,8 +154,9 @@ async def get_subscription_tiers():
                 "features": {
                     "photos_per_month": 50,
                     "vendors": 5,
-                    "campaigns": 3,
-                    "storage_mb": 100
+                    "campaigns": 10,
+                    "storage_mb": 100,
+                    "locations_per_campaign": 5
                 },
                 "description": "Perfect for trying out TrustCapture"
             },
@@ -170,8 +171,9 @@ async def get_subscription_tiers():
                 "features": {
                     "photos_per_month": 1000,
                     "vendors": 10,
-                    "campaigns": 5,
-                    "storage_mb": 10240
+                    "campaigns": 50,
+                    "storage_mb": 10240,
+                    "locations_per_campaign": 500
                 },
                 "description": "For growing businesses with regular photo verification needs"
             },
@@ -187,7 +189,8 @@ async def get_subscription_tiers():
                     "photos_per_month": "unlimited",
                     "vendors": "unlimited",
                     "campaigns": "unlimited",
-                    "storage_mb": 102400
+                    "storage_mb": 102400,
+                    "locations_per_campaign": "unlimited"
                 },
                 "description": "For large organizations with extensive verification requirements"
             }
