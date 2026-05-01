@@ -199,7 +199,9 @@ async def update_campaign(campaign_id: UUID, data: CampaignUpdate, client: Clien
         max_locations = tier_limits.get(tier_str.lower(), 5)
         if len(data.locations) > max_locations:
             raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=f"Your {tier_str} plan allows {max_locations} locations per campaign.")
-        # Delete existing locations using direct SQL for reliability
+        # Clear ORM cache first, then delete via SQL
+        campaign.location_profile = []
+        await db.flush()
         from sqlalchemy import delete as sql_delete
         await db.execute(sql_delete(LocationProfile).where(LocationProfile.campaign_id == campaign.campaign_id))
         await db.flush()
@@ -267,7 +269,9 @@ async def update_campaign(campaign_id: UUID, data: CampaignUpdate, client: Clien
         max_locations = tier_limits.get(tier_str.lower(), 5)
         if len(data.locations) > max_locations:
             raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=f"Your {tier_str} plan allows {max_locations} locations per campaign.")
-        # Delete existing locations using direct SQL for reliability
+        # Clear ORM cache first, then delete via SQL
+        campaign.location_profile = []
+        await db.flush()
         from sqlalchemy import delete as sql_delete
         await db.execute(sql_delete(LocationProfile).where(LocationProfile.campaign_id == campaign.campaign_id))
         await db.flush()
