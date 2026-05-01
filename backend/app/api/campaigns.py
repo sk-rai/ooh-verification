@@ -182,6 +182,74 @@ async def update_campaign(campaign_id: UUID, data: CampaignUpdate, client: Clien
         if data.end_date <= campaign.start_date:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="end_date must be after start_date")
         campaign.end_date = data.end_date
+    # Handle location updates
+    if data.locations is not None:
+        from app.models.location_profile import LocationProfile
+        from app.services.geocoding_service import get_geocoding_service
+        from app.services.elevation_service import get_pressure_range
+        from app.services.magnetic_field_service import get_magnetic_field_range
+        from app.models.subscription import Subscription
+        # Tier-based location limit check
+        sub_result = await db.execute(select(Subscription).where(Subscription.client_id == client.client_id))
+        sub = sub_result.scalar_one_or_none()
+        tier_str = "free"
+        if sub and sub.tier:
+            tier_str = sub.tier.value if hasattr(sub.tier, 'value') else str(sub.tier)
+        tier_limits = {"free": 5, "pro": 500, "enterprise": 99999}
+        max_locations = tier_limits.get(tier_str.lower(), 5)
+        if len(data.locations) > max_locations:
+            raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=f"Your {tier_str} plan allows {max_locations} locations per campaign.")
+        # Delete existing locations
+        existing = await db.execute(select(LocationProfile).where(LocationProfile.campaign_id == campaign.campaign_id))
+        for old_lp in existing.scalars().all():
+            await db.delete(old_lp)
+        await db.flush()
+        # Create new locations
+        geocoding_service = get_geocoding_service()
+        for loc_data in data.locations:
+            loc_lat = loc_data.get('expected_latitude')
+            loc_lon = loc_data.get('expected_longitude')
+            loc_address = loc_data.get('address')
+            resolved_address = None
+            tolerance = loc_data.get('tolerance_meters', 100)
+            has_coords = loc_lat is not None and loc_lon is not None
+            has_address = loc_address and str(loc_address).strip()
+            if has_address and not has_coords:
+                try:
+                    geo_result = await geocoding_service.geocode_address(str(loc_address))
+                    if geo_result:
+                        loc_lat, loc_lon = geo_result.latitude, geo_result.longitude
+                        resolved_address = geo_result.formatted_address
+                        has_coords = True
+                except Exception as e:
+                    logger.warning(f"Geocoding failed: {e}")
+            elif has_coords and not has_address:
+                try:
+                    geo_result = await geocoding_service.reverse_geocode(float(loc_lat), float(loc_lon))
+                    if geo_result: resolved_address = geo_result.formatted_address
+                except Exception: pass
+            elif has_address and has_coords:
+                resolved_address = str(loc_address)
+            if not has_coords:
+                continue
+            pressure_min = pressure_max = magnetic_min = magnetic_max = None
+            try:
+                pr = await get_pressure_range(float(loc_lat), float(loc_lon))
+                if pr: pressure_min, pressure_max = pr
+            except Exception: pass
+            try:
+                mr = await get_magnetic_field_range(float(loc_lat), float(loc_lon))
+                if mr: magnetic_min, magnetic_max = mr
+            except Exception: pass
+            db.add(LocationProfile(
+                campaign_id=campaign.campaign_id,
+                expected_latitude=float(loc_lat), expected_longitude=float(loc_lon),
+                tolerance_meters=float(tolerance),
+                expected_pressure_min=pressure_min, expected_pressure_max=pressure_max,
+                expected_magnetic_min=magnetic_min, expected_magnetic_max=magnetic_max,
+                resolved_address=resolved_address,
+            ))
+
     campaign.updated_at = datetime.utcnow()
     await db.commit()
     result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign.campaign_id).options(selectinload(Campaign.location_profile)))
