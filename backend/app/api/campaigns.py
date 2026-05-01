@@ -199,11 +199,11 @@ async def update_campaign(campaign_id: UUID, data: CampaignUpdate, client: Clien
         max_locations = tier_limits.get(tier_str.lower(), 5)
         if len(data.locations) > max_locations:
             raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=f"Your {tier_str} plan allows {max_locations} locations per campaign.")
-        # Delete existing locations
-        existing = await db.execute(select(LocationProfile).where(LocationProfile.campaign_id == campaign.campaign_id))
-        for old_lp in existing.scalars().all():
-            await db.delete(old_lp)
+        # Delete existing locations using direct SQL for reliability
+        from sqlalchemy import delete as sql_delete
+        await db.execute(sql_delete(LocationProfile).where(LocationProfile.campaign_id == campaign.campaign_id))
         await db.flush()
+        logger.info(f"Deleted old locations for campaign {campaign.campaign_id}, adding {len(data.locations)} new")
         # Create new locations
         geocoding_service = get_geocoding_service()
         for loc_data in data.locations:
@@ -267,11 +267,11 @@ async def update_campaign(campaign_id: UUID, data: CampaignUpdate, client: Clien
         max_locations = tier_limits.get(tier_str.lower(), 5)
         if len(data.locations) > max_locations:
             raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=f"Your {tier_str} plan allows {max_locations} locations per campaign.")
-        # Delete existing locations
-        existing = await db.execute(select(LocationProfile).where(LocationProfile.campaign_id == campaign.campaign_id))
-        for old_lp in existing.scalars().all():
-            await db.delete(old_lp)
+        # Delete existing locations using direct SQL for reliability
+        from sqlalchemy import delete as sql_delete
+        await db.execute(sql_delete(LocationProfile).where(LocationProfile.campaign_id == campaign.campaign_id))
         await db.flush()
+        logger.info(f"Deleted old locations for campaign {campaign.campaign_id}, adding {len(data.locations)} new")
         # Create new locations
         geocoding_service = get_geocoding_service()
         for loc_data in data.locations:

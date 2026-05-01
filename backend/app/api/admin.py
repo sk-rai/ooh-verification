@@ -641,3 +641,19 @@ async def fix_location_constraint(db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"results": results}
 
+
+@router.post("/fix-duplicate-locations")
+async def fix_duplicate_locations(db: AsyncSession = Depends(get_db)):
+    """Remove duplicate location profiles (keep first of each unique lat/lon per campaign)."""
+    from sqlalchemy import text
+    result = await db.execute(text("""
+        DELETE FROM location_profiles
+        WHERE profile_id NOT IN (
+            SELECT DISTINCT ON (campaign_id, expected_latitude, expected_longitude)
+            profile_id FROM location_profiles
+            ORDER BY campaign_id, expected_latitude, expected_longitude, created_at ASC
+        )
+    """))
+    await db.commit()
+    return {"duplicates_removed": result.rowcount}
+
