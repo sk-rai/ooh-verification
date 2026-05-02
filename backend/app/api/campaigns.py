@@ -252,6 +252,8 @@ async def update_campaign(campaign_id: UUID, data: CampaignUpdate, client: Clien
 
     campaign.updated_at = datetime.utcnow()
     await db.commit()
+    # Refresh to load updated location_profile for response serialization
+    await db.refresh(campaign, attribute_names=['location_profile'])
     # Re-fetch campaign with fresh locations
     from app.models.location_profile import LocationProfile as LP2
     result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign.campaign_id))
