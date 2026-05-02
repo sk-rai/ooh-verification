@@ -4,11 +4,12 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.trustcapture.vendor.data.local.entity.AuditEntity
 import com.trustcapture.vendor.data.local.entity.CampaignEntity
+import com.trustcapture.vendor.data.local.entity.CampaignLocationEntity
 import com.trustcapture.vendor.data.local.entity.PhotoEntity
 
 @Database(
-    entities = [CampaignEntity::class, PhotoEntity::class, AuditEntity::class],
-    version = 6,
+    entities = [CampaignEntity::class, CampaignLocationEntity::class, PhotoEntity::class, AuditEntity::class],
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

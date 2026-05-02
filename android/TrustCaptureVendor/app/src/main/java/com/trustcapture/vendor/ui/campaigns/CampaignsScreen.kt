@@ -225,6 +225,13 @@ private fun CampaignCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (campaign.locationCount > 0) {
+                        Text(
+                            text = "${campaign.locationCount} location(s)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(

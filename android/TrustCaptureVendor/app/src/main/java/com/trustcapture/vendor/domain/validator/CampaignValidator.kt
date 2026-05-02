@@ -64,6 +64,7 @@ class CampaignValidator @Inject constructor(
                             startDate = dto.startDate,
                             endDate = dto.endDate,
                             status = dto.status,
+                            locationCount = dto.locations?.size ?: dto.locationCount ?: 0,
                             lastValidatedAt = System.currentTimeMillis()
                         )
                     }

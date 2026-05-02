@@ -15,13 +15,23 @@ data class CampaignResponse(
     @SerializedName("status") val status: String,
     @SerializedName("start_date") val startDate: String,
     @SerializedName("end_date") val endDate: String,
-    @SerializedName("assigned_at") val assignedAt: String?,
-    @SerializedName("assignment_address") val assignmentAddress: String?,
-    @SerializedName("assignment_latitude") val assignmentLatitude: Double?,
-    @SerializedName("assignment_longitude") val assignmentLongitude: Double?,
-    @SerializedName("assignment_location_name") val assignmentLocationName: String?,
-    @SerializedName("location_profile") val locationProfile: LocationProfileResponse?,
-    @SerializedName("created_at") val createdAt: String?
+    @SerializedName("assigned_at") val assignedAt: String? = null,
+    @SerializedName("assignment_address") val assignmentAddress: String? = null,
+    @SerializedName("assignment_latitude") val assignmentLatitude: Double? = null,
+    @SerializedName("assignment_longitude") val assignmentLongitude: Double? = null,
+    @SerializedName("assignment_location_name") val assignmentLocationName: String? = null,
+    @SerializedName("location_profile") val locationProfile: LocationProfileResponse? = null,
+    @SerializedName("locations") val locations: List<CampaignLocationResponse>? = null,
+    @SerializedName("location_count") val locationCount: Int? = null,
+    @SerializedName("created_at") val createdAt: String? = null
+)
+
+data class CampaignLocationResponse(
+    @SerializedName("profile_id") val profileId: String,
+    @SerializedName("expected_latitude") val expectedLatitude: Double,
+    @SerializedName("expected_longitude") val expectedLongitude: Double,
+    @SerializedName("tolerance_meters") val toleranceMeters: Int = 100,
+    @SerializedName("resolved_address") val resolvedAddress: String? = null
 )
 
 data class LocationProfileResponse(

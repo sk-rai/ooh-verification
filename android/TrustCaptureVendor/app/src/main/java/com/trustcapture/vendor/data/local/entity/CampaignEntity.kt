@@ -12,5 +12,6 @@ data class CampaignEntity(
     val startDate: String,
     val endDate: String,
     val status: String,
+    val locationCount: Int = 0,
     val lastValidatedAt: Long = System.currentTimeMillis()
 )
