@@ -76,6 +76,9 @@ class EnvironmentalData(BaseModel):
                 self.magnetic_field_z = self.magnetic_field['z']
             if self.magnetic_field_magnitude is None and 'magnitude' in self.magnetic_field:
                 self.magnetic_field_magnitude = self.magnetic_field['magnitude']
+        # Normalize tremor: Android sends tremor_detected (bool), backend uses hand_tremor_is_human
+        if self.tremor_detected is not None and self.hand_tremor_is_human is None:
+            self.hand_tremor_is_human = self.tremor_detected
 
 
 class SensorDataSchema(BaseModel):
