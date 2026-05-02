@@ -224,7 +224,7 @@ async def vendor_request_otp(
         )
     
     # Generate and store OTP
-    otp = otp_manager.generate_and_store(data.phone_number)
+    otp = await otp_manager.async_generate_and_store(data.phone_number)
     
     # Send OTP via SMS (Twilio)
     sms_sent = await sms_service.send_otp_sms(data.phone_number, otp)
@@ -254,7 +254,7 @@ async def vendor_verify_otp(
     tenant_id = get_current_tenant(request)
     
     # Verify OTP
-    if not otp_manager.verify(data.phone_number, data.otp):
+    if not await otp_manager.async_verify(data.phone_number, data.otp):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired OTP"
