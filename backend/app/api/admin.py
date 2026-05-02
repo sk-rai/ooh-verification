@@ -657,3 +657,20 @@ async def fix_duplicate_locations(db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"duplicates_removed": result.rowcount}
 
+
+@router.post("/fix-otp-table")
+async def fix_otp_table(db: AsyncSession = Depends(get_db)):
+    """Create otp_codes table if not exists."""
+    from sqlalchemy import text
+    await db.execute(text("""
+        CREATE TABLE IF NOT EXISTS otp_codes (
+            phone_number VARCHAR(20) PRIMARY KEY,
+            otp VARCHAR(10) NOT NULL,
+            expires_at TIMESTAMPTZ NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMPTZ DEFAULT now()
+        );
+    """))
+    await db.commit()
+    return {"status": "otp_codes table ready"}
+
