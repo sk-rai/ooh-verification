@@ -39,6 +39,19 @@ async def get_my_campaigns(
     for assignment in assignments:
         campaign = assignment.campaign
         if campaign:
+            # Build locations list (multi-location support)
+            locations = []
+            lp_list = campaign.location_profile if isinstance(campaign.location_profile, list) else ([campaign.location_profile] if campaign.location_profile else [])
+            for lp in lp_list:
+                if lp:
+                    locations.append({
+                        "profile_id": str(lp.profile_id),
+                        "expected_latitude": lp.expected_latitude,
+                        "expected_longitude": lp.expected_longitude,
+                        "tolerance_meters": lp.tolerance_meters,
+                        "resolved_address": lp.resolved_address,
+                    })
+
             campaigns.append({
                 "campaign_id": str(campaign.campaign_id),
                 "campaign_code": campaign.campaign_code,
@@ -52,11 +65,8 @@ async def get_my_campaigns(
                 "assignment_latitude": assignment.assignment_latitude,
                 "assignment_longitude": assignment.assignment_longitude,
                 "assignment_location_name": assignment.assignment_location_name,
-                "location_profile": {
-                    "expected_latitude": campaign.location_profile.expected_latitude,
-                    "expected_longitude": campaign.location_profile.expected_longitude,
-                    "tolerance_meters": campaign.location_profile.tolerance_meters,
-                } if campaign.location_profile else None,
+                "locations": locations,
+                "location_count": len(locations),
             })
 
     return {"campaigns": campaigns, "total": len(campaigns)}
