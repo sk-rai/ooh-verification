@@ -162,7 +162,7 @@ async def list_campaigns(status_filter: Optional[str] = Query(None), campaign_ty
 @router.get("/{campaign_id}", response_model=CampaignResponse)
 async def get_campaign(campaign_id: UUID, client: Client = Depends(get_current_active_client), db: AsyncSession = Depends(get_db)):
     """Get campaign details by ID."""
-    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign_id, Campaign.client_id == client.client_id).options(selectinload(Campaign.location_profile)))
+    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign_id, Campaign.client_id == client.client_id))
     campaign = result.scalar_one_or_none()
     if not campaign:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
@@ -170,7 +170,7 @@ async def get_campaign(campaign_id: UUID, client: Client = Depends(get_current_a
 @router.patch("/{campaign_id}", response_model=CampaignResponse)
 async def update_campaign(campaign_id: UUID, data: CampaignUpdate, client: Client = Depends(get_current_active_client), db: AsyncSession = Depends(get_db)):
     """Update campaign information."""
-    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign_id, Campaign.client_id == client.client_id).options(selectinload(Campaign.location_profile)))
+    result = await db.execute(select(Campaign).where(Campaign.campaign_id == campaign_id, Campaign.client_id == client.client_id))
     campaign = result.scalar_one_or_none()
     if not campaign:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
