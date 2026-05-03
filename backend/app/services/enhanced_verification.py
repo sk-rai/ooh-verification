@@ -153,57 +153,33 @@ def check_magnetic_field(
     return score, flags
 
 
+
 def check_tremor(
     tremor_frequency: Optional[float],
     tremor_is_human: Optional[bool],
     tremor_confidence: Optional[float],
 ) -> tuple[float, List[str]]:
-    """Analyze hand tremor data for human presence verification.
-    
-    Human hand tremor is typically 8-12 Hz. Absence of tremor or
-    mechanical vibration patterns suggest a mounted/fake device.
-    
-    Args:
-        tremor_frequency: Detected tremor frequency in Hz.
-        tremor_is_human: Whether tremor is in human range.
-        tremor_confidence: Confidence of tremor detection (0-1).
-    
-    Returns:
-        Tuple of (score 0-1, list of flags).
-    """
-    flags = []
-    
+    """Analyze hand tremor data. Treat missing/negative as neutral."""
+    # No data — neutral
     if tremor_frequency is None and tremor_is_human is None:
-        return 0.5, ["TREMOR_DATA_MISSING"]
-    
-    # If Android already classified it
-    if tremor_is_human is not None:
-        if tremor_is_human:
-            confidence = tremor_confidence if tremor_confidence is not None else 0.7
-            return min(1.0, 0.5 + confidence * 0.5), []
-        else:
-            flags.append("TREMOR_NOT_HUMAN")
-            confidence = tremor_confidence if tremor_confidence is not None else 0.7
-            return max(0.0, 0.5 - confidence * 0.5), flags
-    
-    # Analyze frequency directly
+        return 0.5, []
+    # Android says human — boost
+    if tremor_is_human is True:
+        confidence = tremor_confidence if tremor_confidence is not None else 0.7
+        return min(1.0, 0.5 + confidence * 0.5), []
+    # Android says not human — neutral (classification unreliable)
+    if tremor_is_human is False:
+        return 0.5, []
+    # Frequency analysis
     if tremor_frequency is not None:
         if 6.0 <= tremor_frequency <= 14.0:
-            # Human range
             return 0.9, []
         elif tremor_frequency < 2.0:
-            # Too stable - possibly mounted device
-            flags.append("TREMOR_TOO_STABLE")
-            return 0.2, flags
+            return 0.3, ["TREMOR_TOO_STABLE"]
         elif tremor_frequency > 20.0:
-            # Mechanical vibration
-            flags.append("TREMOR_MECHANICAL")
-            return 0.1, flags
+            return 0.2, ["TREMOR_MECHANICAL"]
         else:
-            # Borderline
-            flags.append("TREMOR_UNUSUAL_FREQUENCY")
-            return 0.4, flags
-    
+            return 0.5, []
     return 0.5, []
 
 
