@@ -27,7 +27,7 @@ export default function CreateCampaign() {
   })
 
   const [locations, setLocations] = useState<Location[]>([
-    { id: '1', address: '', latitude: '', longitude: '', radius_meters: '100' }
+    { id: '1', address: '', latitude: '', longitude: '', radius_meters: '1000' }
   ])
 
   const [geocoding, setGeocoding] = useState(false)
@@ -76,7 +76,7 @@ export default function CreateCampaign() {
   const addLocation = () => {
     setLocations([
       ...locations,
-      { id: Date.now().toString(), address: '', latitude: '', longitude: '', radius_meters: '100' }
+      { id: Date.now().toString(), address: '', latitude: '', longitude: '', radius_meters: '1000' }
     ])
   }
 
@@ -487,6 +487,16 @@ export default function CreateCampaign() {
                       <p className="mt-1 text-xs text-gray-500">
                         Photos must be taken within this radius of the target location
                       </p>
+                      <div className="mt-2 bg-blue-50 border border-blue-100 rounded p-2">
+                        <p className="text-xs text-blue-700 font-medium mb-1">Recommended radius by campaign type:</p>
+                        <ul className="text-xs text-blue-600 space-y-0.5">
+                          <li>• <strong>Billboard/OOH:</strong> 100-500m (specific outdoor location)</li>
+                          <li>• <strong>Store/Retail:</strong> 200-1000m (neighborhood area)</li>
+                          <li>• <strong>Delivery:</strong> 500-2000m (delivery zone)</li>
+                          <li>• <strong>Construction:</strong> 100-300m (specific site)</li>
+                          <li>• <strong>Property:</strong> 500-1500m (neighborhood/area)</li>
+                        </ul>
+                      </div>
                     </div>
 
                     {/* Geocode result message */}

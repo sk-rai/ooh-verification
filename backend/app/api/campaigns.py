@@ -85,7 +85,7 @@ async def create_campaign(data: CampaignCreate, client: Client = Depends(get_cur
         loc_lon = loc_data.get('expected_longitude')
         loc_address = loc_data.get('address')
         resolved_address = None
-        tolerance = loc_data.get('tolerance_meters', 100)
+        tolerance = loc_data.get('tolerance_meters', 1000)
         has_coords = loc_lat is not None and loc_lon is not None
         has_address = loc_address and str(loc_address).strip()
         if has_address and not has_coords:
@@ -211,7 +211,7 @@ async def update_campaign(campaign_id: UUID, data: CampaignUpdate, client: Clien
             loc_lon = loc_data.get('expected_longitude')
             loc_address = loc_data.get('address')
             resolved_address = None
-            tolerance = loc_data.get('tolerance_meters', 100)
+            tolerance = loc_data.get('tolerance_meters', 1000)
             has_coords = loc_lat is not None and loc_lon is not None
             has_address = loc_address and str(loc_address).strip()
             if has_address and not has_coords:

@@ -72,7 +72,7 @@ export default function EditCampaign() {
   }
 
   const addLocation = () => {
-    setLocations([...locations, { id: Date.now().toString(), address: '', latitude: '', longitude: '', radius_meters: '100' }])
+    setLocations([...locations, { id: Date.now().toString(), address: '', latitude: '', longitude: '', radius_meters: '1000' }])
   }
   const removeLocation = (lid: string) => {
     if (locations.length > 1) setLocations(locations.filter(l => l.id !== lid))
