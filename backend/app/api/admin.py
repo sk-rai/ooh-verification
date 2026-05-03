@@ -677,11 +677,11 @@ async def fix_otp_table(db: AsyncSession = Depends(get_db)):
 
 @router.post("/fix-tolerance")
 async def fix_tolerance(db: AsyncSession = Depends(get_db)):
-    """Update all location profiles with tolerance < 200m to 1000m."""
+    """Update all location profiles with tolerance <= 1000m to 1500m."""
     from sqlalchemy import text
     result = await db.execute(text(
-        "UPDATE location_profiles SET tolerance_meters = 1000 WHERE tolerance_meters <= 200"
+        "UPDATE location_profiles SET tolerance_meters = 1500 WHERE tolerance_meters <= 1000"
     ))
     await db.commit()
-    return {"updated": result.rowcount, "new_tolerance": 1000}
+    return {"updated": result.rowcount, "new_tolerance": 1500}
 
