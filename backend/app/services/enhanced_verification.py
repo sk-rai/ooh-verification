@@ -428,9 +428,9 @@ def determine_status_from_verification(vr: VerificationResult) -> str:
     if severe_flags:
         return "flagged"
     
-    if vr.confidence_score >= 0.75:
+    if vr.confidence_score >= 0.65:
         return "verified"
-    elif vr.confidence_score >= 0.45:
+    elif vr.confidence_score >= 0.40:
         return "flagged"
     else:
         return "rejected"
