@@ -355,7 +355,7 @@ export default function Reports() {
                               {(row.latitude ?? 0).toFixed(4)}, {(row.longitude ?? 0).toFixed(4)}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-500">
-                              {row.captured_at ? new Date(row.captured_at).toLocaleDateString() : 'N/A'}
+                              {row.captured_at ? new Date(row.captured_at).toLocaleString() : 'N/A'}
                             </td>
                             <td className="px-4 py-3 text-sm">
                               {row.rejection_reasons && row.rejection_reasons.length > 0 ? (
