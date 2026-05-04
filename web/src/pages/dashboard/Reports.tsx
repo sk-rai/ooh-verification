@@ -323,6 +323,7 @@ export default function Reports() {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Photo ID</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Campaign</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -335,6 +336,11 @@ export default function Reports() {
                       <tbody className="bg-white divide-y divide-gray-200">
                         {tableData.map((row) => (
                           <tr key={row.photo_id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm">
+                              <a href={`/photos?highlight=${row.photo_id}`} className="text-blue-600 hover:text-blue-800 hover:underline font-mono text-xs" title={row.photo_id}>
+                                {row.photo_id.substring(0, 8)}...
+                              </a>
+                            </td>
                             <td className="px-4 py-3 text-sm">
                               <div className="font-medium text-gray-900">{row.campaign_name}</div>
                               <div className="text-xs text-gray-500">{row.campaign_code}</div>
@@ -369,7 +375,7 @@ export default function Reports() {
                           </tr>
                         ))}
                         {tableData.length === 0 && (
-                          <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">No data available</td></tr>
+                          <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">No data available</td></tr>
                         )}
                       </tbody>
                     </table>
