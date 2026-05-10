@@ -697,12 +697,17 @@ async def create_review_vendor(db: AsyncSession = Depends(get_db)):
         return {"error": "No tenant found"}
     tenant_id = str(tenant[0])
     
+    # Get a client_id for the created_by field
+    client_result = await db.execute(text("SELECT client_id FROM clients LIMIT 1"))
+    client = client_result.fetchone()
+    client_id = str(client[0]) if client else tenant_id
+    
     # Create vendor
     await db.execute(text("""
-        INSERT INTO vendors (vendor_id, tenant_id, name, phone_number, status, device_verified, created_at, updated_at)
-        VALUES ('REVIEW', :tid, 'Play Store Reviewer', '+911234567890', 'active', true, now(), now())
+        INSERT INTO vendors (vendor_id, tenant_id, name, phone_number, status, device_verified, created_by_client_id, created_at, updated_at)
+        VALUES ('REVIEW', :tid, 'Play Store Reviewer', '+911234567890', 'active', true, :cid, now(), now())
         ON CONFLICT (vendor_id) DO UPDATE SET phone_number = '+911234567890', status = 'active', device_verified = true
-    """), {"tid": tenant_id})
+    """), {"tid": tenant_id, "cid": client_id})
     await db.commit()
     return {"status": "REVIEW vendor created", "vendor_id": "REVIEW", "phone": "+911234567890"}
 
