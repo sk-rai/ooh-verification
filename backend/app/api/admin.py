@@ -709,5 +709,23 @@ async def create_review_vendor(db: AsyncSession = Depends(get_db)):
         ON CONFLICT (vendor_id) DO UPDATE SET phone_number = '+911234567890', status = 'active', device_verified = true
     """), {"tid": tenant_id, "cid": client_id})
     await db.commit()
-    return {"status": "REVIEW vendor created", "vendor_id": "REVIEW", "phone": "+911234567890"}
+    
+    # Also create VendorClientAssociation so vendor can be assigned to campaigns
+    await db.execute(text("""
+        INSERT INTO vendor_client_associations (vendor_id, client_id, status, created_at)
+        SELECT 'REVIEW', client_id, 'active', now()
+        FROM clients LIMIT 1
+        ON CONFLICT DO NOTHING
+    """))
+    
+    # Assign to first active campaign
+    await db.execute(text("""
+        INSERT INTO campaign_vendor_assignments (campaign_id, vendor_id, assigned_at)
+        SELECT campaign_id, 'REVIEW', now()
+        FROM campaigns WHERE status = 'active' LIMIT 1
+        ON CONFLICT DO NOTHING
+    """))
+    await db.commit()
+    
+    return {"status": "REVIEW vendor created + associated + assigned", "vendor_id": "REVIEW", "phone": "+911234567890"}
 
