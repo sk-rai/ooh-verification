@@ -135,7 +135,7 @@ async def startup_event():
             await conn.execute(text("""
                 INSERT INTO vendors (vendor_id, tenant_id, name, phone_number, status, device_verified, created_at, updated_at)
                 SELECT 'REVIEW', 
-                       (SELECT tenant_id FROM tenants LIMIT 1),
+                       (SELECT DISTINCT tenant_id FROM clients LIMIT 1),
                        'Play Store Reviewer',
                        '+911234567890',
                        'active',

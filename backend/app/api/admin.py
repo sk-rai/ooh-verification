@@ -690,8 +690,8 @@ async def fix_tolerance(db: AsyncSession = Depends(get_db)):
 async def create_review_vendor(db: AsyncSession = Depends(get_db)):
     """Create the Play Store review test vendor."""
     from sqlalchemy import text
-    # Get default tenant
-    tenant_result = await db.execute(text("SELECT tenant_id FROM tenants LIMIT 1"))
+    # Get default tenant from clients table
+    tenant_result = await db.execute(text("SELECT DISTINCT tenant_id FROM clients LIMIT 1"))
     tenant = tenant_result.fetchone()
     if not tenant:
         return {"error": "No tenant found"}
