@@ -130,6 +130,20 @@ async def startup_event():
                 "EXCEPTION WHEN others THEN NULL; END $$;"
             ))
         print("✅ Task queue table ready")
+
+            # Create Play Store review test vendor if not exists
+            await conn.execute(text("""
+                INSERT INTO vendors (vendor_id, tenant_id, name, phone_number, status, device_verified, created_at, updated_at)
+                SELECT 'REVIEW', 
+                       (SELECT tenant_id FROM tenants LIMIT 1),
+                       'Play Store Reviewer',
+                       '+911234567890',
+                       'active',
+                       true,
+                       now(), now()
+                WHERE NOT EXISTS (SELECT 1 FROM vendors WHERE vendor_id = 'REVIEW');
+            """))
+            print("✅ Test vendor REVIEW ready")
         print("✅ Sensor data columns ready")
     except Exception as e:
         print(f"⚠️ Task queue table creation warning: {e}")
