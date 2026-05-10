@@ -729,3 +729,14 @@ async def create_review_vendor(db: AsyncSession = Depends(get_db)):
     
     return {"status": "REVIEW vendor created + associated + assigned", "vendor_id": "REVIEW", "phone": "+911234567890"}
 
+@router.post("/clear-review-device")
+async def clear_review_device(db: AsyncSession = Depends(get_db)):
+    """Clear device registration for REVIEW vendor so Play Store reviewer can register fresh."""
+    from sqlalchemy import text
+    result = await db.execute(text(
+        "UPDATE vendors SET device_id = NULL, public_key = NULL, device_verified = false "
+        "WHERE vendor_id = 'REVIEW'"
+    ))
+    await db.commit()
+    return {"status": "Device registration cleared for REVIEW", "rows_updated": result.rowcount}
+
