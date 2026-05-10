@@ -199,6 +199,21 @@ async def vendor_request_otp(
         - Req 1.3: SMS delivery
     """
     tenant_id = get_current_tenant(request)
+
+    # Play Store review test account — bypass everything (no DB lookup needed)
+    if data.vendor_id == "REVIEW" and data.phone_number == "+911234567890":
+        from app.core.database import AsyncSessionLocal
+        from sqlalchemy import text
+        from datetime import datetime, timedelta
+        async with AsyncSessionLocal() as test_db:
+            await test_db.execute(text(
+                "INSERT INTO otp_codes (phone_number, otp, expires_at, attempts) "
+                "VALUES (:phone, '123456', :expires, 0) "
+                "ON CONFLICT (phone_number) DO UPDATE SET otp = '123456', expires_at = :expires, attempts = 0"
+            ), {"phone": "+911234567890", "expires": datetime.utcnow() + timedelta(hours=24)})
+            await test_db.commit()
+        return {"message": "OTP sent successfully", "expires_in": 86400}
+
     
     # Verify vendor exists and phone number matches
     result = await db.execute(
@@ -223,21 +238,6 @@ async def vendor_request_otp(
             detail=f"Vendor status is {vendor.status.value}"
         )
     
-    # Generate and store OTP
-    # Play Store review test account — bypass SMS
-    if data.phone_number == "+911234567890":
-        from app.core.database import AsyncSessionLocal
-        from sqlalchemy import text
-        from datetime import datetime, timedelta
-        async with AsyncSessionLocal() as test_db:
-            await test_db.execute(text(
-                "INSERT INTO otp_codes (phone_number, otp, expires_at, attempts) "
-                "VALUES (:phone, '123456', :expires, 0) "
-                "ON CONFLICT (phone_number) DO UPDATE SET otp = '123456', expires_at = :expires, attempts = 0"
-            ), {"phone": "+911234567890", "expires": datetime.utcnow() + timedelta(hours=24)})
-            await test_db.commit()
-        return {"message": "OTP sent successfully", "expires_in": 86400}
-
     otp = await otp_manager.async_generate_and_store(data.phone_number)
     
     # Send OTP via SMS (Twilio)
@@ -274,6 +274,13 @@ async def vendor_verify_otp(
             detail="Invalid or expired OTP"
         )
     
+    # Play Store review test account — bypass vendor lookup
+    if data.vendor_id == "REVIEW" and data.phone_number == "+911234567890":
+        access_token = create_access_token(
+            data={"sub": "REVIEW", "type": "vendor", "vendor_id": "REVIEW"}
+        )
+        return {"access_token": access_token, "token_type": "bearer", "expires_in": 604800}
+
     # Get vendor
     result = await db.execute(
         select(Vendor).where(

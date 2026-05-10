@@ -712,18 +712,18 @@ async def create_review_vendor(db: AsyncSession = Depends(get_db)):
     
     # Also create VendorClientAssociation so vendor can be assigned to campaigns
     await db.execute(text("""
-        INSERT INTO vendor_client_associations (vendor_id, client_id, status, created_at)
-        SELECT 'REVIEW', client_id, 'active', now()
+        INSERT INTO vendor_client_associations (association_id, vendor_id, client_id, tenant_id, status, enrolled_at)
+        SELECT gen_random_uuid(), 'REVIEW', client_id, tenant_id, 'active', now()
         FROM clients LIMIT 1
-        ON CONFLICT DO NOTHING
+        ON CONFLICT ON CONSTRAINT uq_vendor_client DO NOTHING
     """))
     
     # Assign to first active campaign
     await db.execute(text("""
-        INSERT INTO campaign_vendor_assignments (campaign_id, vendor_id, assigned_at)
-        SELECT campaign_id, 'REVIEW', now()
+        INSERT INTO campaign_vendor_assignments (assignment_id, campaign_id, vendor_id, assigned_at, created_at, updated_at)
+        SELECT gen_random_uuid(), campaign_id, 'REVIEW', now(), now(), now()
         FROM campaigns WHERE status = 'active' LIMIT 1
-        ON CONFLICT DO NOTHING
+        ON CONFLICT ON CONSTRAINT uq_campaign_vendor DO NOTHING
     """))
     await db.commit()
     
