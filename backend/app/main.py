@@ -129,7 +129,7 @@ async def startup_event():
                 "ALTER TABLE sensor_data ADD COLUMN IF NOT EXISTS orientation_data JSONB; "
                 "EXCEPTION WHEN others THEN NULL; END $$;"
             ))
-        print("✅ Task queue table ready")
+
 
             # Create Play Store review test vendor if not exists
             await conn.execute(text("""
@@ -144,6 +144,7 @@ async def startup_event():
                 WHERE NOT EXISTS (SELECT 1 FROM vendors WHERE vendor_id = 'REVIEW');
             """))
             print("✅ Test vendor REVIEW ready")
+        print("✅ Task queue table ready")
         print("✅ Sensor data columns ready")
     except Exception as e:
         print(f"⚠️ Task queue table creation warning: {e}")
