@@ -225,23 +225,20 @@ async def vendor_request_otp(
     
     # Generate and store OTP
     # Play Store review test account — bypass SMS
-        if data.phone_number == "+911234567890":
-            # Store hardcoded OTP for test account
-            from app.core.database import AsyncSessionLocal
-            from sqlalchemy import text
-            from datetime import datetime, timedelta
-            async with AsyncSessionLocal() as test_db:
-                await test_db.execute(text(
-                    "INSERT INTO otp_codes (phone_number, otp, expires_at, attempts) "
-                    "VALUES (:phone, '123456', :expires, 0) "
-                    "ON CONFLICT (phone_number) DO UPDATE SET otp = '123456', expires_at = :expires, attempts = 0"
-                ), {"phone": "+911234567890", "expires": datetime.utcnow() + timedelta(hours=24)})
-                await test_db.commit()
-            otp = "123456"
-            # Skip SMS sending for test account
-            return {"message": "OTP sent successfully", "expires_in": 86400}
+    if data.phone_number == "+911234567890":
+        from app.core.database import AsyncSessionLocal
+        from sqlalchemy import text
+        from datetime import datetime, timedelta
+        async with AsyncSessionLocal() as test_db:
+            await test_db.execute(text(
+                "INSERT INTO otp_codes (phone_number, otp, expires_at, attempts) "
+                "VALUES (:phone, '123456', :expires, 0) "
+                "ON CONFLICT (phone_number) DO UPDATE SET otp = '123456', expires_at = :expires, attempts = 0"
+            ), {"phone": "+911234567890", "expires": datetime.utcnow() + timedelta(hours=24)})
+            await test_db.commit()
+        return {"message": "OTP sent successfully", "expires_in": 86400}
 
-        otp = await otp_manager.async_generate_and_store(data.phone_number)
+    otp = await otp_manager.async_generate_and_store(data.phone_number)
     
     # Send OTP via SMS (Twilio)
     sms_sent = await sms_service.send_otp_sms(data.phone_number, otp)
