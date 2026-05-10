@@ -685,3 +685,24 @@ async def fix_tolerance(db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"updated": result.rowcount, "new_tolerance": 1500}
 
+
+@router.post("/create-review-vendor")
+async def create_review_vendor(db: AsyncSession = Depends(get_db)):
+    """Create the Play Store review test vendor."""
+    from sqlalchemy import text
+    # Get default tenant
+    tenant_result = await db.execute(text("SELECT tenant_id FROM tenants LIMIT 1"))
+    tenant = tenant_result.fetchone()
+    if not tenant:
+        return {"error": "No tenant found"}
+    tenant_id = str(tenant[0])
+    
+    # Create vendor
+    await db.execute(text("""
+        INSERT INTO vendors (vendor_id, tenant_id, name, phone_number, status, device_verified, created_at, updated_at)
+        VALUES ('REVIEW', :tid, 'Play Store Reviewer', '+911234567890', 'active', true, now(), now())
+        ON CONFLICT (vendor_id) DO UPDATE SET phone_number = '+911234567890', status = 'active', device_verified = true
+    """), {"tid": tenant_id})
+    await db.commit()
+    return {"status": "REVIEW vendor created", "vendor_id": "REVIEW", "phone": "+911234567890"}
+
