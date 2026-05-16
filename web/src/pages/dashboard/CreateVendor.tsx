@@ -42,7 +42,14 @@ export default function CreateVendor() {
       })
       setCreatedVendor(response.data)
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create vendor')
+      const detail = err.response?.data?.detail
+      if (Array.isArray(detail)) {
+        setError(detail.map((e: any) => e.msg || e.message || JSON.stringify(e)).join(', '))
+      } else if (typeof detail === 'object' && detail !== null) {
+        setError(detail.msg || detail.message || JSON.stringify(detail))
+      } else {
+        setError(detail || 'Failed to create vendor')
+      }
       setLoading(false)
     }
   }

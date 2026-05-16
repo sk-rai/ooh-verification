@@ -740,3 +740,19 @@ async def clear_review_device(db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"status": "Device registration cleared for REVIEW", "rows_updated": result.rowcount}
 
+@router.post("/upgrade-to-enterprise")
+async def upgrade_to_enterprise(db: AsyncSession = Depends(get_db)):
+    """Upgrade rai_sk@yahoo.com to enterprise tier — removes all quota limits for testing."""
+    from sqlalchemy import text
+    result = await db.execute(text("""
+        UPDATE subscriptions SET
+            tier = 'enterprise',
+            vendors_quota = 99999,
+            campaigns_quota = 99999,
+            photos_quota = 99999,
+            storage_quota_mb = 99999
+        WHERE client_id = (SELECT client_id FROM clients WHERE email = 'rai_sk@yahoo.com' LIMIT 1)
+    """))
+    await db.commit()
+    return {"status": "Upgraded to enterprise", "rows_updated": result.rowcount}
+
