@@ -41,6 +41,7 @@ export default function CreateVendor() {
         country: selectedCountry?.name || undefined,
       })
       setCreatedVendor(response.data)
+      setLoading(false)
     } catch (err: any) {
       const detail = err.response?.data?.detail
       if (Array.isArray(detail)) {
@@ -110,6 +111,7 @@ export default function CreateVendor() {
                   <button
                     onClick={() => {
                       setCreatedVendor(null)
+                      setLoading(false)
                       setFormData({ name: '', phone_number: '', email: '', city: '' })
                       setCountryCode('')
                       setStateCode('')
