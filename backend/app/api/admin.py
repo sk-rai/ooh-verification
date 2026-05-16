@@ -756,3 +756,18 @@ async def upgrade_to_enterprise(db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"status": "Upgraded to enterprise", "rows_updated": result.rowcount}
 
+@router.post("/fix-vendor-associations")
+async def fix_vendor_associations(db: AsyncSession = Depends(get_db)):
+    """Create missing vendor_client_associations for vendors that have none."""
+    from sqlalchemy import text
+    result = await db.execute(text("""
+        INSERT INTO vendor_client_associations (association_id, vendor_id, client_id, tenant_id, status, enrolled_at)
+        SELECT gen_random_uuid(), v.vendor_id, v.created_by_client_id, v.tenant_id, 'active', now()
+        FROM vendors v
+        WHERE NOT EXISTS (
+            SELECT 1 FROM vendor_client_associations vca WHERE vca.vendor_id = v.vendor_id
+        )
+    """))
+    await db.commit()
+    return {"status": "Fixed missing associations", "rows_created": result.rowcount}
+

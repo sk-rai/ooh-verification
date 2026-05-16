@@ -86,6 +86,15 @@ async def create_vendor(
     )
     
     db.add(vendor)
+
+    # Create VendorClientAssociation so vendor appears in client's vendor list
+    association = VendorClientAssociation(
+        vendor_id=vendor_id,
+        client_id=client.client_id,
+        tenant_id=client.tenant_id,
+        status=AssociationStatus.ACTIVE
+    )
+    db.add(association)
     await db.commit()
     await db.refresh(vendor)
     
