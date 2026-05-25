@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
 import Navigation from '../../components/Navigation'
 import api from '../../services/api'
 import 'leaflet/dist/leaflet.css'
@@ -17,6 +17,17 @@ interface PhotoLocation {
   captured_at: string
   thumbnail_url?: string
   photo_url?: string
+}
+
+// Component to fly map to selected photo location
+function FlyToLocation({ photo }: { photo: PhotoLocation | null }) {
+  const map = useMap()
+  useEffect(() => {
+    if (photo && photo.latitude && photo.longitude) {
+      map.flyTo([photo.latitude, photo.longitude], 16, { duration: 1 })
+    }
+  }, [photo, map])
+  return null
 }
 
 export default function MapView() {
@@ -181,6 +192,7 @@ export default function MapView() {
                       attribution={'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
+                    <FlyToLocation photo={selectedPhoto} />
                     {filteredPhotos.map((photo) => (
                       <CircleMarker
                         key={photo.photo_id}
