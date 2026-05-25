@@ -28,6 +28,8 @@ app = FastAPI(
 # Configure CORS - MUST be before routers
 # Build CORS origins from env var + localhost defaults
 cors_origins = settings.cors_origins_list + [
+    "https://app.trustcaptures.com",
+    "https://trustcapture-web.onrender.com",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",
