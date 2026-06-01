@@ -16,8 +16,8 @@ android {
         applicationId = "com.lynksavvy.trustcapture"
         minSdk = 24
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.1.0"
+        versionCode = 5
+        versionName = "1.1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "BASE_URL", "\"https://ooh-verification.onrender.com/\"")
@@ -65,6 +65,17 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    // 16 KB page size support (required for API 35+ production releases)
+    androidResources {
+        noCompress += "so"
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 }
 
