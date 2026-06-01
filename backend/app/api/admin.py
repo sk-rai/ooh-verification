@@ -742,7 +742,7 @@ async def clear_review_device(db: AsyncSession = Depends(get_db)):
 
 @router.post("/upgrade-to-enterprise")
 async def upgrade_to_enterprise(db: AsyncSession = Depends(get_db)):
-    """Upgrade rai_sk@yahoo.com to enterprise tier — removes all quota limits for testing."""
+    """Upgrade account to enterprise tier — removes all quota limits for testing."""
     from sqlalchemy import text
     result = await db.execute(text("""
         UPDATE subscriptions SET
@@ -751,7 +751,7 @@ async def upgrade_to_enterprise(db: AsyncSession = Depends(get_db)):
             campaigns_quota = 99999,
             photos_quota = 99999,
             storage_quota_mb = 99999
-        WHERE client_id = (SELECT client_id FROM clients WHERE email = 'rai_sk@yahoo.com' LIMIT 1)
+        WHERE client_id = (SELECT client_id FROM clients LIMIT 1)
     """))
     await db.commit()
     return {"status": "Upgraded to enterprise", "rows_updated": result.rowcount}
@@ -770,4 +770,17 @@ async def fix_vendor_associations(db: AsyncSession = Depends(get_db)):
     """))
     await db.commit()
     return {"status": "Fixed missing associations", "rows_created": result.rowcount}
+
+@router.post("/fix-tenant-email")
+async def fix_tenant_email(db: AsyncSession = Depends(get_db)):
+    """Update tenant config to use custom domain email."""
+    from sqlalchemy import text
+    result = await db.execute(text("""
+        UPDATE tenant_config 
+        SET email_from_address = 'noreply@trustcaptures.com',
+            email_from_name = 'TrustCapture'
+        WHERE subdomain = 'default'
+    """))
+    await db.commit()
+    return {"status": "Tenant email updated", "rows_updated": result.rowcount}
 

@@ -17,7 +17,7 @@ def upgrade() -> None:
         UPDATE tenant_config 
         SET tenant_name = 'TrustCapture',
             email_from_name = 'TrustCapture',
-            email_from_address = 'skrai382@gmail.com',
+            email_from_address = 'noreply@trustcaptures.com',
             primary_color = '#3B82F6',
             secondary_color = '#10B981'
         WHERE subdomain = 'default'
