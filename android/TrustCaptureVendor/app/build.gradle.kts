@@ -16,8 +16,8 @@ android {
         applicationId = "com.lynksavvy.trustcapture"
         minSdk = 24
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "BASE_URL", "\"https://ooh-verification.onrender.com/\"")
@@ -51,7 +51,7 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
-            buildConfigField("String", "BASE_URL", "\"https://ooh-verification.onrender.com/\"")
+            buildConfigField("String", "BASE_URL", "\"https://api.trustcaptures.com/\"")
             manifestPlaceholders["cleartextTrafficPermitted"] = "false"
         }
     }
