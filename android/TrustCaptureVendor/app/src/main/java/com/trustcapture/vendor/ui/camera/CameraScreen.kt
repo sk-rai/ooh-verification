@@ -158,6 +158,7 @@ fun CameraScreen(
                     gpsStatus = uiState.gpsStatus,
                     gpsWarning = uiState.gpsWarning,
                     gpsAccuracy = uiState.accuracy,
+                    compassHeading = uiState.compassHeading,
                     sensorSummary = uiState.sensorSummary,
                     wifiCount = uiState.wifiCount,
                     cellTowerCount = uiState.cellTowerCount,
@@ -210,6 +211,7 @@ private fun CameraPreviewContent(
     gpsStatus: String,
     gpsWarning: String?,
     gpsAccuracy: Float?,
+    compassHeading: Float?,
     sensorSummary: String,
     wifiCount: Int,
     cellTowerCount: Int,
@@ -304,6 +306,21 @@ private fun CameraPreviewContent(
                 StatusChip(Icons.Default.Wifi, if (wifiCount > 0) Color.Green else Color.Yellow, if (wifiCount > 0) "$wifiCount networks" else "No WiFi")
                 Spacer(modifier = Modifier.height(4.dp))
                 StatusChip(Icons.Default.CellTower, if (cellTowerCount > 0) Color.Green else Color.Yellow, if (cellTowerCount > 0) "$cellTowerCount towers" else "No cell")
+                if (compassHeading != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    val cardinal = when {
+                        compassHeading < 22.5f -> "N"
+                        compassHeading < 67.5f -> "NE"
+                        compassHeading < 112.5f -> "E"
+                        compassHeading < 157.5f -> "SE"
+                        compassHeading < 202.5f -> "S"
+                        compassHeading < 247.5f -> "SW"
+                        compassHeading < 292.5f -> "W"
+                        compassHeading < 337.5f -> "NW"
+                        else -> "N"
+                    }
+                    StatusChip(Icons.Default.Explore, Color.White, "${compassHeading.toInt()}° $cardinal")
+                }
             }
         }
 
@@ -446,6 +463,14 @@ private fun PhotoReviewContent(
                     uiState.pressureHpa?.let { MetadataRow(Icons.Default.Speed, "Pressure", "%.1f hPa".format(it)) }
                     uiState.lightLux?.let { MetadataRow(Icons.Default.LightMode, "Light", "${it.toInt()} lux") }
                     uiState.magneticMagnitude?.let { MetadataRow(Icons.Default.Explore, "Magnetic", "%.1f \u00b5T".format(it)) }
+                    uiState.compassHeading?.let { heading ->
+                        val cardinal = when {
+                            heading < 22.5f -> "N"; heading < 67.5f -> "NE"; heading < 112.5f -> "E"
+                            heading < 157.5f -> "SE"; heading < 202.5f -> "S"; heading < 247.5f -> "SW"
+                            heading < 292.5f -> "W"; heading < 337.5f -> "NW"; else -> "N"
+                        }
+                        MetadataRow(Icons.Default.Navigation, "Heading", "${heading.toInt()}\u00b0 $cardinal")
+                    }
                     MetadataRow(Icons.Default.Wifi, "WiFi", if (uiState.wifiCount > 0) "${uiState.wifiCount} networks" else "N/A")
                     MetadataRow(Icons.Default.CellTower, "Cell", if (uiState.cellTowerCount > 0) "${uiState.cellTowerCount} towers" else "N/A")
                     if (uiState.tremorDetected) MetadataRow(Icons.Default.Warning, "Tremor", "Detected \u26a0")

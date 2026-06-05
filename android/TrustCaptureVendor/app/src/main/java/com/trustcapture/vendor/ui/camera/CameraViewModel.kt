@@ -72,6 +72,7 @@ data class CameraUiState(
     val magneticMagnitude: Float? = null,
     val tremorDetected: Boolean = false,
     val environmentalData: EnvironmentalData? = null,
+    val compassHeading: Float? = null,
     // WiFi
     val wifiCount: Int = 0,
     // Cell towers
@@ -163,12 +164,17 @@ class CameraViewModel @Inject constructor(
                 environmentalSensors.observe(appContext).collect { env ->
                     // Only update sensor display during preview — freeze values after capture
                     if (_uiState.value.screenState == CameraScreenState.PREVIEW) {
+                        // Convert azimuth from -180..180 to 0..360 for compass display
+                        val heading = env.orientationX?.let { azimuth ->
+                            ((azimuth % 360) + 360) % 360
+                        }
                         _uiState.value = _uiState.value.copy(
                             pressureHpa = env.pressureHpa,
                             lightLux = env.lightLux,
                             magneticMagnitude = env.magneticMagnitude,
                             tremorDetected = env.tremorDetected,
                             environmentalData = env,
+                            compassHeading = heading,
                             sensorSummary = buildSensorSummary(env)
                         )
                     }
@@ -219,7 +225,8 @@ class CameraViewModel @Inject constructor(
                 longitude = state.longitude,
                 accuracy = state.accuracy,
                 campaignCode = state.campaignCode,
-                vendorId = vendorId
+                vendorId = vendorId,
+                compassHeading = state.compassHeading
             )
 
             val watermarkedUri = withContext(Dispatchers.IO) {
