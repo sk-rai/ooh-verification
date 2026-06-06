@@ -23,6 +23,7 @@ data class WatermarkData(
     val accuracy: Float?,
     val campaignCode: String,
     val vendorId: String,
+    val compassHeading: Float? = null,
     val timestamp: Date = Date()
 )
 
@@ -174,10 +175,11 @@ object WatermarkGenerator {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.US)
         val lines = mutableListOf<String>()
 
-        // GPS line
+        // GPS line with compass heading
         if (data.latitude != null && data.longitude != null) {
             val accStr = data.accuracy?.let { " ±${it.toInt()}m" } ?: ""
-            lines.add("GPS: %.7f, %.7f%s".format(data.latitude, data.longitude, accStr))
+            val headingStr = data.compassHeading?.let { "  Facing: ${it.toInt()}° ${degreesToCardinal(it)}" } ?: ""
+            lines.add("GPS: %.7f, %.7f%s%s".format(data.latitude, data.longitude, accStr, headingStr))
         } else {
             lines.add("GPS: Not available")
         }
@@ -189,6 +191,22 @@ object WatermarkGenerator {
         lines.add("Campaign: ${data.campaignCode}  Vendor: ${data.vendorId}")
 
         return lines
+    }
+
+    /** Converts azimuth degrees (0-360) to cardinal direction. */
+    private fun degreesToCardinal(degrees: Float): String {
+        val normalized = ((degrees % 360) + 360) % 360
+        return when {
+            normalized < 22.5f -> "N"
+            normalized < 67.5f -> "NE"
+            normalized < 112.5f -> "E"
+            normalized < 157.5f -> "SE"
+            normalized < 202.5f -> "S"
+            normalized < 247.5f -> "SW"
+            normalized < 292.5f -> "W"
+            normalized < 337.5f -> "NW"
+            else -> "N"
+        }
     }
 
     /**
