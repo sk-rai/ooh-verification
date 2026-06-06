@@ -28,6 +28,9 @@ from app.core.error_codes import ErrorCode
 from app.core.sms import sms_service
 from app.services.geocoding_service import get_geocoding_service, GeocodingError
 
+from app.models.vendor_client_association import VendorClientAssociation, AssociationStatus
+from app.models.location_profile import LocationProfile
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/bulk", tags=["bulk-operations"])
 
@@ -786,3 +789,285 @@ async def download_assignment_template():
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=assignment_template.csv"}
     )
+
+@router.post("/campaign-setup", response_model=BulkOperationResponse)
+async def bulk_campaign_setup(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_client: Client = Depends(get_current_active_client)
+):
+    """
+    Unified bulk campaign setup from a single CSV.
+
+    CSV Format:
+    campaign_name,campaign_type,start_date,end_date,location_address,vendor_name,vendor_phone,vendor_email
+
+    This endpoint:
+    1. Creates campaigns (deduped by name within the CSV)
+    2. Creates vendors if they don't exist (matched by phone_number)
+    3. Creates VendorClientAssociation if missing
+    4. Assigns vendors to campaigns (skips duplicates)
+    5. Geocodes location_address -> creates LocationProfile for the campaign
+    """
+    csv_processor = CSVProcessor()
+
+    # Validate file
+    is_valid, error = csv_processor.validate_file_type(file)
+    if not is_valid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+
+    required_cols = ['campaign_name', 'campaign_type', 'start_date', 'end_date', 'vendor_name', 'vendor_phone']
+    optional_cols = ['location_address', 'vendor_email']
+
+    is_valid, error, rows = await csv_processor.validate_csv_structure(
+        file, required_columns=required_cols, optional_columns=optional_cols
+    )
+    if not is_valid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+
+    if len(rows) > 10000:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Max 10000 rows per upload")
+
+    results = []
+    successful = 0
+    failed = 0
+
+    # Track created entities to avoid re-creating within the same upload
+    campaigns_cache = {}  # campaign_name -> Campaign object
+    vendors_cache = {}    # phone_number -> Vendor object
+    assignments_set = set()  # (campaign_id, vendor_id) pairs
+    locations_set = set()    # (campaign_id, address) pairs to avoid duplicate locations
+
+    # Pre-fetch existing vendors by phone for this client
+    from app.models.vendor_client_association import VendorClientAssociation, AssociationStatus
+    existing_vendors_result = await db.execute(select(Vendor))
+    for v in existing_vendors_result.scalars().all():
+        vendors_cache[v.phone_number] = v
+
+    # Pre-fetch existing campaigns for this client
+    existing_campaigns_result = await db.execute(
+        select(Campaign).where(Campaign.client_id == current_client.client_id)
+    )
+    for c in existing_campaigns_result.scalars().all():
+        campaigns_cache[c.name] = c
+
+    # Pre-fetch existing assignments
+    existing_assignments_result = await db.execute(
+        select(CampaignVendorAssignment).where(
+            CampaignVendorAssignment.campaign_id.in_([c.campaign_id for c in campaigns_cache.values()])
+        )
+    )
+    for a in existing_assignments_result.scalars().all():
+        assignments_set.add((a.campaign_id, a.vendor_id))
+
+    geocoding_service = get_geocoding_service()
+
+    for row in rows:
+        row_num = row['row_number']
+        data = row['data']
+
+        try:
+            # --- Validate required fields ---
+            campaign_name = (data.get('campaign_name') or '').strip()
+            campaign_type_str = (data.get('campaign_type') or '').strip().lower()
+            start_date_str = (data.get('start_date') or '').strip()
+            end_date_str = (data.get('end_date') or '').strip()
+            vendor_name = (data.get('vendor_name') or '').strip()
+            vendor_phone = (data.get('vendor_phone') or '').strip()
+            vendor_email = (data.get('vendor_email') or '').strip() or None
+            location_address = (data.get('location_address') or '').strip() or None
+
+            if not campaign_name:
+                results.append(csv_processor.create_error_row(row_num, "campaign_name is required"))
+                failed += 1
+                continue
+            if not campaign_type_str:
+                results.append(csv_processor.create_error_row(row_num, "campaign_type is required"))
+                failed += 1
+                continue
+            if not vendor_name:
+                results.append(csv_processor.create_error_row(row_num, "vendor_name is required"))
+                failed += 1
+                continue
+            if not vendor_phone:
+                results.append(csv_processor.create_error_row(row_num, "vendor_phone is required"))
+                failed += 1
+                continue
+
+            # Validate campaign type
+            try:
+                campaign_type = CampaignType(campaign_type_str)
+            except ValueError:
+                valid_types = [t.value for t in CampaignType]
+                results.append(csv_processor.create_error_row(row_num, f"Invalid campaign_type. Must be: {', '.join(valid_types)}"))
+                failed += 1
+                continue
+
+            # Validate dates
+            is_valid_d, err_d, start_date = csv_processor.validate_date_format(start_date_str)
+            if not is_valid_d:
+                results.append(csv_processor.create_error_row(row_num, f"start_date: {err_d}"))
+                failed += 1
+                continue
+            is_valid_d, err_d, end_date = csv_processor.validate_date_format(end_date_str)
+            if not is_valid_d:
+                results.append(csv_processor.create_error_row(row_num, f"end_date: {err_d}"))
+                failed += 1
+                continue
+
+            # Validate phone
+            if not vendor_phone.startswith('+') or not vendor_phone[1:].isdigit() or len(vendor_phone) < 8:
+                results.append(csv_processor.create_error_row(row_num, f"vendor_phone must be E.164 format (+XXXXXXXXXXX)"))
+                failed += 1
+                continue
+
+            # --- 1. Get or Create Campaign ---
+            campaign = campaigns_cache.get(campaign_name)
+            if not campaign:
+                campaign_code = generate_campaign_code()
+                campaign = Campaign(
+                    campaign_code=campaign_code,
+                    tenant_id=current_client.tenant_id,
+                    name=campaign_name,
+                    campaign_type=campaign_type,
+                    client_id=current_client.client_id,
+                    start_date=start_date,
+                    end_date=end_date,
+                    status=CampaignStatus.ACTIVE
+                )
+                db.add(campaign)
+                await db.flush()
+                await db.refresh(campaign)
+                campaigns_cache[campaign_name] = campaign
+
+            # --- 2. Get or Create Vendor ---
+            vendor = vendors_cache.get(vendor_phone)
+            if not vendor:
+                vendor_id = generate_vendor_id()
+                vendor = Vendor(
+                    vendor_id=vendor_id,
+                    tenant_id=current_client.tenant_id,
+                    name=vendor_name,
+                    phone_number=vendor_phone,
+                    email=vendor_email,
+                    created_by_client_id=current_client.client_id,
+                    status=VendorStatus.ACTIVE
+                )
+                db.add(vendor)
+                await db.flush()
+                await db.refresh(vendor)
+                vendors_cache[vendor_phone] = vendor
+
+                # Create VendorClientAssociation
+                from uuid import uuid4
+                assoc = VendorClientAssociation(
+                    association_id=uuid4(),
+                    vendor_id=vendor.vendor_id,
+                    client_id=current_client.client_id,
+                    tenant_id=current_client.tenant_id,
+                    status=AssociationStatus.ACTIVE
+                )
+                db.add(assoc)
+            else:
+                # Check if association exists for this client
+                assoc_result = await db.execute(
+                    select(VendorClientAssociation).where(
+                        VendorClientAssociation.vendor_id == vendor.vendor_id,
+                        VendorClientAssociation.client_id == current_client.client_id
+                    )
+                )
+                if not assoc_result.scalar_one_or_none():
+                    from uuid import uuid4
+                    assoc = VendorClientAssociation(
+                        association_id=uuid4(),
+                        vendor_id=vendor.vendor_id,
+                        client_id=current_client.client_id,
+                        tenant_id=current_client.tenant_id,
+                        status=AssociationStatus.ACTIVE
+                    )
+                    db.add(assoc)
+
+            # --- 3. Assign Vendor to Campaign ---
+            pair = (campaign.campaign_id, vendor.vendor_id)
+            if pair not in assignments_set:
+                assignment = CampaignVendorAssignment(
+                    campaign_id=campaign.campaign_id,
+                    vendor_id=vendor.vendor_id
+                )
+                db.add(assignment)
+                assignments_set.add(pair)
+
+            # --- 4. Create LocationProfile (if address provided and not already added) ---
+            if location_address:
+                loc_key = (campaign.campaign_id, location_address.lower())
+                if loc_key not in locations_set:
+                    lat, lon, resolved = None, None, None
+                    try:
+                        geo_result = await geocoding_service.geocode_address(location_address)
+                        if geo_result:
+                            lat = geo_result.latitude
+                            lon = geo_result.longitude
+                            resolved = geo_result.formatted_address
+                    except Exception as e:
+                        logger.warning(f"Row {row_num}: Geocoding failed for '{location_address}': {e}")
+
+                    if lat and lon:
+                        from app.models.location_profile import LocationProfile
+                        loc_profile = LocationProfile(
+                            campaign_id=campaign.campaign_id,
+                            expected_latitude=lat,
+                            expected_longitude=lon,
+                            tolerance_meters=1000.0,
+                            resolved_address=resolved
+                        )
+                        db.add(loc_profile)
+                        locations_set.add(loc_key)
+
+            results.append(csv_processor.create_success_row(row_num, {
+                "campaign": campaign_name,
+                "campaign_code": campaign.campaign_code,
+                "vendor_id": vendor.vendor_id,
+                "vendor_name": vendor.name,
+                "vendor_phone": vendor.phone_number,
+                "location": location_address or "N/A"
+            }))
+            successful += 1
+
+        except Exception as e:
+            logger.error(f"Row {row_num} error: {e}")
+            results.append(csv_processor.create_error_row(row_num, f"Unexpected error: {str(e)}"))
+            failed += 1
+
+    # Commit
+    if successful > 0:
+        try:
+            await db.commit()
+        except IntegrityError as e:
+            await db.rollback()
+            logger.error(f"Integrity error in campaign-setup: {e}")
+            return BulkOperationResponse(
+                total_rows=len(rows), successful=0, failed=len(rows),
+                results=[], errors=[f"Database constraint error: {str(e)[:200]}"]
+            )
+
+    return BulkOperationResponse(
+        total_rows=len(rows), successful=successful, failed=failed,
+        results=results, errors=[]
+    )
+
+
+@router.get("/campaign-setup/template")
+async def download_campaign_setup_template():
+    """Download CSV template for unified campaign setup."""
+    template = "campaign_name,campaign_type,start_date,end_date,location_address,vendor_name,vendor_phone,vendor_email\n"
+    template += '"Billboard NYC Q3","ooh","2026-07-01","2026-09-30","Times Square, NYC","Arun Kumar","+919876543210","arun@email.com"\n'
+    template += '"Billboard NYC Q3","ooh","2026-07-01","2026-09-30","Times Square, NYC","Priya Singh","+919876543211",""\n'
+    template += '"Store Check June","ooh","2026-06-15","2026-06-30","MG Road, Bangalore","Arun Kumar","+919876543210",""\n'
+
+    from fastapi.responses import Response
+    return Response(
+        content=template,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=campaign_setup_template.csv"}
+    )
+
