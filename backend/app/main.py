@@ -188,6 +188,51 @@ async def shutdown_event():
     await close_db()
 
 
+
+# App version check endpoint (no auth required)
+@app.get("/api/app/version-check")
+async def app_version_check(platform: str = "android", current_version: int = 1):
+    """
+    Check if an app update is available.
+    
+    Returns update info for the mobile app to decide whether to prompt user.
+    No authentication required — called before login.
+    """
+    # Version config — update these when releasing new versions
+    LATEST_VERSIONS = {
+        "android": {
+            "version_code": 6,
+            "version_name": "1.2.0",
+            "min_supported_version": 5,  # Force update below this
+            "update_url": "https://play.google.com/store/apps/details?id=com.lynksavvy.trustcapture",
+            "message": "New features: compass heading, improved sensor accuracy"
+        },
+        "ios": {
+            "version_code": 1,
+            "version_name": "1.0.0",
+            "min_supported_version": 1,
+            "update_url": "",
+            "message": ""
+        }
+    }
+
+    platform_config = LATEST_VERSIONS.get(platform.lower(), LATEST_VERSIONS["android"])
+    latest = platform_config["version_code"]
+    min_supported = platform_config["min_supported_version"]
+
+    update_available = current_version < latest
+    force_update = current_version < min_supported
+
+    return {
+        "update_available": update_available,
+        "force_update": force_update,
+        "latest_version": latest,
+        "latest_version_name": platform_config["version_name"],
+        "update_url": platform_config["update_url"],
+        "message": platform_config["message"] if update_available else ""
+    }
+
+
 # Health check endpoint
 @app.get("/health")
 async def health_check():
