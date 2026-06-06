@@ -15,4 +15,10 @@ interface CampaignApi {
     suspend fun getCampaignById(
         @Path("campaign_id") campaignId: String
     ): Response<CampaignResponse>
+
+    @GET("api/app/version-check")
+    suspend fun checkAppVersion(
+        @retrofit2.http.Query("platform") platform: String = "android",
+        @retrofit2.http.Query("current_version") currentVersion: Int
+    ): Response<com.trustcapture.vendor.data.remote.dto.AppVersionResponse>
 }
