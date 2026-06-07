@@ -20,6 +20,8 @@ class TrustCaptureApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        // Initialize SQLCipher native library (required for sqlcipher-android)
+        System.loadLibrary("sqlcipher")
         // Schedule periodic background upload sync (every 15 min when network available)
         UploadScheduler.schedulePeriodicSync(this)
     }

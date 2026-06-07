@@ -41,7 +41,9 @@
 -dontwarn dagger.hilt.**
 
 # ── SQLCipher ──
+-keep class net.zetetic.** { *; }
 -keep class net.sqlcipher.** { *; }
+-dontwarn net.zetetic.**
 -dontwarn net.sqlcipher.**
 
 # ── CameraX ──
