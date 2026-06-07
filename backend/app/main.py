@@ -201,8 +201,8 @@ async def app_version_check(platform: str = "android", current_version: int = 1)
     # Version config — update these when releasing new versions
     LATEST_VERSIONS = {
         "android": {
-            "version_code": 8,
-            "version_name": "1.2.2",
+            "version_code": 9,
+            "version_name": "1.2.3",
             "min_supported_version": 5,  # Force update below this
             "update_url": "https://play.google.com/store/apps/details?id=com.lynksavvy.trustcapture",
             "message": "New features: compass heading, improved sensor accuracy"
