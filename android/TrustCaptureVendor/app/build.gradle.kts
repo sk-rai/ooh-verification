@@ -16,8 +16,8 @@ android {
         applicationId = "com.lynksavvy.trustcapture"
         minSdk = 24
         targetSdk = 35
-        versionCode = 6
-        versionName = "1.2.0"
+        versionCode = 7
+        versionName = "1.2.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "BASE_URL", "\"https://ooh-verification.onrender.com/\"")
@@ -74,7 +74,7 @@ android {
 
     packaging {
         jniLibs {
-            useLegacyPackaging = false
+            useLegacyPackaging = true
         }
     }
 }
