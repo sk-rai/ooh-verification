@@ -11,7 +11,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import net.sqlcipher.database.SupportFactory
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import javax.inject.Singleton
 
 @Module
@@ -32,8 +32,8 @@ object DatabaseModule {
             java.io.File(legacyDb.path + "-shm").delete()
         }
 
-        val passphrase = net.sqlcipher.database.SQLiteDatabase.getBytes("trustcapture_db_key".toCharArray())
-        val factory = SupportFactory(passphrase)
+        val passphrase = "trustcapture_db_key".toByteArray()
+        val factory = SupportOpenHelperFactory(passphrase)
 
         return Room.databaseBuilder(
             context,

@@ -21,7 +21,7 @@ playServicesLocation = "21.3.0"
 navigationCompose = "2.8.5"
 ksp = "2.0.21-1.0.28"
 coroutines = "1.9.0"
-sqlcipher = "4.5.4"
+sqlcipher = "4.6.1"
 workmanager = "2.9.1"
 hiltWork = "1.2.0"
 
@@ -86,7 +86,7 @@ play-services-location = { group = "com.google.android.gms", name = "play-servic
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 
 # SQLCipher
-sqlcipher-android = { group = "net.zetetic", name = "android-database-sqlcipher", version.ref = "sqlcipher" }
+sqlcipher-android = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipher" }
 sqlite-ktx = { group = "androidx.sqlite", name = "sqlite-ktx", version = "2.4.0" }
 
 # Testing
