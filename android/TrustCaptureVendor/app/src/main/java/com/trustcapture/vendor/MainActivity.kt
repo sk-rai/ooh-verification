@@ -55,12 +55,16 @@ class MainActivity : ComponentActivity() {
                         isLoggedIn -> Routes.CAMPAIGNS
                         else -> Routes.LOGIN
                     }
+                }
 
-                    // Check for app updates (non-blocking)
-                    val versionCheck = updateChecker.check()
-                    if (versionCheck != null && versionCheck.updateAvailable) {
-                        updateInfo = versionCheck
-                        showUpdateDialog = true
+                // Check for app updates separately (non-blocking, won't affect navigation)
+                LaunchedEffect(startDestination) {
+                    if (startDestination != null) {
+                        val versionCheck = updateChecker.check()
+                        if (versionCheck != null && versionCheck.updateAvailable) {
+                            updateInfo = versionCheck
+                            showUpdateDialog = true
+                        }
                     }
                 }
 
@@ -95,20 +99,12 @@ class MainActivity : ComponentActivity() {
 
                 val navController = rememberNavController()
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    if (startDestination != null && !(updateInfo?.forceUpdate == true && showUpdateDialog)) {
+                    if (startDestination != null) {
                         TrustCaptureNavGraph(
                             navController = navController,
                             modifier = Modifier.padding(innerPadding),
                             startDestination = startDestination!!
                         )
-                    } else if (updateInfo?.forceUpdate == true && showUpdateDialog) {
-                        // Block app access for force updates
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("Please update to continue")
-                        }
                     } else {
                         Box(
                             modifier = Modifier.fillMaxSize(),
