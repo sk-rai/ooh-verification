@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
                     val isLoggedIn = userPreferences.isLoggedIn.first()
                     startDestination = when {
                         !hasConsent -> Routes.PRIVACY_CONSENT
-                        isLoggedIn -> Routes.CAMPAIGNS
+                        isLoggedIn -> Routes.HOME
                         else -> Routes.LOGIN
                     }
                 }

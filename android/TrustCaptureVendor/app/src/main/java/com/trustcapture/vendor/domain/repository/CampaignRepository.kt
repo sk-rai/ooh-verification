@@ -7,6 +7,7 @@ import com.trustcapture.vendor.data.remote.api.CampaignApi
 import com.trustcapture.vendor.util.Resource
 import com.trustcapture.vendor.util.safeApiCall
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -15,6 +16,9 @@ class CampaignRepository @Inject constructor(
     private val campaignApi: CampaignApi,
     private val campaignDao: CampaignDao
 ) {
+    private val _hasCampaigns = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val hasCampaigns: kotlinx.coroutines.flow.StateFlow<Boolean> = _hasCampaigns.asStateFlow()
+
     fun getCachedCampaigns(): Flow<List<CampaignEntity>> = campaignDao.getAllCampaigns()
 
     fun getLocationsForCampaign(campaignId: String): Flow<List<CampaignLocationEntity>> =
@@ -39,6 +43,7 @@ class CampaignRepository @Inject constructor(
                 campaignDao.deleteAll()
                 campaignDao.deleteAllLocations()
                 campaignDao.insertAll(entities)
+                _hasCampaigns.value = result.data.hasCampaigns
 
                 // Store locations for each campaign
                 for (dto in result.data.campaigns) {

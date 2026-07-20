@@ -50,6 +50,8 @@ class CampaignsViewModel @Inject constructor(
         .getPendingCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    val hasCampaigns: StateFlow<Boolean> = campaignRepository.hasCampaigns
+
     init {
         refresh()
         // Try to upload any pending photos when campaigns screen loads

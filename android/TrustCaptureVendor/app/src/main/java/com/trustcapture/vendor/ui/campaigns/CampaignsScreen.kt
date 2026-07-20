@@ -32,6 +32,7 @@ import com.trustcapture.vendor.domain.model.CampaignTypeConfig
 @Composable
 fun CampaignsScreen(
     onCampaignSelected: (campaignId: String, campaignCode: String, campaignType: String) -> Unit,
+    onQuickCapture: () -> Unit = {},
     onLoggedOut: () -> Unit,
     onSettings: () -> Unit = {},
     viewModel: CampaignsViewModel = hiltViewModel()
@@ -39,6 +40,7 @@ fun CampaignsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val campaigns by viewModel.campaigns.collectAsState()
     val pendingUploads by viewModel.pendingUploadCount.collectAsState()
+    val hasCampaigns by viewModel.hasCampaigns.collectAsState()
 
     Scaffold(
         topBar = {
