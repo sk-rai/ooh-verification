@@ -1,6 +1,7 @@
 package com.trustcapture.vendor.ui.camera
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -12,6 +13,13 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.FileOutputOptions
+import androidx.camera.video.Quality
+import androidx.camera.video.QualitySelector
+import androidx.camera.video.Recorder
+import androidx.camera.video.Recording
+import androidx.camera.video.VideoCapture
+import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -244,6 +252,23 @@ private fun CameraPreviewContent(
             .build()
     }
 
+    // Video recording setup
+    val recorder = remember {
+        Recorder.Builder()
+            .setQualitySelector(QualitySelector.from(Quality.HD))
+            .build()
+    }
+    val videoCapture = remember { VideoCapture.withOutput(recorder) }
+    var activeRecording by remember { mutableStateOf<Recording?>(null) }
+
+    // Auto-stop video when ViewModel signals stop (e.g., max duration reached)
+    LaunchedEffect(isRecordingVideo) {
+        if (!isRecordingVideo && activeRecording != null) {
+            activeRecording?.stop()
+            activeRecording = null
+        }
+    }
+
     // GPS gate: allow capture when accuracy ≤ 50m, or after 30s timeout
     // WiFi scan runs in background — not a gate (may be unavailable outdoors)
     val gpsReady = gpsAccuracy != null && gpsAccuracy <= 50f
@@ -271,7 +296,7 @@ private fun CameraPreviewContent(
                         try {
                             cameraProvider.unbindAll()
                             cameraProvider.bindToLifecycle(
-                                lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageCapture
+                                lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageCapture, videoCapture
                             )
                         } catch (_: Exception) { }
                     }, ContextCompat.getMainExecutor(ctx))
@@ -406,8 +431,33 @@ private fun CameraPreviewContent(
                         // Video record button (red circle)
                         IconButton(
                             onClick = {
-                                if (isRecordingVideo) onVideoRecordingStopped(null)
-                                else onVideoRecordingStarted()
+                                if (isRecordingVideo) {
+                                    // Stop recording
+                                    activeRecording?.stop()
+                                    activeRecording = null
+                                } else {
+                                    // Start recording
+                                    val videoFile = java.io.File(
+                                        context.cacheDir,
+                                        "VID_${java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())}.mp4"
+                                    )
+                                    val outputOptions = androidx.camera.video.FileOutputOptions.Builder(videoFile).build()
+                                    activeRecording = videoCapture.output
+                                        .prepareRecording(context, outputOptions)
+                                        .start(ContextCompat.getMainExecutor(context)) { event ->
+                                            when (event) {
+                                                is VideoRecordEvent.Finalize -> {
+                                                    if (event.hasError()) {
+                                                        onVideoRecordingStopped(null)
+                                                    } else {
+                                                        onVideoRecordingStopped(event.outputResults.outputUri)
+                                                    }
+                                                    activeRecording = null
+                                                }
+                                            }
+                                        }
+                                    onVideoRecordingStarted()
+                                }
                             },
                             enabled = captureEnabled || isRecordingVideo,
                             modifier = Modifier.size(72.dp),

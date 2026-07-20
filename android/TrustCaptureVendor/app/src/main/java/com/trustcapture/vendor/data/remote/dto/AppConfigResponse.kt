@@ -62,8 +62,10 @@ data class BrandingConfig(
 
 data class VersionConfig(
     @SerializedName("latest_version_code") val latestVersionCode: Int = 10,
+    @SerializedName("latest_version_name") val latestVersionName: String = "1.2.4",
     @SerializedName("min_supported_version") val minSupportedVersion: Int = 8,
-    @SerializedName("update_url") val updateUrl: String = "https://play.google.com/store/apps/details?id=com.lynksavvy.trustcapture"
+    @SerializedName("update_url") val updateUrl: String = "https://play.google.com/store/apps/details?id=com.lynksavvy.trustcapture",
+    @SerializedName("message") val message: String? = null
 )
 
 /**

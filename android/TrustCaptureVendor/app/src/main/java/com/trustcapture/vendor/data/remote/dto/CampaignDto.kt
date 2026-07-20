@@ -4,7 +4,8 @@ import com.google.gson.annotations.SerializedName
 
 data class CampaignListResponse(
     @SerializedName("campaigns") val campaigns: List<CampaignResponse>,
-    @SerializedName("total") val total: Int
+    @SerializedName("total") val total: Int,
+    @SerializedName("has_campaigns") val hasCampaigns: Boolean = false
 )
 
 data class CampaignResponse(
