@@ -69,4 +69,4 @@ async def get_my_campaigns(
                 "location_count": len(locations),
             })
 
-    return {"campaigns": campaigns, "total": len(campaigns)}
+    return {"campaigns": campaigns, "total": len(campaigns), "has_campaigns": len(campaigns) > 0}
