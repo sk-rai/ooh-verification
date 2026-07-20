@@ -21,4 +21,7 @@ interface CampaignApi {
         @retrofit2.http.Query("platform") platform: String = "android",
         @retrofit2.http.Query("current_version") currentVersion: Int
     ): Response<com.trustcapture.vendor.data.remote.dto.AppVersionResponse>
+
+    @GET("api/app/config")
+    suspend fun getAppConfig(): Response<com.trustcapture.vendor.data.remote.dto.AppConfigResponse>
 }

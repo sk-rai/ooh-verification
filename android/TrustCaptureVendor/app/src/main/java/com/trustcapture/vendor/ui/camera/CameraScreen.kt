@@ -200,6 +200,7 @@ fun CameraScreen(
                 onAddSafetyTag = viewModel::addSafetyTag,
                 onRemoveSafetyTag = viewModel::removeSafetyTag,
                 onRoomLabelChanged = viewModel::setRoomLabel,
+                onTextNoteChanged = viewModel::setTextNote,
                 onCaptureAnother = viewModel::captureAnother
             )
         }
@@ -415,6 +416,7 @@ private fun PhotoReviewContent(
     onAddSafetyTag: (String) -> Unit = {},
     onRemoveSafetyTag: (String) -> Unit = {},
     onRoomLabelChanged: (String) -> Unit = {},
+    onTextNoteChanged: (String) -> Unit = {},
     onCaptureAnother: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -552,6 +554,25 @@ private fun PhotoReviewContent(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }
+
+            // Text notes (always available)
+            OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("Notes (optional)", style = MaterialTheme.typography.labelMedium)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = uiState.textNote,
+                        onValueChange = onTextNoteChanged,
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Add observations, comments, or details...") },
+                        minLines = 2,
+                        maxLines = 4,
+                        textStyle = MaterialTheme.typography.bodySmall,
+                        supportingText = { Text("${uiState.textNote.length}/500") }
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Upload success message
             if (uiState.uploadSuccess) {

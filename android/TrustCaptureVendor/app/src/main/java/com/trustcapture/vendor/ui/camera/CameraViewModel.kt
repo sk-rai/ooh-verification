@@ -96,6 +96,7 @@ data class CameraUiState(
     // Campaign-type-specific fields
     val safetyTags: List<String> = emptyList(),
     val roomLabel: String = "",
+    val textNote: String = "",
     val photoSequenceNumber: Int = 1,
     val hipaaFlagged: Boolean = false
 )
@@ -472,6 +473,10 @@ class CameraViewModel @Inject constructor(
 
     fun setRoomLabel(label: String) {
         _uiState.value = _uiState.value.copy(roomLabel = label)
+    }
+
+    fun setTextNote(note: String) {
+        _uiState.value = _uiState.value.copy(textNote = note.take(500))
     }
 
     /** For insurance multi-photo: increment sequence and reset for next capture */
