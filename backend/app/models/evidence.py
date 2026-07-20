@@ -85,7 +85,7 @@ class Evidence(Base):
 
     # Metadata
     tags = Column(JSONB, nullable=True, default=list)
-    metadata = Column(JSONB, nullable=True, default=dict)  # Flexible: extra device info, etc.
+    extra_metadata = Column("metadata", JSONB, nullable=True, default=dict)  # Flexible: extra device info, etc.
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=__import__("datetime").timezone.utc), nullable=False)
