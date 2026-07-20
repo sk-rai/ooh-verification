@@ -14,7 +14,7 @@ import json
 import logging
 
 from app.core.database import get_db
-from app.core.deps import get_current_vendor_from_token
+from app.core.deps import get_current_active_vendor
 from app.models.vendor import Vendor
 from app.models.campaign import Campaign
 from app.models.evidence import Evidence, GpsTrack, EvidenceType, EvidenceStatus
@@ -40,7 +40,7 @@ async def upload_evidence(
     gps_track: Optional[str] = Form(None),
     capture_timestamp: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
-    current_vendor: Vendor = Depends(get_current_vendor_from_token),
+    current_vendor: Vendor = Depends(get_current_active_vendor),
 ):
     """
     Upload evidence (photo, video, voice note, or text note).
