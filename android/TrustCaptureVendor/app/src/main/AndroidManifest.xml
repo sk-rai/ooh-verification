@@ -21,6 +21,9 @@
     <!-- Cell tower scanning -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
+    <!-- Audio recording (voice notes) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <application
         android:name=".TrustCaptureApp"
         android:allowBackup="true"

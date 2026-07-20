@@ -201,6 +201,9 @@ fun CameraScreen(
                 onRemoveSafetyTag = viewModel::removeSafetyTag,
                 onRoomLabelChanged = viewModel::setRoomLabel,
                 onTextNoteChanged = viewModel::setTextNote,
+                onStartVoiceRecording = viewModel::startVoiceRecording,
+                onStopVoiceRecording = viewModel::stopVoiceRecording,
+                onDeleteVoiceNote = viewModel::deleteVoiceNote,
                 onCaptureAnother = viewModel::captureAnother
             )
         }
@@ -417,6 +420,9 @@ private fun PhotoReviewContent(
     onRemoveSafetyTag: (String) -> Unit = {},
     onRoomLabelChanged: (String) -> Unit = {},
     onTextNoteChanged: (String) -> Unit = {},
+    onStartVoiceRecording: () -> Unit = {},
+    onStopVoiceRecording: () -> Unit = {},
+    onDeleteVoiceNote: () -> Unit = {},
     onCaptureAnother: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -570,6 +576,41 @@ private fun PhotoReviewContent(
                         textStyle = MaterialTheme.typography.bodySmall,
                         supportingText = { Text("${uiState.textNote.length}/500") }
                     )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Voice note recording
+            OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("Voice Note (optional)", style = MaterialTheme.typography.labelMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (uiState.voiceNotePath != null && !uiState.isRecordingVoice) {
+                        // Voice note recorded — show status
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Default.Mic, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Voice note recorded (${uiState.voiceRecordingSeconds}s)", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                            IconButton(onClick = onDeleteVoiceNote) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete voice note", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    } else if (uiState.isRecordingVoice) {
+                        // Currently recording
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Default.FiberManualRecord, contentDescription = null, tint = Color.Red, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Recording... ${uiState.voiceRecordingSeconds}s", style = MaterialTheme.typography.bodySmall, color = Color.Red, modifier = Modifier.weight(1f))
+                            FilledTonalButton(onClick = onStopVoiceRecording) { Text("Stop") }
+                        }
+                    } else {
+                        // No voice note — show record button
+                        FilledTonalButton(onClick = onStartVoiceRecording, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Default.Mic, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Record Voice Note")
+                        }
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
