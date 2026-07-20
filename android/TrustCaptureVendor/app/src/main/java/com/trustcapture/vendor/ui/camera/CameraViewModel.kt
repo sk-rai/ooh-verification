@@ -100,6 +100,13 @@ data class CameraUiState(
     val voiceNotePath: String? = null,
     val isRecordingVoice: Boolean = false,
     val voiceRecordingSeconds: Int = 0,
+    // Video recording
+    val isVideoMode: Boolean = false,
+    val isRecordingVideo: Boolean = false,
+    val videoRecordingSeconds: Int = 0,
+    val maxVideoDurationSeconds: Int = 60,
+    val videoFilePath: String? = null,
+    val gpsTrackJson: String? = null,
     val photoSequenceNumber: Int = 1,
     val hipaaFlagged: Boolean = false
 )
@@ -520,6 +527,51 @@ class CameraViewModel @Inject constructor(
     fun deleteVoiceNote() {
         _uiState.value.voiceNotePath?.let { java.io.File(it).delete() }
         _uiState.value = _uiState.value.copy(voiceNotePath = null, voiceRecordingSeconds = 0)
+    }
+
+    // --- Video Mode ---
+
+    fun toggleVideoMode() {
+        _uiState.value = _uiState.value.copy(isVideoMode = !_uiState.value.isVideoMode)
+    }
+
+    private val gpsTrackRecorder = com.trustcapture.vendor.util.GpsTrackRecorder()
+    private var videoTimerJob: kotlinx.coroutines.Job? = null
+
+    fun onVideoRecordingStarted() {
+        gpsTrackRecorder.start()
+        _uiState.value = _uiState.value.copy(isRecordingVideo = true, videoRecordingSeconds = 0)
+        // Start timer and GPS track collection
+        videoTimerJob = viewModelScope.launch {
+            while (_uiState.value.isRecordingVideo) {
+                kotlinx.coroutines.delay(1000)
+                val seconds = gpsTrackRecorder.durationSeconds.toInt()
+                _uiState.value = _uiState.value.copy(videoRecordingSeconds = seconds)
+                // Record GPS point every second
+                val lat = _uiState.value.latitude
+                val lon = _uiState.value.longitude
+                val acc = _uiState.value.accuracy
+                if (lat != null && lon != null && acc != null) {
+                    gpsTrackRecorder.addPoint(lat, lon, acc)
+                }
+                // Auto-stop at max duration
+                if (seconds >= _uiState.value.maxVideoDurationSeconds) {
+                    onVideoRecordingStopped(null) // Signal UI to stop recording
+                    break
+                }
+            }
+        }
+    }
+
+    fun onVideoRecordingStopped(videoUri: android.net.Uri?) {
+        videoTimerJob?.cancel()
+        val trackJson = gpsTrackRecorder.stop()
+        _uiState.value = _uiState.value.copy(
+            isRecordingVideo = false,
+            videoFilePath = videoUri?.toString(),
+            gpsTrackJson = trackJson,
+            screenState = if (videoUri != null) CameraScreenState.CAPTURED else CameraScreenState.PREVIEW
+        )
     }
 
     /** For insurance multi-photo: increment sequence and reset for next capture */

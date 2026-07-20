@@ -164,7 +164,13 @@ fun CameraScreen(
                     cellTowerCount = uiState.cellTowerCount,
                     isEmulator = uiState.isEmulator,
                     isRooted = uiState.isRooted,
+                    isVideoMode = uiState.isVideoMode,
+                    isRecordingVideo = uiState.isRecordingVideo,
+                    videoRecordingSeconds = uiState.videoRecordingSeconds,
                     onPhotoCaptured = { uri -> viewModel.onPhotoCaptured(uri) },
+                    onToggleVideoMode = viewModel::toggleVideoMode,
+                    onVideoRecordingStarted = viewModel::onVideoRecordingStarted,
+                    onVideoRecordingStopped = { uri -> viewModel.onVideoRecordingStopped(uri) },
                     onBack = onBack
                 )
             } else {
@@ -221,7 +227,13 @@ private fun CameraPreviewContent(
     cellTowerCount: Int,
     isEmulator: Boolean,
     isRooted: Boolean,
+    isVideoMode: Boolean = false,
+    isRecordingVideo: Boolean = false,
+    videoRecordingSeconds: Int = 0,
     onPhotoCaptured: (Uri) -> Unit,
+    onToggleVideoMode: () -> Unit = {},
+    onVideoRecordingStarted: () -> Unit = {},
+    onVideoRecordingStopped: (Uri?) -> Unit = {},
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -342,45 +354,97 @@ private fun CameraPreviewContent(
             }
         }
 
-        // Capture button
-        Box(modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(bottom = 48.dp), contentAlignment = Alignment.Center) {
+        // Photo/Video toggle + Capture/Record button
+        Box(modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(bottom = 32.dp), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                if (!captureEnabled) {
-                    Surface(
-                        color = Color.Black.copy(alpha = 0.7f),
-                        shape = MaterialTheme.shapes.small
-                    ) {
-                        Text(
-                            text = "Waiting for GPS...",
-                            color = Color.Yellow,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                        )
+                // GPS status messages
+                if (!captureEnabled && !isRecordingVideo) {
+                    Surface(color = Color.Black.copy(alpha = 0.7f), shape = MaterialTheme.shapes.small) {
+                        Text(text = "Waiting for GPS...", color = Color.Yellow, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                } else if (gpsTimedOut && !gpsReady) {
-                    Surface(
-                        color = Color(0xFFFF6D00).copy(alpha = 0.9f),
-                        shape = MaterialTheme.shapes.small
-                    ) {
-                        Text(
-                            text = "⚠ Low GPS accuracy — photo may be flagged",
-                            color = Color.White,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
+                } else if (gpsTimedOut && !gpsReady && !isRecordingVideo) {
+                    Surface(color = Color(0xFFFF6D00).copy(alpha = 0.9f), shape = MaterialTheme.shapes.small) {
+                        Text(text = "\u26a0 Low GPS accuracy \u2014 may be flagged", color = Color.White, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-                IconButton(
-                    onClick = { capturePhoto(context, imageCapture, onPhotoCaptured) },
-                    enabled = captureEnabled,
-                    modifier = Modifier.size(72.dp),
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = if (captureEnabled) Color.White else Color.Gray.copy(alpha = 0.5f),
-                        contentColor = if (captureEnabled) Color.Black else Color.DarkGray
-                    )
-                ) { Icon(Icons.Default.CameraAlt, contentDescription = "Capture Photo", modifier = Modifier.size(36.dp)) }
+
+                // Video recording timer
+                if (isRecordingVideo) {
+                    Surface(color = Color.Red.copy(alpha = 0.85f), shape = MaterialTheme.shapes.small) {
+                        Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.FiberManualRecord, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("REC ${videoRecordingSeconds}s", color = Color.White, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                // Capture/Record button
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    // Photo/Video toggle (left side)
+                    if (!isRecordingVideo) {
+                        IconButton(
+                            onClick = onToggleVideoMode,
+                            modifier = Modifier.size(44.dp),
+                            colors = IconButtonDefaults.iconButtonColors(containerColor = Color.Black.copy(alpha = 0.5f), contentColor = Color.White)
+                        ) {
+                            Icon(
+                                if (isVideoMode) Icons.Default.CameraAlt else Icons.Default.Videocam,
+                                contentDescription = if (isVideoMode) "Switch to Photo" else "Switch to Video",
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.size(44.dp))
+                    }
+
+                    // Main capture/record button (center)
+                    if (isVideoMode) {
+                        // Video record button (red circle)
+                        IconButton(
+                            onClick = {
+                                if (isRecordingVideo) onVideoRecordingStopped(null)
+                                else onVideoRecordingStarted()
+                            },
+                            enabled = captureEnabled || isRecordingVideo,
+                            modifier = Modifier.size(72.dp),
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = if (isRecordingVideo) Color.Red else Color.Red.copy(alpha = 0.8f),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            if (isRecordingVideo) {
+                                Icon(Icons.Default.Stop, contentDescription = "Stop Recording", modifier = Modifier.size(36.dp))
+                            } else {
+                                Icon(Icons.Default.FiberManualRecord, contentDescription = "Start Recording", modifier = Modifier.size(36.dp))
+                            }
+                        }
+                    } else {
+                        // Photo capture button (white circle)
+                        IconButton(
+                            onClick = { capturePhoto(context, imageCapture, onPhotoCaptured) },
+                            enabled = captureEnabled,
+                            modifier = Modifier.size(72.dp),
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = if (captureEnabled) Color.White else Color.Gray.copy(alpha = 0.5f),
+                                contentColor = if (captureEnabled) Color.Black else Color.DarkGray
+                            )
+                        ) { Icon(Icons.Default.CameraAlt, contentDescription = "Capture Photo", modifier = Modifier.size(36.dp)) }
+                    }
+
+                    // Mode label (right side)
+                    Surface(color = Color.Black.copy(alpha = 0.5f), shape = MaterialTheme.shapes.small) {
+                        Text(
+                            text = if (isVideoMode) "VIDEO" else "PHOTO",
+                            color = if (isVideoMode) Color.Red else Color.White,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
             }
         }
     }
