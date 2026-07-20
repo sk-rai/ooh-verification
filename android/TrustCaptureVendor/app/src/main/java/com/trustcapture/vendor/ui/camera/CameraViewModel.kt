@@ -96,6 +96,10 @@ data class CameraUiState(
     // Campaign-type-specific fields
     val safetyTags: List<String> = emptyList(),
     val roomLabel: String = "",
+    val textNote: String = "",
+    val voiceNotePath: String? = null,
+    val isRecordingVoice: Boolean = false,
+    val voiceRecordingSeconds: Int = 0,
     val photoSequenceNumber: Int = 1,
     val hipaaFlagged: Boolean = false
 )
@@ -472,6 +476,50 @@ class CameraViewModel @Inject constructor(
 
     fun setRoomLabel(label: String) {
         _uiState.value = _uiState.value.copy(roomLabel = label)
+    }
+
+    fun setTextNote(note: String) {
+        _uiState.value = _uiState.value.copy(textNote = note.take(500))
+    }
+
+    // --- Voice Note Recording ---
+
+    private var voiceRecorder: com.trustcapture.vendor.util.VoiceRecorder? = null
+    private var voiceTimerJob: kotlinx.coroutines.Job? = null
+
+    fun startVoiceRecording() {
+        if (_uiState.value.isRecordingVoice) return
+        voiceRecorder = com.trustcapture.vendor.util.VoiceRecorder(appContext)
+        if (voiceRecorder?.start() == true) {
+            _uiState.value = _uiState.value.copy(isRecordingVoice = true, voiceRecordingSeconds = 0)
+            // Timer to update elapsed seconds
+            voiceTimerJob = viewModelScope.launch {
+                while (_uiState.value.isRecordingVoice) {
+                    kotlinx.coroutines.delay(1000)
+                    _uiState.value = _uiState.value.copy(
+                        voiceRecordingSeconds = voiceRecorder?.elapsedSeconds ?: 0
+                    )
+                    // Auto-stop at max duration (120s default)
+                    if ((_uiState.value.voiceRecordingSeconds) >= 120) {
+                        stopVoiceRecording()
+                    }
+                }
+            }
+        }
+    }
+
+    fun stopVoiceRecording() {
+        voiceTimerJob?.cancel()
+        val file = voiceRecorder?.stop()
+        _uiState.value = _uiState.value.copy(
+            isRecordingVoice = false,
+            voiceNotePath = file?.absolutePath
+        )
+    }
+
+    fun deleteVoiceNote() {
+        _uiState.value.voiceNotePath?.let { java.io.File(it).delete() }
+        _uiState.value = _uiState.value.copy(voiceNotePath = null, voiceRecordingSeconds = 0)
     }
 
     /** For insurance multi-photo: increment sequence and reset for next capture */

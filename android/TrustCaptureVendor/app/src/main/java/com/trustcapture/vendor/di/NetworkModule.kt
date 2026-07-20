@@ -105,4 +105,9 @@ object NetworkModule {
     @Singleton
     fun providePhotoApi(retrofit: Retrofit): PhotoApi =
         retrofit.create(PhotoApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideEvidenceApi(retrofit: Retrofit): com.trustcapture.vendor.data.remote.api.EvidenceApi =
+        retrofit.create(com.trustcapture.vendor.data.remote.api.EvidenceApi::class.java)
 }
