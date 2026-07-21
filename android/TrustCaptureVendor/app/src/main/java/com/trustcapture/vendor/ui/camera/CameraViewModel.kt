@@ -568,12 +568,29 @@ class CameraViewModel @Inject constructor(
     fun onVideoRecordingStopped(videoUri: android.net.Uri?) {
         videoTimerJob?.cancel()
         val trackJson = gpsTrackRecorder.stop()
-        _uiState.value = _uiState.value.copy(
-            isRecordingVideo = false,
-            videoFilePath = videoUri?.toString(),
-            gpsTrackJson = trackJson,
-            screenState = if (videoUri != null) CameraScreenState.CAPTURED else CameraScreenState.PREVIEW
-        )
+
+        viewModelScope.launch {
+            // Sign the video file if available
+            var signatureJson: String? = null
+            if (videoUri != null) {
+                signatureJson = withContext(Dispatchers.IO) {
+                    photoSigner.signPhoto(
+                        context = appContext,
+                        photoUri = videoUri,
+                        latitude = _uiState.value.latitude,
+                        longitude = _uiState.value.longitude
+                    )
+                }
+            }
+
+            _uiState.value = _uiState.value.copy(
+                isRecordingVideo = false,
+                videoFilePath = videoUri?.toString(),
+                gpsTrackJson = trackJson,
+                signatureJson = signatureJson,
+                screenState = if (videoUri != null) CameraScreenState.CAPTURED else CameraScreenState.PREVIEW
+            )
+        }
     }
 
     /** For insurance multi-photo: increment sequence and reset for next capture */
