@@ -557,11 +557,21 @@ private fun PhotoReviewContent(
             modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp).verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Photo preview
+            // Photo/Video preview
             Card(modifier = Modifier.fillMaxWidth().heightIn(min = 200.dp, max = 300.dp)) {
                 val displayUri = uiState.watermarkedPhotoUri ?: uiState.originalPhotoUri
                 if (displayUri != null) {
                     AsyncImage(model = displayUri, contentDescription = "Captured photo with watermark", modifier = Modifier.fillMaxSize())
+                } else if (uiState.videoFilePath != null) {
+                    // Video captured — show placeholder with video info
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.Videocam, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Video Recorded", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            Text("${uiState.videoRecordingSeconds}s · GPS track: ${if (uiState.gpsTrackJson != null) "✓" else "—"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -725,8 +735,18 @@ private fun PhotoReviewContent(
                         }
                     } else {
                         // No voice note — request audio permission then start
+                        val context2 = LocalContext.current
                         FilledTonalButton(
-                            onClick = { audioPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO) },
+                            onClick = {
+                                val hasPermission = ContextCompat.checkSelfPermission(
+                                    context2, android.Manifest.permission.RECORD_AUDIO
+                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                if (hasPermission) {
+                                    onStartVoiceRecording()
+                                } else {
+                                    audioPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(Icons.Default.Mic, contentDescription = null, modifier = Modifier.size(18.dp))

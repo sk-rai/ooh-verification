@@ -498,7 +498,7 @@ class CameraViewModel @Inject constructor(
         if (_uiState.value.isRecordingVoice) return
         voiceRecorder = com.trustcapture.vendor.util.VoiceRecorder(appContext)
         if (voiceRecorder?.start() == true) {
-            _uiState.value = _uiState.value.copy(isRecordingVoice = true, voiceRecordingSeconds = 0)
+            _uiState.value = _uiState.value.copy(isRecordingVoice = true, voiceRecordingSeconds = 0, error = null)
             // Timer to update elapsed seconds
             voiceTimerJob = viewModelScope.launch {
                 while (_uiState.value.isRecordingVoice) {
@@ -512,6 +512,8 @@ class CameraViewModel @Inject constructor(
                     }
                 }
             }
+        } else {
+            _uiState.value = _uiState.value.copy(error = "Failed to start voice recording. Check microphone permission.")
         }
     }
 
