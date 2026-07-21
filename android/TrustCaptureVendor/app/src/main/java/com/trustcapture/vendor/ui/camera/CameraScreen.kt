@@ -695,6 +695,12 @@ private fun PhotoReviewContent(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Voice note recording
+            val audioPermissionLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { granted ->
+                if (granted) onStartVoiceRecording()
+            }
+
             OutlinedCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text("Voice Note (optional)", style = MaterialTheme.typography.labelMedium)
@@ -718,8 +724,11 @@ private fun PhotoReviewContent(
                             FilledTonalButton(onClick = onStopVoiceRecording) { Text("Stop") }
                         }
                     } else {
-                        // No voice note — show record button
-                        FilledTonalButton(onClick = onStartVoiceRecording, modifier = Modifier.fillMaxWidth()) {
+                        // No voice note — request audio permission then start
+                        FilledTonalButton(
+                            onClick = { audioPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Icon(Icons.Default.Mic, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Record Voice Note")
