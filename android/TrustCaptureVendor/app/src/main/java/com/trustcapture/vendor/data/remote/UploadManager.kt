@@ -42,6 +42,7 @@ data class UploadQueueState(
 @Singleton
 class UploadManager @Inject constructor(
     private val photoApi: PhotoApi,
+    private val evidenceApi: com.trustcapture.vendor.data.remote.api.EvidenceApi,
     private val photoRepository: PhotoRepository,
     private val auditRepository: AuditRepository,
     @ApplicationContext private val context: Context
@@ -187,5 +188,52 @@ class UploadManager @Inject constructor(
         val network = cm.activeNetwork ?: return false
         val caps = cm.getNetworkCapabilities(network) ?: return false
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    /**
+     * Upload evidence (photo/video/voice/text) to the new /api/evidence/upload endpoint.
+     * Returns the response or throws an exception.
+     */
+    suspend fun uploadEvidence(
+        fileBytes: ByteArray?,
+        fileName: String,
+        mimeType: String,
+        evidenceType: String,
+        campaignId: String?,
+        campaignCode: String?,
+        category: String?,
+        textContent: String?,
+        sensorDataJson: String?,
+        signatureJson: String?,
+        gpsTrackJson: String?,
+        captureTimestamp: String?,
+        voiceNoteBytes: ByteArray? = null,
+        voiceNoteFileName: String? = null
+    ): com.trustcapture.vendor.data.remote.dto.EvidenceUploadResponse {
+        val filePart = if (fileBytes != null) {
+            val body = fileBytes.toRequestBody(mimeType.toMediaType())
+            MultipartBody.Part.createFormData("file", fileName, body)
+        } else null
+
+        val response = evidenceApi.uploadEvidence(
+            file = filePart,
+            evidenceType = evidenceType.toRequestBody("text/plain".toMediaType()),
+            campaignId = campaignId?.toRequestBody("text/plain".toMediaType()),
+            campaignCode = campaignCode?.toRequestBody("text/plain".toMediaType()),
+            category = category?.toRequestBody("text/plain".toMediaType()),
+            textContent = textContent?.toRequestBody("text/plain".toMediaType()),
+            sensorData = sensorDataJson?.toRequestBody("text/plain".toMediaType()),
+            signature = signatureJson?.toRequestBody("text/plain".toMediaType()),
+            gpsTrack = gpsTrackJson?.toRequestBody("text/plain".toMediaType()),
+            captureTimestamp = captureTimestamp?.toRequestBody("text/plain".toMediaType()),
+            notes = null
+        )
+
+        if (response.isSuccessful && response.body() != null) {
+            return response.body()!!
+        } else {
+            val errorMsg = response.errorBody()?.string() ?: "Evidence upload failed (${response.code()})"
+            throw Exception(errorMsg)
+        }
     }
 }
