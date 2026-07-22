@@ -793,8 +793,14 @@ private fun PhotoReviewContent(
                     Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Photo uploaded successfully", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        Text("Campaign: ${uiState.campaignCode}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val uploadTypeLabel = if (uiState.videoFilePath != null) "Video" else "Photo"
+                        Text("$uploadTypeLabel uploaded successfully!", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        if (uiState.campaignCode.isNotBlank()) {
+                            Text("Campaign: ${uiState.campaignCode}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (uiState.voiceNotePath != null) {
+                            Text("Voice note attached ✓", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -825,7 +831,8 @@ private fun PhotoReviewContent(
                     Button(onClick = onUpload, modifier = Modifier.weight(1f).height(48.dp), enabled = !uiState.isUploading) {
                         if (uiState.isUploading) {
                             CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-                            Spacer(modifier = Modifier.width(8.dp)); Text("Uploading...")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(if (uiState.videoFilePath != null) "Uploading video..." else "Uploading...")
                         } else {
                             Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp)); Text("Upload")

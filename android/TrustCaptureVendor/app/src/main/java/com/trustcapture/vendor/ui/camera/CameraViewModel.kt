@@ -405,6 +405,13 @@ class CameraViewModel @Inject constructor(
                     // Photo upload — existing flow (save locally + background upload)
                     uploadPhotoEvidence(state, vendorId)
                 }
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                Log.e(TAG, "Upload timed out", e)
+                _uiState.value = _uiState.value.copy(
+                    isUploading = false,
+                    error = "Upload timed out — video saved locally, will retry on next network connection",
+                    screenState = CameraScreenState.CAPTURED
+                )
             } catch (e: Exception) {
                 Log.e(TAG, "Upload failed", e)
                 _uiState.value = _uiState.value.copy(
@@ -426,26 +433,31 @@ class CameraViewModel @Inject constructor(
             .withZone(java.time.ZoneOffset.UTC)
             .format(java.time.Instant.now())
 
-        val response = withContext(Dispatchers.IO) {
-            uploadManager.uploadEvidence(
-                fileBytes = videoBytes,
-                fileName = "video_${System.currentTimeMillis()}.mp4",
-                mimeType = "video/mp4",
-                evidenceType = "video",
-                campaignId = state.campaignId.ifBlank { null },
-                campaignCode = state.campaignCode.ifBlank { null },
-                category = null,
-                textContent = state.textNote.ifBlank { null },
-                sensorDataJson = state.sensorDataJson,
-                signatureJson = state.signatureJson,
-                gpsTrackJson = state.gpsTrackJson,
-                captureTimestamp = timestamp
-            )
+        // Upload with timeout (90 seconds for video)
+        val response = kotlinx.coroutines.withTimeout(90_000L) {
+            withContext(Dispatchers.IO) {
+                uploadManager.uploadEvidence(
+                    fileBytes = videoBytes,
+                    fileName = "video_${System.currentTimeMillis()}.mp4",
+                    mimeType = "video/mp4",
+                    evidenceType = "video",
+                    campaignId = state.campaignId.ifBlank { null },
+                    campaignCode = state.campaignCode.ifBlank { null },
+                    category = null,
+                    textContent = state.textNote.ifBlank { null },
+                    sensorDataJson = state.sensorDataJson,
+                    signatureJson = state.signatureJson,
+                    gpsTrackJson = state.gpsTrackJson,
+                    captureTimestamp = timestamp
+                )
+            }
         }
 
         // Also upload voice note if present
         if (state.voiceNotePath != null) {
-            uploadVoiceNoteEvidence(state, vendorId)
+            try { uploadVoiceNoteEvidence(state, vendorId) } catch (e: Exception) {
+                Log.w(TAG, "Voice note upload failed (video still uploaded)", e)
+            }
         }
 
         LocationHelper.switchMode(GpsPowerMode.BALANCED)
