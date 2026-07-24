@@ -498,25 +498,34 @@ class CameraViewModel @Inject constructor(
     private suspend fun uploadPhotoEvidence(state: CameraUiState, vendorId: String) {
         val photoUri = state.watermarkedPhotoUri ?: return
 
-        // Encrypt and save photo locally
-        val photoId = photoRepository.savePhoto(
-            photoUri = photoUri,
-            campaignId = state.campaignId,
-            campaignCode = state.campaignCode,
-            campaignType = state.campaignConfig.type.key,
-            vendorId = vendorId,
-            sensorDataJson = state.sensorDataJson ?: "{}",
-            signatureJson = state.signatureJson ?: "{}",
-            latitude = state.latitude,
-            longitude = state.longitude,
-            confidenceScore = state.confidenceScore,
-            triangulationFlags = state.triangulationFlags,
-            safetyTags = state.safetyTags,
-            roomLabel = state.roomLabel,
-            photoSequence = if (state.campaignConfig.allowMultiPhoto) state.photoSequenceNumber else null,
-            hipaaCompliant = state.campaignConfig.enforceHipaa,
-            emulatorMode = state.isEmulator
-        )
+        // Read photo bytes for direct upload to evidence endpoint
+        val photoBytes = withContext(Dispatchers.IO) {
+            appContext.contentResolver.openInputStream(photoUri)?.readBytes()
+        } ?: throw Exception("Cannot read photo file")
+
+        val timestamp = java.time.format.DateTimeFormatter.ISO_INSTANT
+            .withZone(java.time.ZoneOffset.UTC)
+            .format(java.time.Instant.now())
+
+        // Upload directly to /api/evidence/upload with timeout (60s for photo)
+        kotlinx.coroutines.withTimeout(60_000L) {
+            withContext(Dispatchers.IO) {
+                uploadManager.uploadEvidence(
+                    fileBytes = photoBytes,
+                    fileName = "photo_${System.currentTimeMillis()}.jpg",
+                    mimeType = "image/jpeg",
+                    evidenceType = "photo",
+                    campaignId = state.campaignId.ifBlank { null },
+                    campaignCode = state.campaignCode.ifBlank { null },
+                    category = null,
+                    textContent = state.textNote.ifBlank { null },
+                    sensorDataJson = state.sensorDataJson,
+                    signatureJson = state.signatureJson,
+                    gpsTrackJson = null,
+                    captureTimestamp = timestamp
+                )
+            }
+        }
 
         // Also upload voice note if present
         if (state.voiceNotePath != null) {
@@ -542,15 +551,10 @@ class CameraViewModel @Inject constructor(
             eventType = "PHOTO_CAPTURED",
             vendorId = vendorId,
             deviceId = "trustcapture_device_key",
-            photoId = photoId,
+            photoId = null,
             details = extraMeta,
             emulatorMode = state.isEmulator
         )
-
-        // Trigger upload queue to push to backend
-        uploadManager.processQueue()
-        // Also schedule via WorkManager for reliability
-        com.trustcapture.vendor.data.remote.UploadScheduler.triggerImmediateUpload(appContext)
 
         // Switch back to balanced power after upload
         LocationHelper.switchMode(GpsPowerMode.BALANCED)

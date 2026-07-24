@@ -824,11 +824,11 @@ private fun PhotoReviewContent(
                         Spacer(modifier = Modifier.width(4.dp)); Text(if (uiState.campaignConfig.allowMultiPhoto) "Next Photo" else "Capture Another")
                     }
                 } else {
-                    OutlinedButton(onClick = onRetake, modifier = Modifier.weight(1f).height(48.dp), enabled = !uiState.isUploading) {
+                    OutlinedButton(onClick = onRetake, modifier = Modifier.weight(1f).height(48.dp), enabled = !uiState.isUploading && !uiState.isRecordingVoice) {
                         Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp)); Text("Retake")
                     }
-                    Button(onClick = onUpload, modifier = Modifier.weight(1f).height(48.dp), enabled = !uiState.isUploading) {
+                    Button(onClick = onUpload, modifier = Modifier.weight(1f).height(48.dp), enabled = !uiState.isUploading && !uiState.isRecordingVoice) {
                         if (uiState.isUploading) {
                             CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(8.dp))
