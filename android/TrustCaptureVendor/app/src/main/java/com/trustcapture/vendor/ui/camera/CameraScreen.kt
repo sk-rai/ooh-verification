@@ -1,6 +1,7 @@
 package com.trustcapture.vendor.ui.camera
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -12,7 +13,16 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.FileOutputOptions
+import androidx.camera.video.Quality
+import androidx.camera.video.QualitySelector
+import androidx.camera.video.Recorder
+import androidx.camera.video.Recording
+import androidx.camera.video.VideoCapture
+import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -26,6 +36,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -244,6 +256,23 @@ private fun CameraPreviewContent(
             .build()
     }
 
+    // Video recording setup
+    val recorder = remember {
+        Recorder.Builder()
+            .setQualitySelector(QualitySelector.from(Quality.HD))
+            .build()
+    }
+    val videoCapture = remember { VideoCapture.withOutput(recorder) }
+    var activeRecording by remember { mutableStateOf<Recording?>(null) }
+
+    // Auto-stop video when ViewModel signals stop (e.g., max duration reached)
+    LaunchedEffect(isRecordingVideo) {
+        if (!isRecordingVideo && activeRecording != null) {
+            activeRecording?.stop()
+            activeRecording = null
+        }
+    }
+
     // GPS gate: allow capture when accuracy ≤ 50m, or after 30s timeout
     // WiFi scan runs in background — not a gate (may be unavailable outdoors)
     val gpsReady = gpsAccuracy != null && gpsAccuracy <= 50f
@@ -271,7 +300,7 @@ private fun CameraPreviewContent(
                         try {
                             cameraProvider.unbindAll()
                             cameraProvider.bindToLifecycle(
-                                lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageCapture
+                                lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageCapture, videoCapture
                             )
                         } catch (_: Exception) { }
                     }, ContextCompat.getMainExecutor(ctx))
@@ -406,8 +435,33 @@ private fun CameraPreviewContent(
                         // Video record button (red circle)
                         IconButton(
                             onClick = {
-                                if (isRecordingVideo) onVideoRecordingStopped(null)
-                                else onVideoRecordingStarted()
+                                if (isRecordingVideo) {
+                                    // Stop recording
+                                    activeRecording?.stop()
+                                    activeRecording = null
+                                } else {
+                                    // Start recording
+                                    val videoFile = java.io.File(
+                                        context.cacheDir,
+                                        "VID_${java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())}.mp4"
+                                    )
+                                    val outputOptions = androidx.camera.video.FileOutputOptions.Builder(videoFile).build()
+                                    activeRecording = videoCapture.output
+                                        .prepareRecording(context, outputOptions)
+                                        .start(ContextCompat.getMainExecutor(context)) { event ->
+                                            when (event) {
+                                                is VideoRecordEvent.Finalize -> {
+                                                    if (event.hasError()) {
+                                                        onVideoRecordingStopped(null)
+                                                    } else {
+                                                        onVideoRecordingStopped(event.outputResults.outputUri)
+                                                    }
+                                                    activeRecording = null
+                                                }
+                                            }
+                                        }
+                                    onVideoRecordingStarted()
+                                }
                             },
                             enabled = captureEnabled || isRecordingVideo,
                             modifier = Modifier.size(72.dp),
@@ -507,11 +561,46 @@ private fun PhotoReviewContent(
             modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp).verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Photo preview
+            // Photo/Video preview
             Card(modifier = Modifier.fillMaxWidth().heightIn(min = 200.dp, max = 300.dp)) {
                 val displayUri = uiState.watermarkedPhotoUri ?: uiState.originalPhotoUri
                 if (displayUri != null) {
                     AsyncImage(model = displayUri, contentDescription = "Captured photo with watermark", modifier = Modifier.fillMaxSize())
+                } else if (uiState.videoFilePath != null) {
+                    // Video captured — show thumbnail extracted from first frame
+                    val context = LocalContext.current
+                    val thumbnail = remember(uiState.videoFilePath) {
+                        try {
+                            val retriever = android.media.MediaMetadataRetriever()
+                            retriever.setDataSource(context, android.net.Uri.parse(uiState.videoFilePath))
+                            val bitmap = retriever.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                            retriever.release()
+                            bitmap
+                        } catch (e: Exception) { null }
+                    }
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        if (thumbnail != null) {
+                            Image(
+                                bitmap = thumbnail.asImageBitmap(),
+                                contentDescription = "Video thumbnail",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                        // Overlay with video info
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .background(Color.Black.copy(alpha = 0.5f), MaterialTheme.shapes.medium)
+                                .padding(16.dp)
+                        ) {
+                            Icon(Icons.Default.PlayCircle, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.White)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Video · ${uiState.videoRecordingSeconds}s", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = Color.White)
+                            Text("GPS track: ${if (uiState.gpsTrackJson != null) "✓ recorded" else "—"}", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f))
+                        }
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -645,6 +734,12 @@ private fun PhotoReviewContent(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Voice note recording
+            val audioPermissionLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { granted ->
+                if (granted) onStartVoiceRecording()
+            }
+
             OutlinedCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text("Voice Note (optional)", style = MaterialTheme.typography.labelMedium)
@@ -668,8 +763,21 @@ private fun PhotoReviewContent(
                             FilledTonalButton(onClick = onStopVoiceRecording) { Text("Stop") }
                         }
                     } else {
-                        // No voice note — show record button
-                        FilledTonalButton(onClick = onStartVoiceRecording, modifier = Modifier.fillMaxWidth()) {
+                        // No voice note — request audio permission then start
+                        val context2 = LocalContext.current
+                        FilledTonalButton(
+                            onClick = {
+                                val hasPermission = ContextCompat.checkSelfPermission(
+                                    context2, android.Manifest.permission.RECORD_AUDIO
+                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                if (hasPermission) {
+                                    onStartVoiceRecording()
+                                } else {
+                                    audioPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Icon(Icons.Default.Mic, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Record Voice Note")
@@ -685,8 +793,14 @@ private fun PhotoReviewContent(
                     Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Photo uploaded successfully", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        Text("Campaign: ${uiState.campaignCode}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val uploadTypeLabel = if (uiState.videoFilePath != null) "Video" else "Photo"
+                        Text("$uploadTypeLabel uploaded successfully!", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        if (uiState.campaignCode.isNotBlank()) {
+                            Text("Campaign: ${uiState.campaignCode}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (uiState.voiceNotePath != null) {
+                            Text("Voice note attached ✓", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -717,7 +831,8 @@ private fun PhotoReviewContent(
                     Button(onClick = onUpload, modifier = Modifier.weight(1f).height(48.dp), enabled = !uiState.isUploading) {
                         if (uiState.isUploading) {
                             CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-                            Spacer(modifier = Modifier.width(8.dp)); Text("Uploading...")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(if (uiState.videoFilePath != null) "Uploading video..." else "Uploading...")
                         } else {
                             Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp)); Text("Upload")

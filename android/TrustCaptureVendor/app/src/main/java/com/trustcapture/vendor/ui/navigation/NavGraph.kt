@@ -14,6 +14,8 @@ import com.trustcapture.vendor.ui.camera.CameraScreen
 import com.trustcapture.vendor.ui.campaigns.CampaignsScreen
 import com.trustcapture.vendor.ui.campaigns.LocationsScreen
 import com.trustcapture.vendor.ui.campaigns.LocationsViewModel
+import com.trustcapture.vendor.ui.capture.QuickCaptureScreen
+import com.trustcapture.vendor.ui.home.HomeScreen
 import com.trustcapture.vendor.ui.login.LoginScreen
 import com.trustcapture.vendor.ui.otp.OtpScreen
 import com.trustcapture.vendor.ui.privacy.PrivacyConsentScreen
@@ -25,7 +27,10 @@ object Routes {
     const val PRIVACY_CONSENT = "privacy_consent"
     const val LOGIN = "login"
     const val OTP = "otp/{phoneNumber}/{vendorId}"
+    const val HOME = "home"
     const val CAMPAIGNS = "campaigns"
+    const val QUICK_CAPTURE = "quick_capture"
+    const val QUICK_CAMERA = "quick_camera/{category}"
     const val LOCATIONS = "locations/{campaignId}/{campaignCode}/{campaignName}/{campaignType}"
     const val CAMERA = "camera/{campaignId}/{campaignCode}/{campaignType}"
     const val SETTINGS = "settings"
@@ -38,6 +43,8 @@ object Routes {
 
     fun camera(campaignId: String, campaignCode: String, campaignType: String) =
         "camera/$campaignId/$campaignCode/$campaignType"
+
+    fun quickCamera(category: String) = "quick_camera/$category"
 }
 
 @Composable
@@ -67,7 +74,7 @@ fun TrustCaptureNavGraph(
                     navController.navigate(Routes.otp(phoneNumber, vendorId))
                 },
                 onLoggedIn = {
-                    navController.navigate(Routes.CAMPAIGNS) {
+                    navController.navigate(Routes.HOME) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 }
@@ -83,12 +90,41 @@ fun TrustCaptureNavGraph(
         ) {
             OtpScreen(
                 onVerified = {
-                    navController.navigate(Routes.CAMPAIGNS) {
+                    navController.navigate(Routes.HOME) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },
                 onBack = { navController.popBackStack() }
             )
+        }
+
+        composable(Routes.HOME) {
+            HomeScreen(
+                onCampaigns = { navController.navigate(Routes.CAMPAIGNS) },
+                onQuickCapture = { navController.navigate(Routes.QUICK_CAPTURE) },
+                onSettings = { navController.navigate(Routes.SETTINGS) },
+                onLoggedOut = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Routes.QUICK_CAPTURE) {
+            QuickCaptureScreen(
+                onCategorySelected = { category ->
+                    navController.navigate(Routes.quickCamera(category))
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Routes.QUICK_CAMERA,
+            arguments = listOf(navArgument("category") { type = NavType.StringType })
+        ) {
+            CameraScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.CAMPAIGNS) {
