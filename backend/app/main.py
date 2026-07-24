@@ -134,6 +134,81 @@ async def startup_event():
                 "EXCEPTION WHEN others THEN NULL; END $$;"
             ))
 
+            # Create evidence tables if not exist (migration 021)
+            await conn.execute(text('''
+                CREATE TABLE IF NOT EXISTS cases (
+                    case_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    tenant_id UUID NOT NULL,
+                    client_id UUID NOT NULL REFERENCES clients(client_id) ON DELETE CASCADE,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    category VARCHAR(50),
+                    status VARCHAR(20) NOT NULL DEFAULT 'open',
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                );
+            '''))
+            await conn.execute(text('''
+                CREATE TABLE IF NOT EXISTS evidence (
+                    evidence_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    tenant_id UUID NOT NULL,
+                    campaign_id UUID REFERENCES campaigns(campaign_id) ON DELETE SET NULL,
+                    vendor_id VARCHAR(6) NOT NULL REFERENCES vendors(vendor_id) ON DELETE CASCADE,
+                    case_id UUID REFERENCES cases(case_id) ON DELETE SET NULL,
+                    evidence_type VARCHAR(20) NOT NULL,
+                    category VARCHAR(50),
+                    file_key VARCHAR(500),
+                    file_url VARCHAR(500),
+                    thumbnail_key VARCHAR(500),
+                    thumbnail_url VARCHAR(500),
+                    file_size_bytes BIGINT,
+                    mime_type VARCHAR(50),
+                    duration_seconds FLOAT,
+                    text_content TEXT,
+                    capture_timestamp TIMESTAMPTZ,
+                    latitude FLOAT,
+                    longitude FLOAT,
+                    accuracy FLOAT,
+                    verification_status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                    verification_confidence FLOAT,
+                    verification_flags JSONB DEFAULT '[]',
+                    device_signature TEXT,
+                    file_hash VARCHAR(128),
+                    sensor_data JSONB,
+                    tags JSONB DEFAULT '[]',
+                    metadata JSONB DEFAULT '{}',
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                );
+            '''))
+            await conn.execute(text('''
+                CREATE TABLE IF NOT EXISTS gps_tracks (
+                    track_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    evidence_id UUID NOT NULL REFERENCES evidence(evidence_id) ON DELETE CASCADE UNIQUE,
+                    points JSONB NOT NULL,
+                    duration_seconds FLOAT,
+                    total_distance_meters FLOAT,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                );
+            '''))
+            # Evidence indexes
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_evidence_tenant_id ON evidence (tenant_id);"))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_evidence_campaign_id ON evidence (campaign_id);"))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_evidence_vendor_id ON evidence (vendor_id);"))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_evidence_type ON evidence (evidence_type);"))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_evidence_status ON evidence (verification_status);"))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_evidence_created ON evidence (created_at);"))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_gps_tracks_evidence_id ON gps_tracks (evidence_id);"))
+            # Add asset_id to location_profiles if missing
+            await conn.execute(text(
+                "DO $$ BEGIN "
+                "ALTER TABLE location_profiles ADD COLUMN IF NOT EXISTS asset_id VARCHAR(100); "
+                "ALTER TABLE location_profiles ADD COLUMN IF NOT EXISTS asset_type VARCHAR(50); "
+                "ALTER TABLE location_profiles ADD COLUMN IF NOT EXISTS location_description TEXT; "
+                "EXCEPTION WHEN others THEN NULL; END $$;"
+            ))
+            print("✅ Evidence tables ready")
+
 
             # Create Play Store review test vendor if not exists
             await conn.execute(text("""
