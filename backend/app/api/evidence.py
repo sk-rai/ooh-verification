@@ -383,3 +383,27 @@ async def get_evidence(
         "verification_flags": evidence.verification_flags,
         "created_at": evidence.created_at.isoformat(),
     }
+
+
+@router.post("/fix-video-thumbnails")
+async def fix_video_thumbnails(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Fix video thumbnail URLs: change .mp4 extension to .jpg for Cloudinary frame extraction."""
+    from sqlalchemy import text
+    tenant_id = get_current_tenant(request)
+
+    result = await db.execute(text("""
+        UPDATE evidence
+        SET thumbnail_url = REPLACE(
+            REPLACE(thumbnail_url, '.mp4', '.jpg'),
+            '.mov', '.jpg'
+        )
+        WHERE evidence_type = 'video'
+          AND thumbnail_url IS NOT NULL
+          AND (thumbnail_url LIKE '%.mp4' OR thumbnail_url LIKE '%.mov')
+          AND tenant_id = :tid
+    """), {"tid": tenant_id})
+    await db.commit()
+    return {"status": "Fixed video thumbnails", "rows_updated": result.rowcount}
