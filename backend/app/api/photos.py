@@ -42,8 +42,11 @@ async def list_photos(
     db: AsyncSession = Depends(get_db),
     client: Client = Depends(get_current_client)
 ):
-    """List photos for the current client."""
+    """List photos and evidence for the current client."""
     from sqlalchemy import func
+    from app.models.evidence import Evidence
+
+    # --- Query old photos table ---
     query = select(Photo).where(Photo.tenant_id == client.tenant_id)
     if campaign_code:
         campaign = await db.execute(
@@ -74,15 +77,17 @@ async def list_photos(
     result = await db.execute(detail_query)
     rows = result.all()
     storage = get_storage_service()
-    return [
+    photos_list = [
         {
             "photo_id": str(row[0].photo_id),
-            "campaign_id": str(row[0].campaign_id),
+            "evidence_type": "photo",
+            "campaign_id": str(row[0].campaign_id) if row[0].campaign_id else None,
             "campaign_name": row.campaign_name or "",
             "vendor_id": str(row[0].vendor_id) if row[0].vendor_id else None,
             "vendor_name": row.vendor_name or "",
             "photo_url": storage.get_photo_url(row[0].s3_key) if row[0].s3_key else None,
             "thumbnail_url": storage.get_thumbnail_url(row[0].s3_key) if row[0].s3_key else None,
+            "file_url": storage.get_photo_url(row[0].s3_key) if row[0].s3_key else None,
             "status": row[0].verification_status.value if hasattr(row[0].verification_status, 'value') else str(row[0].verification_status),
             "verification_status": row[0].verification_status.value if hasattr(row[0].verification_status, 'value') else str(row[0].verification_status),
             "verification_confidence": row[0].verification_confidence or 0,
@@ -92,9 +97,63 @@ async def list_photos(
             "gps_accuracy": float(row.gps_accuracy) if row.gps_accuracy else 0,
             "captured_at": row[0].capture_timestamp.isoformat() if row[0].capture_timestamp else (row[0].created_at.isoformat() if row[0].created_at else None),
             "created_at": row[0].created_at.isoformat() if row[0].created_at else None,
+            "category": None,
+            "text_content": None,
+            "duration_seconds": None,
         }
         for row in rows
     ]
+
+    # --- Query new evidence table ---
+    evidence_query = (
+        select(Evidence, Cam.name.label("campaign_name"), Cam.campaign_code,
+               Ven.name.label("vendor_name"))
+        .join(Cam, Cam.campaign_id == Evidence.campaign_id, isouter=True)
+        .join(Ven, Ven.vendor_id == Evidence.vendor_id, isouter=True)
+        .where(Evidence.tenant_id == client.tenant_id)
+    )
+    if campaign_code:
+        campaign_result2 = await db.execute(
+            select(Campaign).where(Campaign.campaign_code == campaign_code, Campaign.tenant_id == client.tenant_id)
+        )
+        campaign_obj2 = campaign_result2.scalar_one_or_none()
+        if campaign_obj2:
+            evidence_query = evidence_query.where(Evidence.campaign_id == campaign_obj2.campaign_id)
+    evidence_query = evidence_query.order_by(Evidence.created_at.desc()).offset(offset).limit(limit)
+    evidence_result = await db.execute(evidence_query)
+    evidence_rows = evidence_result.all()
+
+    evidence_list = [
+        {
+            "photo_id": str(row[0].evidence_id),
+            "evidence_type": row[0].evidence_type,
+            "campaign_id": str(row[0].campaign_id) if row[0].campaign_id else None,
+            "campaign_name": row.campaign_name or "Quick Capture",
+            "vendor_id": row[0].vendor_id,
+            "vendor_name": row.vendor_name or "",
+            "photo_url": row[0].file_url,
+            "thumbnail_url": row[0].thumbnail_url,
+            "file_url": row[0].file_url,
+            "status": row[0].verification_status,
+            "verification_status": row[0].verification_status,
+            "verification_confidence": row[0].verification_confidence or 0,
+            "confidence_score": row[0].verification_confidence or 0,
+            "gps_latitude": row[0].latitude or 0,
+            "gps_longitude": row[0].longitude or 0,
+            "gps_accuracy": row[0].accuracy or 0,
+            "captured_at": row[0].capture_timestamp.isoformat() if row[0].capture_timestamp else (row[0].created_at.isoformat() if row[0].created_at else None),
+            "created_at": row[0].created_at.isoformat() if row[0].created_at else None,
+            "category": row[0].category,
+            "text_content": row[0].text_content,
+            "duration_seconds": row[0].duration_seconds,
+        }
+        for row in evidence_rows
+    ]
+
+    # Merge and sort by created_at desc
+    combined = photos_list + evidence_list
+    combined.sort(key=lambda x: x.get("created_at") or "", reverse=True)
+    return combined[:limit]
 
 @router.get("/locations")
 async def get_photo_locations(
