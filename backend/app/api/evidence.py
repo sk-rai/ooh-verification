@@ -103,11 +103,37 @@ async def upload_evidence(
     if sensor_data:
         try:
             parsed_sensor_data = json.loads(sensor_data)
-            latitude = parsed_sensor_data.get("gps_latitude") or parsed_sensor_data.get("latitude")
-            longitude = parsed_sensor_data.get("gps_longitude") or parsed_sensor_data.get("longitude")
-            accuracy = parsed_sensor_data.get("gps_accuracy") or parsed_sensor_data.get("accuracy")
-        except json.JSONDecodeError:
-            logger.warning("Invalid sensor_data JSON, ignoring")
+            # Try multiple field name patterns (Android sends various formats)
+            latitude = (
+                parsed_sensor_data.get("gps_latitude") or
+                parsed_sensor_data.get("latitude") or
+                parsed_sensor_data.get("lat") or
+                (parsed_sensor_data.get("gps", {}) or {}).get("latitude") or
+                (parsed_sensor_data.get("location", {}) or {}).get("latitude")
+            )
+            longitude = (
+                parsed_sensor_data.get("gps_longitude") or
+                parsed_sensor_data.get("longitude") or
+                parsed_sensor_data.get("lon") or
+                parsed_sensor_data.get("lng") or
+                (parsed_sensor_data.get("gps", {}) or {}).get("longitude") or
+                (parsed_sensor_data.get("location", {}) or {}).get("longitude")
+            )
+            accuracy = (
+                parsed_sensor_data.get("gps_accuracy") or
+                parsed_sensor_data.get("accuracy") or
+                (parsed_sensor_data.get("gps", {}) or {}).get("accuracy") or
+                (parsed_sensor_data.get("location", {}) or {}).get("accuracy")
+            )
+            # Convert to float if string
+            if latitude and isinstance(latitude, str):
+                latitude = float(latitude)
+            if longitude and isinstance(longitude, str):
+                longitude = float(longitude)
+            if accuracy and isinstance(accuracy, str):
+                accuracy = float(accuracy)
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logger.warning(f"Error parsing sensor_data: {e}")
 
     # Parse capture timestamp
     parsed_timestamp = None

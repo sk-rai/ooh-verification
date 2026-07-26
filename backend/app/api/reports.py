@@ -515,9 +515,10 @@ async def get_table_data(
     result = await db.execute(query)
     rows = result.all()
 
-    return [
+    photos_data = [
         {
             "photo_id": str(row[0].photo_id),
+            "evidence_type": "photo",
             "campaign_code": row.campaign_code or "",
             "campaign_name": row.campaign_name or "",
             "vendor_id": row.vid or "",
@@ -532,6 +533,48 @@ async def get_table_data(
         }
         for row in rows
     ]
+
+    # Also include evidence table records
+    from app.models.evidence import Evidence
+    evidence_query = (
+        select(Evidence, Campaign.name.label("campaign_name"), Campaign.campaign_code,
+               Vendor.name.label("vendor_name"), Vendor.vendor_id.label("vid"))
+        .join(Campaign, Campaign.campaign_id == Evidence.campaign_id, isouter=True)
+        .join(Vendor, Vendor.vendor_id == Evidence.vendor_id, isouter=True)
+        .where(Evidence.tenant_id == client.tenant_id)
+    )
+    if start_date:
+        evidence_query = evidence_query.where(Evidence.created_at >= datetime.fromisoformat(start_date))
+    if end_date:
+        evidence_query = evidence_query.where(Evidence.created_at <= datetime.fromisoformat(end_date) + timedelta(days=1))
+    evidence_query = evidence_query.order_by(Evidence.created_at.desc())
+
+    evidence_result = await db.execute(evidence_query)
+    evidence_rows = evidence_result.all()
+
+    evidence_data = [
+        {
+            "photo_id": str(row[0].evidence_id),
+            "evidence_type": row[0].evidence_type,
+            "campaign_code": row.campaign_code or "",
+            "campaign_name": row.campaign_name or "Quick Capture",
+            "vendor_id": row.vid or "",
+            "vendor_name": row.vendor_name or "",
+            "status": row[0].verification_status or "pending",
+            "confidence": row[0].verification_confidence or 0,
+            "latitude": row[0].latitude or 0,
+            "longitude": row[0].longitude or 0,
+            "accuracy": row[0].accuracy or 0,
+            "captured_at": row[0].created_at.isoformat() if row[0].created_at else None,
+            "rejection_reasons": row[0].verification_flags or [],
+        }
+        for row in evidence_rows
+    ]
+
+    # Merge and sort
+    combined = photos_data + evidence_data
+    combined.sort(key=lambda x: x.get("captured_at") or "", reverse=True)
+    return combined
 
 
 @router.get("/export/pdf")
