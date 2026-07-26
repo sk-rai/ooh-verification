@@ -215,8 +215,14 @@ class UploadManager @Inject constructor(
             MultipartBody.Part.createFormData("file", fileName, body)
         } else null
 
+        val voiceNotePart = if (voiceNoteBytes != null && voiceNoteFileName != null) {
+            val body = voiceNoteBytes.toRequestBody("audio/mp4".toMediaType())
+            MultipartBody.Part.createFormData("voice_note", voiceNoteFileName, body)
+        } else null
+
         val response = evidenceApi.uploadEvidence(
             file = filePart,
+            voiceNote = voiceNotePart,
             evidenceType = evidenceType.toRequestBody("text/plain".toMediaType()),
             campaignId = campaignId?.toRequestBody("text/plain".toMediaType()),
             campaignCode = campaignCode?.toRequestBody("text/plain".toMediaType()),

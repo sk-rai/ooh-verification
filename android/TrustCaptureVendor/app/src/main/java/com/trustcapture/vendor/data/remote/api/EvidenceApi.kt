@@ -19,6 +19,7 @@ interface EvidenceApi {
     @POST("api/evidence/upload")
     suspend fun uploadEvidence(
         @Part file: MultipartBody.Part?,  // Nullable for text-only notes
+        @Part voiceNote: MultipartBody.Part?,  // Optional voice note attachment
         @Part("evidence_type") evidenceType: RequestBody,
         @Part("campaign_id") campaignId: RequestBody?,
         @Part("campaign_code") campaignCode: RequestBody?,
