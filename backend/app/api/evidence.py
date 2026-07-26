@@ -135,6 +135,22 @@ async def upload_evidence(
         except (json.JSONDecodeError, TypeError, ValueError) as e:
             logger.warning(f"Error parsing sensor_data: {e}")
 
+    # Fallback: extract GPS from gps_track first point (for video/voice without sensor_data)
+    if (not latitude or not longitude) and gps_track:
+        try:
+            track_points = json.loads(gps_track) if isinstance(gps_track, str) else gps_track
+            if isinstance(track_points, list) and len(track_points) > 0:
+                first_point = track_points[0]
+                latitude = latitude or first_point.get("lat") or first_point.get("latitude")
+                longitude = longitude or first_point.get("lon") or first_point.get("lng") or first_point.get("longitude")
+                accuracy = accuracy or first_point.get("accuracy")
+                if latitude and isinstance(latitude, str):
+                    latitude = float(latitude)
+                if longitude and isinstance(longitude, str):
+                    longitude = float(longitude)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
+
     # Parse capture timestamp
     parsed_timestamp = None
     if capture_timestamp:
