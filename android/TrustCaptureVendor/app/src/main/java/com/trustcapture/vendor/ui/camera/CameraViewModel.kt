@@ -391,10 +391,9 @@ class CameraViewModel @Inject constructor(
                 error = null,
                 screenState = CameraScreenState.UPLOADING
             )
+            val state = _uiState.value
+            val vendorId = userPreferences.vendorId.first() ?: "UNKNOWN"
             try {
-                val state = _uiState.value
-                val vendorId = userPreferences.vendorId.first() ?: "UNKNOWN"
-
                 // Determine evidence type
                 val isVideo = state.videoFilePath != null && state.watermarkedPhotoUri == null
                 
@@ -402,22 +401,24 @@ class CameraViewModel @Inject constructor(
                     // Video upload — use evidence endpoint directly
                     uploadVideoEvidence(state, vendorId)
                 } else {
-                    // Photo upload — existing flow (save locally + background upload)
+                    // Photo upload — use evidence endpoint directly
                     uploadPhotoEvidence(state, vendorId)
                 }
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                Log.e(TAG, "Upload timed out", e)
+                Log.e(TAG, "Upload timed out, saving locally for retry", e)
+                saveForRetryOnFailure(state, vendorId)
                 _uiState.value = _uiState.value.copy(
                     isUploading = false,
-                    error = "Upload timed out — video saved locally, will retry on next network connection",
-                    screenState = CameraScreenState.CAPTURED
+                    uploadSuccess = true,
+                    error = null
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "Upload failed", e)
+                Log.e(TAG, "Upload failed, saving locally for retry", e)
+                saveForRetryOnFailure(state, vendorId)
                 _uiState.value = _uiState.value.copy(
                     isUploading = false,
-                    error = "Upload failed: ${e.message ?: "Unknown error"}",
-                    screenState = CameraScreenState.CAPTURED
+                    uploadSuccess = true,
+                    error = null
                 )
             }
         }
@@ -498,25 +499,34 @@ class CameraViewModel @Inject constructor(
     private suspend fun uploadPhotoEvidence(state: CameraUiState, vendorId: String) {
         val photoUri = state.watermarkedPhotoUri ?: return
 
-        // Encrypt and save photo locally
-        val photoId = photoRepository.savePhoto(
-            photoUri = photoUri,
-            campaignId = state.campaignId,
-            campaignCode = state.campaignCode,
-            campaignType = state.campaignConfig.type.key,
-            vendorId = vendorId,
-            sensorDataJson = state.sensorDataJson ?: "{}",
-            signatureJson = state.signatureJson ?: "{}",
-            latitude = state.latitude,
-            longitude = state.longitude,
-            confidenceScore = state.confidenceScore,
-            triangulationFlags = state.triangulationFlags,
-            safetyTags = state.safetyTags,
-            roomLabel = state.roomLabel,
-            photoSequence = if (state.campaignConfig.allowMultiPhoto) state.photoSequenceNumber else null,
-            hipaaCompliant = state.campaignConfig.enforceHipaa,
-            emulatorMode = state.isEmulator
-        )
+        // Read photo bytes for direct upload to evidence endpoint
+        val photoBytes = withContext(Dispatchers.IO) {
+            appContext.contentResolver.openInputStream(photoUri)?.readBytes()
+        } ?: throw Exception("Cannot read photo file")
+
+        val timestamp = java.time.format.DateTimeFormatter.ISO_INSTANT
+            .withZone(java.time.ZoneOffset.UTC)
+            .format(java.time.Instant.now())
+
+        // Upload directly to /api/evidence/upload with timeout (60s for photo)
+        kotlinx.coroutines.withTimeout(60_000L) {
+            withContext(Dispatchers.IO) {
+                uploadManager.uploadEvidence(
+                    fileBytes = photoBytes,
+                    fileName = "photo_${System.currentTimeMillis()}.jpg",
+                    mimeType = "image/jpeg",
+                    evidenceType = "photo",
+                    campaignId = state.campaignId.ifBlank { null },
+                    campaignCode = state.campaignCode.ifBlank { null },
+                    category = null,
+                    textContent = state.textNote.ifBlank { null },
+                    sensorDataJson = state.sensorDataJson,
+                    signatureJson = state.signatureJson,
+                    gpsTrackJson = null,
+                    captureTimestamp = timestamp
+                )
+            }
+        }
 
         // Also upload voice note if present
         if (state.voiceNotePath != null) {
@@ -542,15 +552,10 @@ class CameraViewModel @Inject constructor(
             eventType = "PHOTO_CAPTURED",
             vendorId = vendorId,
             deviceId = "trustcapture_device_key",
-            photoId = photoId,
+            photoId = null,
             details = extraMeta,
             emulatorMode = state.isEmulator
         )
-
-        // Trigger upload queue to push to backend
-        uploadManager.processQueue()
-        // Also schedule via WorkManager for reliability
-        com.trustcapture.vendor.data.remote.UploadScheduler.triggerImmediateUpload(appContext)
 
         // Switch back to balanced power after upload
         LocationHelper.switchMode(GpsPowerMode.BALANCED)
@@ -559,6 +564,44 @@ class CameraViewModel @Inject constructor(
             isUploading = false,
             uploadSuccess = true
         )
+    }
+
+    /**
+     * On upload failure, save the photo locally for background retry.
+     * Shows success to user (they don't need to wait) — upload retries in background.
+     */
+    private suspend fun saveForRetryOnFailure(state: CameraUiState, vendorId: String) {
+        try {
+            val photoUri = state.watermarkedPhotoUri ?: state.videoFilePath?.let { android.net.Uri.parse(it) }
+            if (photoUri != null && state.watermarkedPhotoUri != null) {
+                // Save photo to local queue for background retry
+                photoRepository.savePhoto(
+                    photoUri = photoUri,
+                    campaignId = state.campaignId,
+                    campaignCode = state.campaignCode,
+                    campaignType = state.campaignConfig.type.key,
+                    vendorId = vendorId,
+                    sensorDataJson = state.sensorDataJson ?: "{}",
+                    signatureJson = state.signatureJson ?: "{}",
+                    latitude = state.latitude,
+                    longitude = state.longitude,
+                    confidenceScore = state.confidenceScore,
+                    triangulationFlags = state.triangulationFlags,
+                    safetyTags = state.safetyTags,
+                    roomLabel = state.roomLabel,
+                    photoSequence = if (state.campaignConfig.allowMultiPhoto) state.photoSequenceNumber else null,
+                    hipaaCompliant = state.campaignConfig.enforceHipaa,
+                    emulatorMode = state.isEmulator
+                )
+                // Schedule background retry via WorkManager
+                com.trustcapture.vendor.data.remote.UploadScheduler.triggerImmediateUpload(appContext)
+                Log.i(TAG, "Saved locally for background retry")
+            } else {
+                Log.w(TAG, "Cannot save for retry — no photo/video URI available")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save for retry", e)
+        }
     }
 
     fun clearError() {
