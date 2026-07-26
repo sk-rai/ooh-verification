@@ -193,9 +193,11 @@ async def upload_evidence(
                 )
                 file_key = upload_result["public_id"]
                 file_url = upload_result["secure_url"]
-                # Generate thumbnail for video
+                # Generate thumbnail for video (Cloudinary: use .jpg extension for video frame)
                 if evidence_type == "video":
-                    thumbnail_url = file_url.replace("/upload/", "/upload/w_200,h_200,c_fill,so_1/")
+                    # Cloudinary video thumbnail: add transformation + change extension to .jpg
+                    base_url = file_url.rsplit(".", 1)[0]  # remove .mp4/.mov extension
+                    thumbnail_url = base_url.replace("/upload/", "/upload/w_200,h_200,c_fill,so_1/") + ".jpg"
                     thumbnail_key = file_key
         except Exception as e:
             logger.error(f"Storage upload failed: {e}")
