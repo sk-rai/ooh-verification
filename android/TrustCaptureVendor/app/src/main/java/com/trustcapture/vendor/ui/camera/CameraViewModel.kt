@@ -442,6 +442,9 @@ class CameraViewModel @Inject constructor(
             .withZone(java.time.ZoneOffset.UTC)
             .format(java.time.Instant.now())
 
+        // Build sensor data with GPS (video captures don't go through onPhotoCaptured)
+        val sensorJson = state.sensorDataJson ?: buildGpsSensorJson(state)
+
         // Upload with timeout (90 seconds for video)
         kotlinx.coroutines.withTimeout(90_000L) {
             withContext(Dispatchers.IO) {
@@ -454,7 +457,7 @@ class CameraViewModel @Inject constructor(
                     campaignCode = state.campaignCode.ifBlank { null },
                     category = null,
                     textContent = state.textNote.ifBlank { null },
-                    sensorDataJson = state.sensorDataJson,
+                    sensorDataJson = sensorJson,
                     signatureJson = state.signatureJson,
                     gpsTrackJson = state.gpsTrackJson,
                     captureTimestamp = timestamp,
@@ -481,6 +484,9 @@ class CameraViewModel @Inject constructor(
             .withZone(java.time.ZoneOffset.UTC)
             .format(java.time.Instant.now())
 
+        // Include GPS sensor data for voice notes
+        val sensorJson = buildGpsSensorJson(state)
+
         withContext(Dispatchers.IO) {
             uploadManager.uploadEvidence(
                 fileBytes = voiceBytes,
@@ -491,7 +497,7 @@ class CameraViewModel @Inject constructor(
                 campaignCode = state.campaignCode.ifBlank { null },
                 category = null,
                 textContent = null,
-                sensorDataJson = null,
+                sensorDataJson = sensorJson,
                 signatureJson = null,
                 gpsTrackJson = null,
                 captureTimestamp = timestamp
@@ -612,6 +618,14 @@ class CameraViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    /** Build minimal sensor_data JSON with GPS for video/voice uploads. */
+    private fun buildGpsSensorJson(state: CameraUiState): String? {
+        val lat = state.latitude ?: return null
+        val lon = state.longitude ?: return null
+        val acc = state.accuracy ?: 0f
+        return """{"gps":{"latitude":$lat,"longitude":$lon,"accuracy":$acc,"altitude":${state.altitude ?: 0.0}},"gps_latitude":$lat,"gps_longitude":$lon,"gps_accuracy":$acc}"""
     }
 
     // --- Campaign-type-specific actions ---
