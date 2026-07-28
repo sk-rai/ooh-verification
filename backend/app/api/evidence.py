@@ -288,28 +288,46 @@ async def upload_evidence(
         # Run the existing photo verification pipeline
         try:
             from app.services.enhanced_verification import run_enhanced_verification
+            from app.services.location_profile_matcher import LocationProfileMatcher
             from app.models.location_profile import LocationProfile
 
             # Get location profiles for campaign (if campaign exists)
-            location_profiles = []
+            location_profile = None
+            location_match_result = None
+
             if resolved_campaign_id:
                 lp_result = await db.execute(
                     select(LocationProfile).where(LocationProfile.campaign_id == resolved_campaign_id)
                 )
-                location_profiles = lp_result.scalars().all()
+                profiles = lp_result.scalars().all()
+                if profiles:
+                    location_profile = profiles[0]  # Use first profile
+                    # Run location matching
+                    if latitude and longitude:
+                        matcher = LocationProfileMatcher()
+                        location_match_result = matcher.match(
+                            latitude=latitude,
+                            longitude=longitude,
+                            profiles=profiles
+                        )
+
+            # Determine signature validity
+            signature_valid = signature is not None and len(signature) > 0
 
             # Run verification
-            result = await run_enhanced_verification(
+            result = run_enhanced_verification(
+                signature_valid=signature_valid,
+                location_match_result=location_match_result,
                 sensor_data=parsed_sensor_data,
-                location_profiles=location_profiles,
-                signature_data=json.loads(signature) if signature else None,
+                location_profile=location_profile,
             )
-            verification_status = result.get("status", "pending")
-            verification_confidence = result.get("confidence", 0)
-            verification_flags = result.get("flags", [])
+            verification_status = result.status
+            verification_confidence = result.confidence
+            verification_flags = result.flags
         except Exception as e:
             logger.error(f"Verification failed for evidence {evidence.evidence_id}: {e}")
             verification_status = "pending"
+            verification_confidence = 0.0
 
     elif evidence_type == "video":
         # Video verification: async (mark as pending, process in background)
