@@ -5,6 +5,7 @@ import api from '../../services/api'
 
 interface Photo {
   photo_id: string
+  evidence_type?: string
   campaign_id: string
   campaign_name: string
   vendor_id: string
@@ -17,6 +18,10 @@ interface Photo {
   gps_accuracy: number
   thumbnail_url?: string
   photo_url?: string
+  file_url?: string
+  text_content?: string
+  duration_seconds?: number
+  category?: string
 }
 
 interface PhotoDetailModalProps {
@@ -60,15 +65,41 @@ function PhotoDetailModal({ photo, onClose }: PhotoDetailModalProps) {
             </button>
           </div>
 
-          {/* Photo */}
+          {/* Media Content */}
           <div className="mb-6">
-            {photo.photo_url ? (
-              <img src={photo.photo_url} alt="Photo" className="w-full rounded-lg" />
+            {(photo as any).evidence_type === 'video' ? (
+              <video src={photo.file_url || photo.photo_url} controls className="w-full rounded-lg max-h-96" />
+            ) : (photo as any).evidence_type === 'voice_note' ? (
+              <div className="bg-gray-100 rounded-lg p-6 flex flex-col items-center">
+                <svg className="h-16 w-16 text-blue-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+                <audio src={photo.file_url || photo.photo_url} controls className="w-full" />
+                {(photo as any).duration_seconds && (
+                  <p className="text-sm text-gray-500 mt-2">Duration: {Math.round((photo as any).duration_seconds)}s</p>
+                )}
+              </div>
+            ) : (photo as any).evidence_type === 'text_note' ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                <svg className="h-8 w-8 text-yellow-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <p className="text-gray-800 whitespace-pre-wrap">{(photo as any).text_content || 'No content'}</p>
+              </div>
+            ) : photo.photo_url || photo.file_url ? (
+              <img src={photo.photo_url || photo.file_url} alt="Photo" className="w-full rounded-lg" />
             ) : (
               <div className="w-full aspect-video bg-gray-200 rounded-lg flex items-center justify-center">
                 <svg className="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
+              </div>
+            )}
+            {/* Text content / notes attached to any media */}
+            {(photo as any).text_content && (photo as any).evidence_type !== 'text_note' && (
+              <div className="mt-3 bg-gray-50 border border-gray-200 rounded p-3">
+                <p className="text-xs font-medium text-gray-500 mb-1">Notes</p>
+                <p className="text-sm text-gray-700">{(photo as any).text_content}</p>
               </div>
             )}
           </div>
@@ -373,7 +404,44 @@ export default function PhotoGallery() {
                   onClick={() => setSelectedPhoto(photo)}
                   className="group relative aspect-square bg-gray-200 rounded-lg overflow-hidden hover:opacity-75 transition"
                 >
-                  {photo.thumbnail_url ? (
+                  {(photo as any).evidence_type === 'voice_note' ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-blue-50">
+                      <svg className="h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                      </svg>
+                      <span className="text-xs text-blue-600 mt-2 font-medium">Voice Note</span>
+                      {(photo as any).duration_seconds && (
+                        <span className="text-xs text-blue-400 mt-1">{Math.round((photo as any).duration_seconds)}s</span>
+                      )}
+                    </div>
+                  ) : (photo as any).evidence_type === 'text_note' ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-yellow-50 p-3">
+                      <svg className="h-10 w-10 text-yellow-600 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      <p className="text-xs text-gray-600 text-center line-clamp-3">{(photo as any).text_content || 'Text Note'}</p>
+                    </div>
+                  ) : (photo as any).evidence_type === 'video' ? (
+                    <>
+                      {photo.thumbnail_url ? (
+                        <img src={photo.thumbnail_url} alt="Video" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                          <svg className="h-12 w-12 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      )}
+                      {/* Play icon overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="bg-black/40 rounded-full p-2">
+                          <svg className="h-8 w-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </>
+                  ) : photo.thumbnail_url ? (
                     <img src={photo.thumbnail_url} alt="Photo" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
@@ -392,6 +460,12 @@ export default function PhotoGallery() {
                   <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
                     {((photo.confidence_score ?? 0) * 100).toFixed(0)}%
                   </div>
+                  {/* Evidence type badge */}
+                  {(photo as any).evidence_type && (photo as any).evidence_type !== 'photo' && (
+                    <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded capitalize">
+                      {(photo as any).evidence_type === 'voice_note' ? '🎤 Audio' : (photo as any).evidence_type === 'text_note' ? '📝 Note' : '🎬 Video'}
+                    </div>
+                  )}
                 </button>
               ))}
             </div>
