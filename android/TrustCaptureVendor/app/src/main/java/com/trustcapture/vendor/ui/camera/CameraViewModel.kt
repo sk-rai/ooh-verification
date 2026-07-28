@@ -430,12 +430,23 @@ class CameraViewModel @Inject constructor(
             appContext.contentResolver.openInputStream(videoUri)?.readBytes()
         } ?: throw Exception("Cannot read video file")
 
+        // Read voice note if present
+        val voiceNoteBytes = if (state.voiceNotePath != null) {
+            withContext(Dispatchers.IO) {
+                val file = java.io.File(state.voiceNotePath!!)
+                if (file.exists()) file.readBytes() else null
+            }
+        } else null
+
         val timestamp = java.time.format.DateTimeFormatter.ISO_INSTANT
             .withZone(java.time.ZoneOffset.UTC)
             .format(java.time.Instant.now())
 
+        // Build sensor data with GPS (video captures don't go through onPhotoCaptured)
+        val sensorJson = state.sensorDataJson ?: buildGpsSensorJson(state)
+
         // Upload with timeout (90 seconds for video)
-        val response = kotlinx.coroutines.withTimeout(90_000L) {
+        kotlinx.coroutines.withTimeout(90_000L) {
             withContext(Dispatchers.IO) {
                 uploadManager.uploadEvidence(
                     fileBytes = videoBytes,
@@ -446,18 +457,13 @@ class CameraViewModel @Inject constructor(
                     campaignCode = state.campaignCode.ifBlank { null },
                     category = null,
                     textContent = state.textNote.ifBlank { null },
-                    sensorDataJson = state.sensorDataJson,
+                    sensorDataJson = sensorJson,
                     signatureJson = state.signatureJson,
                     gpsTrackJson = state.gpsTrackJson,
-                    captureTimestamp = timestamp
+                    captureTimestamp = timestamp,
+                    voiceNoteBytes = voiceNoteBytes,
+                    voiceNoteFileName = if (voiceNoteBytes != null) "voice_${System.currentTimeMillis()}.m4a" else null
                 )
-            }
-        }
-
-        // Also upload voice note if present
-        if (state.voiceNotePath != null) {
-            try { uploadVoiceNoteEvidence(state, vendorId) } catch (e: Exception) {
-                Log.w(TAG, "Voice note upload failed (video still uploaded)", e)
             }
         }
 
@@ -478,6 +484,9 @@ class CameraViewModel @Inject constructor(
             .withZone(java.time.ZoneOffset.UTC)
             .format(java.time.Instant.now())
 
+        // Include GPS sensor data for voice notes
+        val sensorJson = buildGpsSensorJson(state)
+
         withContext(Dispatchers.IO) {
             uploadManager.uploadEvidence(
                 fileBytes = voiceBytes,
@@ -488,7 +497,7 @@ class CameraViewModel @Inject constructor(
                 campaignCode = state.campaignCode.ifBlank { null },
                 category = null,
                 textContent = null,
-                sensorDataJson = null,
+                sensorDataJson = sensorJson,
                 signatureJson = null,
                 gpsTrackJson = null,
                 captureTimestamp = timestamp
@@ -503,6 +512,14 @@ class CameraViewModel @Inject constructor(
         val photoBytes = withContext(Dispatchers.IO) {
             appContext.contentResolver.openInputStream(photoUri)?.readBytes()
         } ?: throw Exception("Cannot read photo file")
+
+        // Read voice note if present
+        val voiceNoteBytes = if (state.voiceNotePath != null) {
+            withContext(Dispatchers.IO) {
+                val file = java.io.File(state.voiceNotePath!!)
+                if (file.exists()) file.readBytes() else null
+            }
+        } else null
 
         val timestamp = java.time.format.DateTimeFormatter.ISO_INSTANT
             .withZone(java.time.ZoneOffset.UTC)
@@ -523,15 +540,10 @@ class CameraViewModel @Inject constructor(
                     sensorDataJson = state.sensorDataJson,
                     signatureJson = state.signatureJson,
                     gpsTrackJson = null,
-                    captureTimestamp = timestamp
+                    captureTimestamp = timestamp,
+                    voiceNoteBytes = voiceNoteBytes,
+                    voiceNoteFileName = if (voiceNoteBytes != null) "voice_${System.currentTimeMillis()}.m4a" else null
                 )
-            }
-        }
-
-        // Also upload voice note if present
-        if (state.voiceNotePath != null) {
-            try { uploadVoiceNoteEvidence(state, vendorId) } catch (e: Exception) {
-                Log.w(TAG, "Voice note upload failed (photo still uploaded)", e)
             }
         }
 
@@ -606,6 +618,14 @@ class CameraViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    /** Build minimal sensor_data JSON with GPS for video/voice uploads. */
+    private fun buildGpsSensorJson(state: CameraUiState): String? {
+        val lat = state.latitude ?: return null
+        val lon = state.longitude ?: return null
+        val acc = state.accuracy ?: 0f
+        return """{"gps":{"latitude":$lat,"longitude":$lon,"accuracy":$acc,"altitude":${state.altitude ?: 0.0}},"gps_latitude":$lat,"gps_longitude":$lon,"gps_accuracy":$acc}"""
     }
 
     // --- Campaign-type-specific actions ---

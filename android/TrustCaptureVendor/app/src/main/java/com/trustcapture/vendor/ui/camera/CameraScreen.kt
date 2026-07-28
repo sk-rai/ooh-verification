@@ -551,7 +551,7 @@ private fun PhotoReviewContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Review Photo") },
+                title = { Text(if (uiState.videoFilePath != null && uiState.watermarkedPhotoUri == null) "Review Video" else "Review Photo") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } }
             )
         },
@@ -572,13 +572,22 @@ private fun PhotoReviewContent(
                     val thumbnail = remember(uiState.videoFilePath) {
                         try {
                             val retriever = android.media.MediaMetadataRetriever()
-                            retriever.setDataSource(context, android.net.Uri.parse(uiState.videoFilePath))
+                            val uri = android.net.Uri.parse(uiState.videoFilePath)
+                            // Try URI-based first, fall back to path-based
+                            if (uri.scheme == "file") {
+                                retriever.setDataSource(uri.path)
+                            } else {
+                                retriever.setDataSource(context, uri)
+                            }
                             val bitmap = retriever.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
                             retriever.release()
                             bitmap
-                        } catch (e: Exception) { null }
+                        } catch (e: Exception) {
+                            android.util.Log.w("CameraScreen", "Thumbnail extraction failed: ${e.message}")
+                            null
+                        }
                     }
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.fillMaxSize().background(Color.DarkGray), contentAlignment = Alignment.Center) {
                         if (thumbnail != null) {
                             Image(
                                 bitmap = thumbnail.asImageBitmap(),
