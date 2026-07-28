@@ -468,6 +468,14 @@ class CameraViewModel @Inject constructor(
         }
 
         LocationHelper.switchMode(GpsPowerMode.BALANCED)
+
+        // Upload voice note as separate evidence entry (backend needs it as its own record)
+        if (state.voiceNotePath != null) {
+            try { uploadVoiceNoteEvidence(state, vendorId) } catch (e: Exception) {
+                Log.w(TAG, "Voice note upload failed (video still uploaded)", e)
+            }
+        }
+
         _uiState.value = _uiState.value.copy(
             isUploading = false,
             uploadSuccess = true,
@@ -571,6 +579,13 @@ class CameraViewModel @Inject constructor(
 
         // Switch back to balanced power after upload
         LocationHelper.switchMode(GpsPowerMode.BALANCED)
+
+        // Upload voice note as separate evidence entry (backend needs it as its own record)
+        if (state.voiceNotePath != null) {
+            try { uploadVoiceNoteEvidence(state, vendorId) } catch (e: Exception) {
+                Log.w(TAG, "Voice note upload failed (photo still uploaded)", e)
+            }
+        }
 
         _uiState.value = _uiState.value.copy(
             isUploading = false,
