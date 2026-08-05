@@ -44,6 +44,7 @@ interface PhotoRow {
   accuracy: number
   captured_at: string
   rejection_reasons: string[]
+  evidence_type?: string
 }
 
 export default function Reports() {
@@ -340,6 +341,13 @@ export default function Reports() {
                               <a href={`/photos?highlight=${row.photo_id}`} className="text-blue-600 hover:text-blue-800 hover:underline font-mono text-xs" title={row.photo_id}>
                                 {row.photo_id.substring(0, 8)}...
                               </a>
+                              {row.evidence_type && row.evidence_type !== 'photo' && (
+                                <div className="mt-1">
+                                  <span className="inline-block px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded capitalize">
+                                    {row.evidence_type === 'voice_note' ? '🎤 Audio' : row.evidence_type === 'text_note' ? '📝 Note' : '🎬 Video'}
+                                  </span>
+                                </div>
+                              )}
                             </td>
                             <td className="px-4 py-3 text-sm">
                               <div className="font-medium text-gray-900">{row.campaign_name}</div>
@@ -370,7 +378,13 @@ export default function Reports() {
                                     <span key={i} className="inline-block px-1.5 py-0.5 text-xs bg-red-100 text-red-700 rounded">{r}</span>
                                   ))}
                                 </div>
-                              ) : <span className="text-gray-400">-</span>}
+                              ) : row.status === 'flagged' ? (
+                                <span className="inline-block px-1.5 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded">VERIFICATION_INCOMPLETE</span>
+                              ) : row.status === 'pending' ? (
+                                <span className="text-gray-400 text-xs">Pending verification</span>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
                             </td>
                           </tr>
                         ))}

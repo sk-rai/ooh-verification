@@ -344,13 +344,11 @@ async def upload_evidence(
                 verification_flags.append("MISSING_GPS_TRACK")
 
     elif evidence_type == "voice_note":
-        # Voice note: verify device signature + GPS presence
-        if signature and latitude and longitude:
-            verification_status = "verified"
-            verification_confidence = 0.70
-        else:
-            verification_status = "flagged"
-            verification_confidence = 0.5
+        # Voice notes are supplementary evidence — always treated as verified
+        # Verification applies to the associated photo/video, not the audio itself
+        verification_status = "verified"
+        verification_confidence = 1.0
+        verification_flags = []
 
     elif evidence_type == "text_note":
         # Text notes: no verification (informational)
