@@ -12,7 +12,8 @@ data class AppConfigResponse(
     @SerializedName("upload_config") val uploadConfig: UploadConfig = UploadConfig(),
     @SerializedName("ui_config") val uiConfig: UiConfig = UiConfig(),
     @SerializedName("branding") val branding: BrandingConfig = BrandingConfig(),
-    @SerializedName("version") val version: VersionConfig = VersionConfig()
+    @SerializedName("version") val version: VersionConfig = VersionConfig(),
+    @SerializedName("tracking_config") val trackingConfig: TrackingConfig = TrackingConfig()
 )
 
 data class CaptureConfig(
@@ -27,12 +28,21 @@ data class CaptureConfig(
     @SerializedName("max_voice_notes_per_location") val maxVoiceNotesPerLocation: Int = 5,
     @SerializedName("video_resolution") val videoResolution: String = "720p",
     @SerializedName("photo_max_dimension") val photoMaxDimension: Int = 3000,
+    @SerializedName("photo_compression_quality") val photoCompressionQuality: Int = 90,
     @SerializedName("watermark_enabled") val watermarkEnabled: Boolean = true,
+    @SerializedName("watermark_opacity") val watermarkOpacity: Int = 160,
+    @SerializedName("watermark_height_percent") val watermarkHeightPercent: Int = 15,
     @SerializedName("compass_enabled") val compassEnabled: Boolean = true,
     @SerializedName("gallery_upload_allowed") val galleryUploadAllowed: Boolean = false,
     @SerializedName("gps_required") val gpsRequired: Boolean = true,
     @SerializedName("gps_min_accuracy_meters") val gpsMinAccuracyMeters: Int = 50,
-    @SerializedName("gps_timeout_seconds") val gpsTimeoutSeconds: Int = 30
+    @SerializedName("gps_timeout_seconds") val gpsTimeoutSeconds: Int = 30,
+    @SerializedName("gps_interval_high_ms") val gpsIntervalHighMs: Long = 5000L,
+    @SerializedName("gps_interval_balanced_ms") val gpsIntervalBalancedMs: Long = 15000L,
+    @SerializedName("camera_facing") val cameraFacing: String = "back",
+    @SerializedName("allow_emulator_capture") val allowEmulatorCapture: Boolean = true,
+    @SerializedName("allow_rooted_capture") val allowRootedCapture: Boolean = true,
+    @SerializedName("max_text_note_length") val maxTextNoteLength: Int = 500
 )
 
 data class UploadConfig(
@@ -40,7 +50,10 @@ data class UploadConfig(
     @SerializedName("max_file_size_mb") val maxFileSizeMb: Int = 50,
     @SerializedName("retry_max_attempts") val retryMaxAttempts: Int = 5,
     @SerializedName("background_upload") val backgroundUpload: Boolean = true,
-    @SerializedName("wifi_only_upload") val wifiOnlyUpload: Boolean = false
+    @SerializedName("wifi_only_upload") val wifiOnlyUpload: Boolean = false,
+    @SerializedName("upload_timeout_photo_ms") val uploadTimeoutPhotoMs: Long = 60_000L,
+    @SerializedName("upload_timeout_video_ms") val uploadTimeoutVideoMs: Long = 120_000L,
+    @SerializedName("upload_periodic_interval_minutes") val uploadPeriodicIntervalMinutes: Long = 15L
 )
 
 data class UiConfig(
@@ -49,7 +62,31 @@ data class UiConfig(
         "accident", "damage", "inspection", "delivery_proof", "hazard", "other"
     ),
     @SerializedName("show_confidence_score") val showConfidenceScore: Boolean = true,
-    @SerializedName("show_sensor_details") val showSensorDetails: Boolean = true
+    @SerializedName("show_sensor_details") val showSensorDetails: Boolean = true,
+    @SerializedName("features") val features: FeaturesConfig = FeaturesConfig(),
+    @SerializedName("maintenance") val maintenance: MaintenanceConfig = MaintenanceConfig()
+)
+
+data class FeaturesConfig(
+    @SerializedName("campaigns") val campaigns: Boolean = true,
+    @SerializedName("quick_capture") val quickCapture: Boolean = true,
+    @SerializedName("settings") val settings: Boolean = true,
+    @SerializedName("tracking") val tracking: Boolean = false
+)
+
+data class MaintenanceConfig(
+    @SerializedName("enabled") val enabled: Boolean = false,
+    @SerializedName("message") val message: String = ""
+)
+
+data class TrackingConfig(
+    @SerializedName("enabled") val enabled: Boolean = false,
+    @SerializedName("interval_minutes") val intervalMinutes: Int = 30,
+    @SerializedName("max_duration_hours") val maxDurationHours: Int = 8,
+    @SerializedName("sync_interval_minutes") val syncIntervalMinutes: Int = 30,
+    @SerializedName("min_accuracy_meters") val minAccuracyMeters: Int = 100,
+    @SerializedName("stop_on_app_close") val stopOnAppClose: Boolean = true,
+    @SerializedName("collect_battery_level") val collectBatteryLevel: Boolean = true
 )
 
 data class BrandingConfig(
@@ -61,8 +98,8 @@ data class BrandingConfig(
 )
 
 data class VersionConfig(
-    @SerializedName("latest_version_code") val latestVersionCode: Int = 10,
-    @SerializedName("latest_version_name") val latestVersionName: String = "1.2.4",
+    @SerializedName("latest_version_code") val latestVersionCode: Int = 11,
+    @SerializedName("latest_version_name") val latestVersionName: String = "1.3.0",
     @SerializedName("min_supported_version") val minSupportedVersion: Int = 8,
     @SerializedName("update_url") val updateUrl: String = "https://play.google.com/store/apps/details?id=com.lynksavvy.trustcapture",
     @SerializedName("message") val message: String? = null

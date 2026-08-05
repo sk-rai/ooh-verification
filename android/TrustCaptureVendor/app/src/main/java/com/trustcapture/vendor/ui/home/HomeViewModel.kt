@@ -20,6 +20,11 @@ import javax.inject.Inject
 data class HomeUiState(
     val hasCampaigns: Boolean = true,
     val quickCaptureEnabled: Boolean = true,
+    val showCampaigns: Boolean = true,
+    val showSettings: Boolean = true,
+    val maintenanceEnabled: Boolean = false,
+    val maintenanceMessage: String = "",
+    val tenantName: String = "TrustCapture",
     val pendingUploads: Int = 0
 )
 
@@ -41,7 +46,12 @@ class HomeViewModel @Inject constructor(
             appConfigRepository.refreshConfig()
             val config = appConfigRepository.config.value
             _uiState.value = _uiState.value.copy(
-                quickCaptureEnabled = config.uiConfig.quickCaptureEnabled
+                quickCaptureEnabled = config.uiConfig.features.quickCapture,
+                showCampaigns = config.uiConfig.features.campaigns,
+                showSettings = config.uiConfig.features.settings,
+                maintenanceEnabled = config.uiConfig.maintenance.enabled,
+                maintenanceMessage = config.uiConfig.maintenance.message,
+                tenantName = config.branding.tenantName
             )
         }
 

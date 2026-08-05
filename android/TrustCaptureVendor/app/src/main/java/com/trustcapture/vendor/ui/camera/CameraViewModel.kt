@@ -125,6 +125,7 @@ class CameraViewModel @Inject constructor(
     private val uploadManager: UploadManager,
     private val securityManager: SecurityManager,
     private val keystoreManager: KeystoreManager,
+    private val appConfigRepository: com.trustcapture.vendor.domain.repository.AppConfigRepository,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
@@ -241,7 +242,17 @@ class CameraViewModel @Inject constructor(
             )
 
             val watermarkedUri = withContext(Dispatchers.IO) {
-                WatermarkGenerator.applyWatermark(appContext, uri, watermarkData)
+                val cfg = appConfigRepository.config.value
+                WatermarkGenerator.applyWatermark(
+                    context = appContext,
+                    sourceUri = uri,
+                    data = watermarkData,
+                    maxDimension = cfg.captureConfig.photoMaxDimension,
+                    compressionQuality = cfg.captureConfig.photoCompressionQuality,
+                    watermarkOpacity = cfg.captureConfig.watermarkOpacity,
+                    watermarkHeightPercent = cfg.captureConfig.watermarkHeightPercent,
+                    brandText = "${cfg.branding.watermarkText}™"
+                )
             }
 
             // Sign the watermarked photo with device Keystore key
@@ -445,8 +456,9 @@ class CameraViewModel @Inject constructor(
         // Build sensor data with GPS (video captures don't go through onPhotoCaptured)
         val sensorJson = state.sensorDataJson ?: buildGpsSensorJson(state)
 
-        // Upload with timeout (90 seconds for video)
-        kotlinx.coroutines.withTimeout(90_000L) {
+        // Upload with timeout from config (video)
+        val videoTimeoutMs = appConfigRepository.config.value.uploadConfig.uploadTimeoutVideoMs
+        kotlinx.coroutines.withTimeout(videoTimeoutMs) {
             withContext(Dispatchers.IO) {
                 uploadManager.uploadEvidence(
                     fileBytes = videoBytes,
@@ -533,8 +545,9 @@ class CameraViewModel @Inject constructor(
             .withZone(java.time.ZoneOffset.UTC)
             .format(java.time.Instant.now())
 
-        // Upload directly to /api/evidence/upload with timeout (60s for photo)
-        kotlinx.coroutines.withTimeout(60_000L) {
+        // Upload directly to /api/evidence/upload with timeout from config
+        val photoTimeoutMs = appConfigRepository.config.value.uploadConfig.uploadTimeoutPhotoMs
+        kotlinx.coroutines.withTimeout(photoTimeoutMs) {
             withContext(Dispatchers.IO) {
                 uploadManager.uploadEvidence(
                     fileBytes = photoBytes,
@@ -664,7 +677,8 @@ class CameraViewModel @Inject constructor(
     }
 
     fun setTextNote(note: String) {
-        _uiState.value = _uiState.value.copy(textNote = note.take(500))
+        val maxLen = appConfigRepository.config.value.captureConfig.maxTextNoteLength
+        _uiState.value = _uiState.value.copy(textNote = note.take(maxLen))
     }
 
     // --- Voice Note Recording ---
@@ -684,8 +698,9 @@ class CameraViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(
                         voiceRecordingSeconds = voiceRecorder?.elapsedSeconds ?: 0
                     )
-                    // Auto-stop at max duration (120s default)
-                    if ((_uiState.value.voiceRecordingSeconds) >= 120) {
+                    // Auto-stop at max duration from config
+                    val maxVoiceSecs = appConfigRepository.config.value.captureConfig.maxVoiceDurationSeconds
+                    if ((_uiState.value.voiceRecordingSeconds) >= maxVoiceSecs) {
                         stopVoiceRecording()
                     }
                 }

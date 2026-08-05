@@ -25,13 +25,37 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    // Maintenance mode — show full-screen message
+    if (uiState.maintenanceEnabled) {
+        Scaffold { padding ->
+            Column(
+                modifier = Modifier.fillMaxSize().padding(padding).padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Under Maintenance", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                if (uiState.maintenanceMessage.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(uiState.maintenanceMessage, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                OutlinedButton(onClick = { viewModel.logout(onLoggedOut) }) { Text("Sign Out") }
+            }
+        }
+        return
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("TrustCapture") },
+                title = { Text(uiState.tenantName) },
                 actions = {
-                    IconButton(onClick = onSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    if (uiState.showSettings) {
+                        IconButton(onClick = onSettings) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        }
                     }
                     IconButton(onClick = { viewModel.logout(onLoggedOut) }) {
                         Icon(Icons.Default.Logout, contentDescription = "Logout")
@@ -63,8 +87,8 @@ fun HomeScreen(
             )
             Spacer(modifier = Modifier.height(32.dp))
 
-            // My Campaigns button (shown if vendor has campaigns)
-            if (uiState.hasCampaigns) {
+            // My Campaigns button (shown if feature enabled AND vendor has campaigns)
+            if (uiState.showCampaigns && uiState.hasCampaigns) {
                 ElevatedCard(
                     onClick = onCampaigns,
                     modifier = Modifier.fillMaxWidth()
@@ -97,7 +121,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Quick Capture button (always shown)
+            // Quick Capture button (shown if feature enabled)
             if (uiState.quickCaptureEnabled) {
                 ElevatedCard(
                     onClick = onQuickCapture,

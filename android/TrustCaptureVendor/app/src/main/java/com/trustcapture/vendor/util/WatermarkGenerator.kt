@@ -31,8 +31,8 @@ object WatermarkGenerator {
 
     /**
      * Burns watermark into photo pixels. Returns URI of the watermarked file.
-     * The watermark is rendered in the bottom 15% of the image with a
-     * semi-transparent black background, using monospace font.
+     * The watermark is rendered in the bottom [heightPercent]% of the image with a
+     * semi-transparent background, using monospace font.
      *
      * Uses BitmapFactory.Options.inSampleSize to downsample large photos
      * before processing, reducing memory usage significantly.
@@ -40,7 +40,12 @@ object WatermarkGenerator {
     fun applyWatermark(
         context: Context,
         sourceUri: Uri,
-        data: WatermarkData
+        data: WatermarkData,
+        maxDimension: Int = 3000,
+        compressionQuality: Int = 90,
+        watermarkOpacity: Int = 160,
+        watermarkHeightPercent: Int = 15,
+        brandText: String = "TrustCapture™"
     ): Uri? {
         return try {
             // First pass: decode bounds only to determine dimensions
@@ -49,8 +54,8 @@ object WatermarkGenerator {
                 BitmapFactory.decodeStream(stream, null, options)
             }
 
-            // Calculate inSampleSize: downsample if either dimension > 3000px
-            val maxDim = 3000
+            // Calculate inSampleSize: downsample if either dimension > maxDimension
+            val maxDim = maxDimension
             var sampleSize = 1
             val w = options.outWidth
             val h = options.outHeight
@@ -86,13 +91,13 @@ object WatermarkGenerator {
             val width = bitmap.width
             val height = bitmap.height
 
-            // Watermark occupies bottom 15% of image
-            val watermarkHeight = (height * 0.15f).toInt()
+            // Watermark occupies bottom watermarkHeightPercent% of image
+            val watermarkHeight = (height * (watermarkHeightPercent / 100f)).toInt()
             val watermarkTop = height - watermarkHeight
 
-            // Semi-transparent black background
+            // Semi-transparent black background with configurable opacity
             val bgPaint = Paint().apply {
-                color = Color.argb(160, 0, 0, 0)
+                color = Color.argb(watermarkOpacity, 0, 0, 0)
                 style = Paint.Style.FILL
             }
             canvas.drawRect(
@@ -130,7 +135,7 @@ object WatermarkGenerator {
                 )
             }
 
-            // Draw TrustCapture branding (right-aligned, smaller)
+            // Draw brand text (right-aligned, smaller, from config)
             val brandPaint = Paint().apply {
                 color = Color.argb(200, 255, 255, 255)
                 textSize = fontSize * 0.7f
@@ -139,25 +144,24 @@ object WatermarkGenerator {
                 textAlign = Paint.Align.RIGHT
             }
             canvas.drawText(
-                "TrustCapture™",
+                brandText,
                 width - leftPadding,
                 watermarkTop + fontSize,
                 brandPaint
             )
 
-            // Save watermarked bitmap with adaptive compression
-            // Target: ~1-2MB output. Start at 90% quality, reduce if too large.
+            // Save watermarked bitmap with configurable compression quality
             val outputFile = File(
                 context.cacheDir,
                 "WM_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(data.timestamp)}.jpg"
             )
-            var quality = 90
+            var quality = compressionQuality
             FileOutputStream(outputFile).use { out ->
                 bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out)
             }
             // If file > 2MB, recompress at lower quality
             if (outputFile.length() > 2 * 1024 * 1024) {
-                quality = 80
+                quality = (compressionQuality - 10).coerceAtLeast(60)
                 FileOutputStream(outputFile).use { out ->
                     bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out)
                 }
