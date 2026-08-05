@@ -67,6 +67,8 @@ async def get_my_campaigns(
                 "assignment_location_name": assignment.assignment_location_name,
                 "locations": locations,
                 "location_count": len(locations),
+                # Per-campaign config — if None, Android uses global app config
+                "config": getattr(campaign, 'campaign_config', None),
             })
 
     return {"campaigns": campaigns, "total": len(campaigns), "has_campaigns": len(campaigns) > 0}

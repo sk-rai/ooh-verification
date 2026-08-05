@@ -12,33 +12,82 @@ router = APIRouter(prefix="/api/app", tags=["app-config"])
 
 # Default capture config (can be overridden per-tenant later)
 DEFAULT_CAPTURE_CONFIG = {
+    # Photo settings
     "photo_enabled": True,
-    "video_enabled": True,
-    "voice_note_enabled": True,
-    "text_note_enabled": True,
-    "max_video_duration_seconds": 60,
-    "max_voice_duration_seconds": 120,
+    "photo_max_dimension": 3000,
+    "photo_compression_quality": 90,
     "max_photos_per_location": 10,
+
+    # Video settings
+    "video_enabled": True,
+    "max_video_duration_seconds": 60,
     "max_videos_per_location": 5,
-    "max_voice_notes_per_location": 5,
     "video_resolution": "720p",
+
+    # Voice note settings
+    "voice_note_enabled": True,
+    "max_voice_duration_seconds": 120,
+    "max_voice_notes_per_location": 5,
+
+    # Text note settings
+    "text_note_enabled": True,
+    "max_text_note_length": 500,
+
+    # Watermark settings
     "watermark_enabled": True,
+    "watermark_opacity": 160,
+    "watermark_height_percent": 15,
+
+    # Camera settings
+    "camera_facing": "back",
     "compass_enabled": True,
     "gallery_upload_allowed": False,
+
+    # GPS settings
     "gps_required": True,
     "gps_min_accuracy_meters": 50,
     "gps_timeout_seconds": 30,
+    "gps_interval_high_ms": 5000,
+    "gps_interval_balanced_ms": 15000,
+
+    # Security settings
+    "allow_emulator_capture": True,
+    "allow_rooted_capture": True,
 }
 
 DEFAULT_UPLOAD_CONFIG = {
     "endpoint": "/api/evidence/upload",
     "max_file_size_mb": 50,
     "retry_max_attempts": 5,
+    "upload_timeout_photo_ms": 60000,
+    "upload_timeout_video_ms": 120000,
+    "wifi_only_upload": False,
+    "upload_periodic_interval_minutes": 15,
 }
 
 DEFAULT_UI_CONFIG = {
     "quick_capture_enabled": True,
     "categories": ["accident", "damage", "inspection", "delivery_proof", "hazard", "other"],
+    "features": {
+        "campaigns": True,
+        "quick_capture": True,
+        "settings": True,
+        "tracking": False,
+    },
+    "maintenance": {
+        "enabled": False,
+        "message": "",
+    },
+}
+
+DEFAULT_TRACKING_CONFIG = {
+    "enabled": False,
+    "interval_minutes": 30,
+    "max_duration_hours": 8,
+    "sync_interval_minutes": 30,
+    "min_accuracy_meters": 100,
+    "stop_on_app_close": True,
+    "collect_battery_level": True,
 }
 
 DEFAULT_BRANDING = {
@@ -98,6 +147,7 @@ async def get_app_config(request: Request):
         "capture_config": DEFAULT_CAPTURE_CONFIG,
         "upload_config": DEFAULT_UPLOAD_CONFIG,
         "ui_config": DEFAULT_UI_CONFIG,
+        "tracking_config": DEFAULT_TRACKING_CONFIG,
         "branding": branding,
         "version": VERSION_CONFIG,
     }
