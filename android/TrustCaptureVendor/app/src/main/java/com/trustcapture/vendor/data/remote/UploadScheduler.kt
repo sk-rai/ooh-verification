@@ -30,10 +30,11 @@ object UploadScheduler {
     /**
      * Enqueue a periodic upload job. Call once at app startup.
      * Uses KEEP policy so it doesn't restart if already scheduled.
+     * [intervalMinutes] defaults to 15 but can be set from backend config.
      */
-    fun schedulePeriodicSync(context: Context) {
+    fun schedulePeriodicSync(context: Context, intervalMinutes: Long = 15L) {
         val request = PeriodicWorkRequestBuilder<UploadWorker>(
-            15, TimeUnit.MINUTES
+            intervalMinutes, TimeUnit.MINUTES
         )
             .setConstraints(networkConstraints)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
@@ -41,7 +42,7 @@ object UploadScheduler {
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             PERIODIC_WORK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingPeriodicWorkPolicy.UPDATE,  // UPDATE instead of KEEP so interval changes take effect
             request
         )
     }
