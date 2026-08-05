@@ -100,11 +100,11 @@ DEFAULT_BRANDING = {
 
 # Version config — update when releasing new app versions
 VERSION_CONFIG = {
-    "latest_version_code": 10,
-    "latest_version_name": "1.2.4",
+    "latest_version_code": 11,
+    "latest_version_name": "1.3.0",
     "min_supported_version": 8,
     "update_url": "https://play.google.com/store/apps/details?id=com.lynksavvy.trustcapture",
-    "message": "",
+    "message": "New: video capture, voice notes, quick capture mode, configurable settings",
 }
 
 
