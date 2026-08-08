@@ -305,10 +305,21 @@ async def upload_evidence(
                     # Run location matching
                     if latitude and longitude:
                         matcher = LocationProfileMatcher()
-                        location_match_result = matcher.match(
-                            latitude=latitude,
-                            longitude=longitude,
-                            profiles=profiles
+                        captured_data = {
+                            "latitude": latitude,
+                            "longitude": longitude,
+                        }
+                        # Add optional sensor data if available
+                        if parsed_sensor_data:
+                            captured_data.update({
+                                "wifi_bssids": parsed_sensor_data.get("wifi_bssids"),
+                                "cell_tower_ids": parsed_sensor_data.get("cell_tower_ids"),
+                                "pressure": parsed_sensor_data.get("barometric_pressure"),
+                                "light_level": parsed_sensor_data.get("light_level"),
+                            })
+                        location_match_result = matcher.match_location(
+                            captured_data=captured_data,
+                            location_profile=location_profile
                         )
 
             # Determine signature validity
