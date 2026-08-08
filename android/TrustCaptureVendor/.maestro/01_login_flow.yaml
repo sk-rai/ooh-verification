@@ -1,0 +1,28 @@
+appId: com.lynksavvy.trustcapture
+name: "Login Flow - OTP"
+---
+# Launch app
+- launchApp
+
+# Should see login screen with phone number field
+- assertVisible: "Enter Phone Number"
+
+# Enter test vendor phone number
+- tapOn:
+    id: "phone_input"  
+- inputText: "9876543210"
+
+# Tap Send OTP
+- tapOn: "Send OTP"
+
+# Wait for OTP screen
+- assertVisible: "Enter OTP"
+
+# Enter test OTP (backend test mode: 123456)
+- inputText: "123456"
+
+# Tap Verify
+- tapOn: "Verify"
+
+# Should land on Home screen
+- assertVisible: "What would you like to do?"

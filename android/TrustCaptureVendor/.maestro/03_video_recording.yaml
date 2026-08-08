@@ -1,0 +1,59 @@
+appId: com.lynksavvy.trustcapture
+name: "Quick Capture - Video Recording"
+---
+# Assumes already logged in
+- launchApp
+
+# Navigate to Quick Capture
+- tapOn: "Quick Capture"
+- tapOn: "Damage"
+
+# Wait for camera
+- extendedWaitUntil:
+    visible: "PHOTO"
+    timeout: 35000
+
+# Switch to video mode (tap the toggle button on the left)
+- tapOn:
+    point: "25%,85%"
+
+# Should see VIDEO label
+- assertVisible: "VIDEO"
+
+# Start recording (tap the red record button in center)
+- tapOn:
+    point: "50%,85%"
+
+# Should see recording timer
+- extendedWaitUntil:
+    visible: "REC"
+    timeout: 3000
+
+# Wait 5 seconds for recording
+- swipe:
+    direction: UP
+    duration: 5000
+
+# Stop recording (tap stop button)
+- tapOn:
+    point: "50%,85%"
+
+# Should transition to review screen
+- extendedWaitUntil:
+    visible: "Review Video"
+    timeout: 10000
+
+# Should show video info
+- assertVisible: "Video"
+- assertVisible: "GPS track"
+
+# Upload
+- scrollUntilVisible:
+    element: "Upload"
+    direction: DOWN
+- tapOn: "Upload"
+
+# Wait for success
+- extendedWaitUntil:
+    visible: "uploaded successfully"
+    timeout: 130000

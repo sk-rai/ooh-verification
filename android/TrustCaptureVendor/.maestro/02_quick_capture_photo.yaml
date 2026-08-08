@@ -1,0 +1,51 @@
+appId: com.lynksavvy.trustcapture
+name: "Quick Capture - Photo with Text Note"
+---
+# Assumes already logged in (run 01_login_flow first or app is already at Home)
+- launchApp
+
+# Tap Quick Capture
+- tapOn: "Quick Capture"
+
+# Category picker should appear
+- assertVisible: "Select Category"
+
+# Select "Inspection" category
+- tapOn: "Inspection"
+
+# Camera screen should open — wait for GPS
+- extendedWaitUntil:
+    visible: "GPS"
+    timeout: 35000
+
+# Should see PHOTO mode label
+- assertVisible: "PHOTO"
+
+# Take a photo (tap the capture button)
+- tapOn:
+    point: "50%,85%"
+
+# Wait for watermark processing
+- extendedWaitUntil:
+    visible: "Review Photo"
+    timeout: 10000
+
+# Should see review screen with metadata
+- assertVisible: "Capture Details"
+- assertVisible: "GPS"
+- assertVisible: "Signed"
+
+# Type a text note
+- scrollUntilVisible:
+    element: "Add observations"
+    direction: DOWN
+- tapOn: "Add observations"
+- inputText: "Test inspection note from Maestro"
+
+# Tap Upload
+- tapOn: "Upload"
+
+# Wait for upload to complete (success or queued)
+- extendedWaitUntil:
+    visible: "uploaded successfully"
+    timeout: 70000
