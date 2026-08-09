@@ -332,11 +332,26 @@ async def upload_evidence(
                 sensor_data=parsed_sensor_data,
                 location_profile=location_profile,
             )
-            verification_status = result.status
-            verification_confidence = result.confidence
+            verification_confidence = result.confidence_score
             verification_flags = result.flags
+            # Determine status from confidence + flags
+            if "LOCATION_FAR_FROM_EXPECTED" in verification_flags or "SIGNATURE_INVALID" in verification_flags:
+                verification_status = "rejected"
+            elif verification_confidence >= 0.65:
+                verification_status = "verified"
+            elif verification_confidence >= 0.40:
+                verification_status = "flagged"
+            else:
+                verification_status = "rejected"
         except Exception as e:
+            import traceback
             logger.error(f"Verification failed for evidence {evidence.evidence_id}: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            print(f"❌ Verification error: {e}")
+            print(f"   location_match_result: {location_match_result}")
+            print(f"   latitude: {latitude}, longitude: {longitude}")
+            print(f"   location_profile: {location_profile}")
+            print(traceback.format_exc())
             verification_status = "pending"
             verification_confidence = 0.0
 
