@@ -319,11 +319,28 @@ async def get_aggregate_statistics(
         )
     )).scalar() or 0
 
+    # Also count evidence table records
+    from app.models.evidence import Evidence
+    evidence_total = (await db.execute(
+        select(func.count()).select_from(Evidence).where(Evidence.tenant_id == client.tenant_id)
+    )).scalar() or 0
+    evidence_verified = (await db.execute(
+        select(func.count()).select_from(Evidence).where(
+            Evidence.tenant_id == client.tenant_id, Evidence.verification_status == "verified"
+        )
+    )).scalar() or 0
+    evidence_rejected = (await db.execute(
+        select(func.count()).select_from(Evidence).where(
+            Evidence.tenant_id == client.tenant_id, Evidence.verification_status == "rejected"
+        )
+    )).scalar() or 0
+    evidence_pending = evidence_total - evidence_verified - evidence_rejected
+
     return {
-        "total_photos": total_photos,
-        "verified_photos": verified,
-        "failed_photos": rejected,
-        "pending_photos": pending,
+        "total_photos": total_photos + evidence_total,
+        "verified_photos": verified + evidence_verified,
+        "failed_photos": rejected + evidence_rejected,
+        "pending_photos": pending + evidence_pending,
         "total_campaigns": total_campaigns,
         "active_campaigns": active_campaigns,
         "total_vendors": total_vendors,

@@ -31,16 +31,18 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [campaignsRes, vendorsRes, photosRes] = await Promise.all([
+      const [campaignsRes, vendorsRes, photosRes, statsRes] = await Promise.all([
         api.get('/api/campaigns').catch(() => ({ data: [] })),
         api.get('/api/vendors').catch(() => ({ data: [] })),
         api.get('/api/photos?limit=6').catch(() => ({ data: [] })),
+        api.get('/api/reports/statistics').catch(() => ({ data: {} })),
       ])
 
+      const reportStats = statsRes.data || {}
       setStats({
         campaigns: (Array.isArray(campaignsRes.data) ? campaignsRes.data : (campaignsRes.data?.campaigns || [])).length,
         vendors: (Array.isArray(vendorsRes.data) ? vendorsRes.data : (vendorsRes.data?.vendors || [])).length,
-        photos: (Array.isArray(photosRes.data) ? photosRes.data : (photosRes.data?.photos || [])).length,
+        photos: reportStats.total_photos || (Array.isArray(photosRes.data) ? photosRes.data : (photosRes.data?.photos || [])).length,
       })
 
       const photosArr = Array.isArray(photosRes.data) ? photosRes.data : (photosRes.data?.photos || [])
