@@ -3,6 +3,7 @@ package com.trustcapture.vendor.data.remote
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import com.trustcapture.vendor.data.local.dao.EvidenceDao
 import com.trustcapture.vendor.data.local.entity.PhotoEntity
 import com.trustcapture.vendor.data.remote.api.PhotoApi
 import com.trustcapture.vendor.data.remote.dto.CampaignMetadata
@@ -45,6 +46,7 @@ class UploadManager @Inject constructor(
     private val evidenceApi: com.trustcapture.vendor.data.remote.api.EvidenceApi,
     private val photoRepository: PhotoRepository,
     private val auditRepository: AuditRepository,
+    private val evidenceDao: EvidenceDao,
     @ApplicationContext private val context: Context
 ) {
     companion object {
@@ -241,5 +243,63 @@ class UploadManager @Inject constructor(
             val errorMsg = response.errorBody()?.string() ?: "Evidence upload failed (${response.code()})"
             throw Exception(errorMsg)
         }
+    }
+
+    /**
+     * Process the evidence_queue table: upload pending items in background.
+     * Called by UploadWorker alongside the old photo queue processing.
+     */
+    suspend fun processEvidenceQueue() {
+        // Reset stale uploading items (stuck for > 5 minutes)
+        evidenceDao.getStaleUploading().forEach { evidenceDao.resetToPending(it.id) }
+
+        // Get pending items
+        val pending = evidenceDao.getPendingEvidence()
+        for (item in pending) {
+            if (item.retryCount >= MAX_RETRIES) continue // Skip max-retried
+
+            if (!isNetworkAvailable()) {
+                Log.w(TAG, "No network — stopping evidence queue processing")
+                break
+            }
+
+            try {
+                evidenceDao.markUploading(item.id)
+
+                val file = java.io.File(item.filePath)
+                if (!file.exists()) {
+                    evidenceDao.markFailed(item.id, "File not found: ${item.filePath}")
+                    continue
+                }
+
+                val fileBytes = file.readBytes()
+                uploadEvidence(
+                    fileBytes = fileBytes,
+                    fileName = item.fileName,
+                    mimeType = item.mimeType,
+                    evidenceType = item.evidenceType,
+                    campaignId = item.campaignId,
+                    campaignCode = item.campaignCode,
+                    category = item.category,
+                    textContent = item.textContent,
+                    sensorDataJson = item.sensorDataJson,
+                    signatureJson = item.signatureJson,
+                    gpsTrackJson = item.gpsTrackJson,
+                    captureTimestamp = item.captureTimestamp
+                )
+
+                evidenceDao.markUploaded(item.id)
+                // Delete the file after successful upload
+                file.delete()
+                Log.i(TAG, "Evidence ${item.id} (${item.evidenceType}) uploaded successfully")
+            } catch (e: Exception) {
+                Log.e(TAG, "Evidence ${item.id} upload failed: ${e.message}", e)
+                evidenceDao.markFailed(item.id, e.message ?: "Unknown error")
+                delay(BASE_DELAY_MS * (1L shl item.retryCount.coerceAtMost(4)))
+            }
+        }
+
+        // Cleanup old uploaded items
+        evidenceDao.cleanupUploaded()
     }
 }
