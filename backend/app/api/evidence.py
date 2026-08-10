@@ -356,11 +356,36 @@ async def upload_evidence(
             verification_confidence = 0.0
 
     elif evidence_type == "video":
-        # Video verification: async (mark as pending, process in background)
-        # For now: basic checks (device signature present, GPS track present)
-        if signature and gps_track:
+        # Video verification: check location if campaign assigned, then signature/track
+        from app.services.location_profile_matcher import LocationProfileMatcher
+        from app.models.location_profile import LocationProfile
+
+        video_location_ok = True
+        if resolved_campaign_id and latitude and longitude:
+            lp_result = await db.execute(
+                select(LocationProfile).where(LocationProfile.campaign_id == resolved_campaign_id)
+            )
+            profiles = lp_result.scalars().all()
+            if profiles:
+                matcher = LocationProfileMatcher()
+                match_result = matcher.match_location(
+                    captured_data={"latitude": latitude, "longitude": longitude},
+                    location_profile=profiles[0]
+                )
+                if match_result:
+                    distance = match_result.get("distance_meters", 0)
+                    if distance > 1000:
+                        verification_flags.append("LOCATION_FAR_FROM_EXPECTED")
+                        video_location_ok = False
+                    elif distance > 200:
+                        verification_flags.append("LOCATION_MODERATE_DEVIATION")
+
+        if not video_location_ok:
+            verification_status = "rejected"
+            verification_confidence = 0.3
+        elif signature and gps_track:
             verification_status = "verified"
-            verification_confidence = 0.75  # Base confidence for video with track + signature
+            verification_confidence = 0.75
         else:
             verification_status = "flagged"
             verification_confidence = 0.5
