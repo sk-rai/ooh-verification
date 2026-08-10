@@ -23,6 +23,8 @@ import com.trustcapture.vendor.util.WatermarkGenerator
 import com.trustcapture.vendor.util.WifiData
 import com.trustcapture.vendor.util.WifiNetworkData
 import com.trustcapture.vendor.util.WifiScanner
+import com.trustcapture.vendor.data.local.dao.EvidenceDao
+import com.trustcapture.vendor.data.local.entity.EvidenceEntity
 import com.trustcapture.vendor.domain.model.CampaignTypeConfig
 import com.trustcapture.vendor.data.remote.UploadManager
 import com.trustcapture.vendor.domain.repository.AuditRepository
@@ -126,6 +128,7 @@ class CameraViewModel @Inject constructor(
     private val securityManager: SecurityManager,
     private val keystoreManager: KeystoreManager,
     private val appConfigRepository: com.trustcapture.vendor.domain.repository.AppConfigRepository,
+    private val evidenceDao: EvidenceDao,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
@@ -405,242 +408,89 @@ class CameraViewModel @Inject constructor(
             val state = _uiState.value
             val vendorId = userPreferences.vendorId.first() ?: "UNKNOWN"
             try {
-                // Determine evidence type
                 val isVideo = state.videoFilePath != null && state.watermarkedPhotoUri == null
-                
-                if (isVideo) {
-                    // Video upload — use evidence endpoint directly
-                    uploadVideoEvidence(state, vendorId)
-                } else {
-                    // Photo upload — use evidence endpoint directly
-                    uploadPhotoEvidence(state, vendorId)
+                val cfg = appConfigRepository.config.value
+
+                val timestamp = java.time.format.DateTimeFormatter.ISO_INSTANT
+                    .withZone(java.time.ZoneOffset.UTC)
+                    .format(java.time.Instant.now())
+
+                // Determine source file and copy to persistent upload dir
+                val sourceUri = if (isVideo) android.net.Uri.parse(state.videoFilePath!!) else state.watermarkedPhotoUri!!
+                val evidenceType = if (isVideo) "video" else "photo"
+                val mimeType = if (isVideo) "video/mp4" else "image/jpeg"
+                val extension = if (isVideo) "mp4" else "jpg"
+                val fileName = "${evidenceType}_${System.currentTimeMillis()}.$extension"
+
+                // Copy to persistent upload directory
+                val uploadDir = java.io.File(appContext.filesDir, "upload_queue").also { it.mkdirs() }
+                val destFile = java.io.File(uploadDir, fileName)
+                withContext(Dispatchers.IO) {
+                    appContext.contentResolver.openInputStream(sourceUri)?.use { input ->
+                        destFile.outputStream().use { output -> input.copyTo(output) }
+                    }
                 }
-            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                Log.e(TAG, "Upload timed out, saving locally for retry", e)
-                saveForRetryOnFailure(state, vendorId)
-                _uiState.value = _uiState.value.copy(
-                    isUploading = false,
-                    uploadSuccess = true,
-                    error = null
-                )
-            } catch (e: Exception) {
-                Log.e(TAG, "Upload failed, saving locally for retry", e)
-                saveForRetryOnFailure(state, vendorId)
-                _uiState.value = _uiState.value.copy(
-                    isUploading = false,
-                    uploadSuccess = true,
-                    error = null
-                )
-            }
-        }
-    }
 
-    private suspend fun uploadVideoEvidence(state: CameraUiState, vendorId: String) {
-        val videoUri = android.net.Uri.parse(state.videoFilePath!!)
-        val videoBytes = withContext(Dispatchers.IO) {
-            appContext.contentResolver.openInputStream(videoUri)?.readBytes()
-        } ?: throw Exception("Cannot read video file")
+                // Build sensor data
+                val sensorJson = state.sensorDataJson ?: buildGpsSensorJson(state)
 
-        // Read voice note if present
-        val voiceNoteBytes = if (state.voiceNotePath != null) {
-            withContext(Dispatchers.IO) {
-                val file = java.io.File(state.voiceNotePath!!)
-                if (file.exists()) file.readBytes() else null
-            }
-        } else null
-
-        val timestamp = java.time.format.DateTimeFormatter.ISO_INSTANT
-            .withZone(java.time.ZoneOffset.UTC)
-            .format(java.time.Instant.now())
-
-        // Build sensor data with GPS (video captures don't go through onPhotoCaptured)
-        val sensorJson = state.sensorDataJson ?: buildGpsSensorJson(state)
-
-        // Upload with timeout from config (video)
-        val videoTimeoutMs = appConfigRepository.config.value.uploadConfig.uploadTimeoutVideoMs
-        kotlinx.coroutines.withTimeout(videoTimeoutMs) {
-            withContext(Dispatchers.IO) {
-                uploadManager.uploadEvidence(
-                    fileBytes = videoBytes,
-                    fileName = "video_${System.currentTimeMillis()}.mp4",
-                    mimeType = "video/mp4",
-                    evidenceType = "video",
+                // Save to evidence queue (Room DB)
+                evidenceDao.insert(EvidenceEntity(
+                    evidenceType = evidenceType,
+                    filePath = destFile.absolutePath,
+                    fileName = fileName,
+                    mimeType = mimeType,
                     campaignId = state.campaignId.ifBlank { null },
                     campaignCode = state.campaignCode.ifBlank { null },
                     category = null,
                     textContent = state.textNote.ifBlank { null },
                     sensorDataJson = sensorJson,
                     signatureJson = state.signatureJson,
-                    gpsTrackJson = state.gpsTrackJson,
-                    captureTimestamp = timestamp,
-                    voiceNoteBytes = voiceNoteBytes,
-                    voiceNoteFileName = if (voiceNoteBytes != null) "voice_${System.currentTimeMillis()}.m4a" else null
-                )
-            }
-        }
+                    gpsTrackJson = if (isVideo) state.gpsTrackJson else null,
+                    captureTimestamp = timestamp
+                ))
 
-        LocationHelper.switchMode(GpsPowerMode.BALANCED)
+                // Also queue voice note if present
+                if (state.voiceNotePath != null) {
+                    val voiceFile = java.io.File(state.voiceNotePath!!)
+                    if (voiceFile.exists()) {
+                        val voiceDest = java.io.File(uploadDir, "voice_${System.currentTimeMillis()}.m4a")
+                        withContext(Dispatchers.IO) { voiceFile.copyTo(voiceDest, overwrite = true) }
+                        evidenceDao.insert(EvidenceEntity(
+                            evidenceType = "voice_note",
+                            filePath = voiceDest.absolutePath,
+                            fileName = voiceDest.name,
+                            mimeType = "audio/mp4",
+                            campaignId = state.campaignId.ifBlank { null },
+                            campaignCode = state.campaignCode.ifBlank { null },
+                            category = null,
+                            textContent = null,
+                            sensorDataJson = sensorJson,
+                            signatureJson = null,
+                            gpsTrackJson = null,
+                            captureTimestamp = timestamp
+                        ))
+                    }
+                }
 
-        // Upload voice note as separate evidence entry (backend needs it as its own record)
-        if (state.voiceNotePath != null) {
-            try { uploadVoiceNoteEvidence(state, vendorId) } catch (e: Exception) {
-                Log.w(TAG, "Voice note upload failed (video still uploaded)", e)
-            }
-        }
-
-        _uiState.value = _uiState.value.copy(
-            isUploading = false,
-            uploadSuccess = true,
-            error = null
-        )
-    }
-
-    private suspend fun uploadVoiceNoteEvidence(state: CameraUiState, vendorId: String) {
-        val voiceFile = java.io.File(state.voiceNotePath!!)
-        if (!voiceFile.exists()) return
-        val voiceBytes = withContext(Dispatchers.IO) { voiceFile.readBytes() }
-
-        val timestamp = java.time.format.DateTimeFormatter.ISO_INSTANT
-            .withZone(java.time.ZoneOffset.UTC)
-            .format(java.time.Instant.now())
-
-        // Include GPS sensor data for voice notes
-        val sensorJson = buildGpsSensorJson(state)
-
-        withContext(Dispatchers.IO) {
-            uploadManager.uploadEvidence(
-                fileBytes = voiceBytes,
-                fileName = "voice_${System.currentTimeMillis()}.m4a",
-                mimeType = "audio/mp4",
-                evidenceType = "voice_note",
-                campaignId = state.campaignId.ifBlank { null },
-                campaignCode = state.campaignCode.ifBlank { null },
-                category = null,
-                textContent = null,
-                sensorDataJson = sensorJson,
-                signatureJson = null,
-                gpsTrackJson = null,
-                captureTimestamp = timestamp
-            )
-        }
-    }
-
-    private suspend fun uploadPhotoEvidence(state: CameraUiState, vendorId: String) {
-        val photoUri = state.watermarkedPhotoUri ?: return
-
-        // Read photo bytes for direct upload to evidence endpoint
-        val photoBytes = withContext(Dispatchers.IO) {
-            appContext.contentResolver.openInputStream(photoUri)?.readBytes()
-        } ?: throw Exception("Cannot read photo file")
-
-        // Read voice note if present
-        val voiceNoteBytes = if (state.voiceNotePath != null) {
-            withContext(Dispatchers.IO) {
-                val file = java.io.File(state.voiceNotePath!!)
-                if (file.exists()) file.readBytes() else null
-            }
-        } else null
-
-        val timestamp = java.time.format.DateTimeFormatter.ISO_INSTANT
-            .withZone(java.time.ZoneOffset.UTC)
-            .format(java.time.Instant.now())
-
-        // Upload directly to /api/evidence/upload with timeout from config
-        val photoTimeoutMs = appConfigRepository.config.value.uploadConfig.uploadTimeoutPhotoMs
-        kotlinx.coroutines.withTimeout(photoTimeoutMs) {
-            withContext(Dispatchers.IO) {
-                uploadManager.uploadEvidence(
-                    fileBytes = photoBytes,
-                    fileName = "photo_${System.currentTimeMillis()}.jpg",
-                    mimeType = "image/jpeg",
-                    evidenceType = "photo",
-                    campaignId = state.campaignId.ifBlank { null },
-                    campaignCode = state.campaignCode.ifBlank { null },
-                    category = null,
-                    textContent = state.textNote.ifBlank { null },
-                    sensorDataJson = state.sensorDataJson,
-                    signatureJson = state.signatureJson,
-                    gpsTrackJson = null,
-                    captureTimestamp = timestamp,
-                    voiceNoteBytes = voiceNoteBytes,
-                    voiceNoteFileName = if (voiceNoteBytes != null) "voice_${System.currentTimeMillis()}.m4a" else null
-                )
-            }
-        }
-
-        // Log audit event
-        val securityJson = securityManager.assess().toJson()
-        val config = state.campaignConfig
-        val extraMeta = buildString {
-            append("""{"campaign":"${state.campaignCode}","confidence":${state.confidenceScore},"security":$securityJson""")
-            append(""","campaign_type":"${config.type.key}"""")
-            append(""","emulator_mode":${state.isEmulator}""")
-            if (config.enforceHipaa) append(""","hipaa_compliant":true""")
-            if (state.safetyTags.isNotEmpty()) append(""","safety_tags":${state.safetyTags.map { "\"$it\"" }}""")
-            if (state.roomLabel.isNotBlank()) append(""","room_label":"${state.roomLabel}"""")
-            if (config.allowMultiPhoto) append(""","photo_sequence":${state.photoSequenceNumber}""")
-            append("}")
-        }
-        auditRepository.log(
-            eventType = "PHOTO_CAPTURED",
-            vendorId = vendorId,
-            deviceId = "trustcapture_device_key",
-            photoId = null,
-            details = extraMeta,
-            emulatorMode = state.isEmulator
-        )
-
-        // Switch back to balanced power after upload
-        LocationHelper.switchMode(GpsPowerMode.BALANCED)
-
-        // Upload voice note as separate evidence entry (backend needs it as its own record)
-        if (state.voiceNotePath != null) {
-            try { uploadVoiceNoteEvidence(state, vendorId) } catch (e: Exception) {
-                Log.w(TAG, "Voice note upload failed (photo still uploaded)", e)
-            }
-        }
-
-        _uiState.value = _uiState.value.copy(
-            isUploading = false,
-            uploadSuccess = true
-        )
-    }
-
-    /**
-     * On upload failure, save the photo locally for background retry.
-     * Shows success to user (they don't need to wait) — upload retries in background.
-     */
-    private suspend fun saveForRetryOnFailure(state: CameraUiState, vendorId: String) {
-        try {
-            val photoUri = state.watermarkedPhotoUri ?: state.videoFilePath?.let { android.net.Uri.parse(it) }
-            if (photoUri != null && state.watermarkedPhotoUri != null) {
-                // Save photo to local queue for background retry
-                photoRepository.savePhoto(
-                    photoUri = photoUri,
-                    campaignId = state.campaignId,
-                    campaignCode = state.campaignCode,
-                    campaignType = state.campaignConfig.type.key,
-                    vendorId = vendorId,
-                    sensorDataJson = state.sensorDataJson ?: "{}",
-                    signatureJson = state.signatureJson ?: "{}",
-                    latitude = state.latitude,
-                    longitude = state.longitude,
-                    confidenceScore = state.confidenceScore,
-                    triangulationFlags = state.triangulationFlags,
-                    safetyTags = state.safetyTags,
-                    roomLabel = state.roomLabel,
-                    photoSequence = if (state.campaignConfig.allowMultiPhoto) state.photoSequenceNumber else null,
-                    hipaaCompliant = state.campaignConfig.enforceHipaa,
-                    emulatorMode = state.isEmulator
-                )
-                // Schedule background retry via WorkManager
+                // Trigger background upload immediately
                 com.trustcapture.vendor.data.remote.UploadScheduler.triggerImmediateUpload(appContext)
-                Log.i(TAG, "Saved locally for background retry")
-            } else {
-                Log.w(TAG, "Cannot save for retry — no photo/video URI available")
+
+                // Show success immediately — user can navigate away
+                LocationHelper.switchMode(GpsPowerMode.BALANCED)
+                _uiState.value = _uiState.value.copy(
+                    isUploading = false,
+                    uploadSuccess = true,
+                    error = null
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to save evidence locally", e)
+                _uiState.value = _uiState.value.copy(
+                    isUploading = false,
+                    error = "Failed to save: ${e.message}",
+                    screenState = CameraScreenState.CAPTURED
+                )
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to save for retry", e)
         }
     }
 
