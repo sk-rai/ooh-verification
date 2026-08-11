@@ -395,11 +395,36 @@ async def upload_evidence(
                 verification_flags.append("MISSING_GPS_TRACK")
 
     elif evidence_type == "voice_note":
-        # Voice notes are supplementary evidence — always treated as verified
-        # Verification applies to the associated photo/video, not the audio itself
-        verification_status = "verified"
-        verification_confidence = 1.0
-        verification_flags = []
+        # Voice notes: check location if campaign assigned, otherwise verified
+        from app.services.location_profile_matcher import LocationProfileMatcher
+        from app.models.location_profile import LocationProfile
+
+        voice_location_ok = True
+        if resolved_campaign_id and latitude and longitude:
+            lp_result = await db.execute(
+                select(LocationProfile).where(LocationProfile.campaign_id == resolved_campaign_id)
+            )
+            profiles = lp_result.scalars().all()
+            if profiles:
+                matcher = LocationProfileMatcher()
+                match_result = matcher.match_location(
+                    captured_data={"latitude": latitude, "longitude": longitude},
+                    location_profile=profiles[0]
+                )
+                if match_result:
+                    distance = match_result.get("distance_meters", 0)
+                    if distance > 1000:
+                        verification_flags.append("LOCATION_FAR_FROM_EXPECTED")
+                        voice_location_ok = False
+                    elif distance > 200:
+                        verification_flags.append("LOCATION_MODERATE_DEVIATION")
+
+        if not voice_location_ok:
+            verification_status = "rejected"
+            verification_confidence = 0.3
+        else:
+            verification_status = "verified"
+            verification_confidence = 1.0
 
     elif evidence_type == "text_note":
         # Text notes: no verification (informational)
