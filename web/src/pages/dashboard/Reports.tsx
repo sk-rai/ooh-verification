@@ -47,13 +47,104 @@ interface PhotoRow {
   evidence_type?: string
 }
 
+function SiteVisitsTab({ startDate, endDate }: { startDate: string; endDate: string }) {
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchSiteVisits()
+  }, [startDate, endDate])
+
+  const fetchSiteVisits = async () => {
+    setLoading(true)
+    try {
+      const r = await api.get(`/api/reports/site-visits?start_date=${startDate}&end_date=${endDate}`)
+      setData(r.data)
+    } catch { setData(null) }
+    finally { setLoading(false) }
+  }
+
+  const exportCSV = () => {
+    window.open(`${api.defaults.baseURL}/api/reports/site-visits/export/csv?start_date=${startDate}&end_date=${endDate}`, '_blank')
+  }
+  const exportPDF = () => {
+    window.open(`${api.defaults.baseURL}/api/reports/site-visits/export/pdf?start_date=${startDate}&end_date=${endDate}`, '_blank')
+  }
+
+  if (loading) return <div className="bg-white shadow rounded-lg p-6"><p className="text-gray-500 text-center py-8">Loading site visits...</p></div>
+  if (!data || !data.rows) return <div className="bg-white shadow rounded-lg p-6"><p className="text-gray-500 text-center py-8">No site visit data available.</p></div>
+
+  return (
+    <div>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white shadow rounded-lg p-4"><dt className="text-sm text-gray-500">Active Vendors</dt><dd className="text-2xl font-semibold">{data.summary.total_vendors_active}</dd></div>
+        <div className="bg-white shadow rounded-lg p-4"><dt className="text-sm text-gray-500">Total Captures</dt><dd className="text-2xl font-semibold">{data.summary.total_captures}</dd></div>
+        <div className="bg-white shadow rounded-lg p-4"><dt className="text-sm text-gray-500">Total Distance</dt><dd className="text-2xl font-semibold">{data.summary.total_distance_km} km</dd></div>
+        <div className="bg-white shadow rounded-lg p-4"><dt className="text-sm text-gray-500">Avg Hours/Vendor</dt><dd className="text-2xl font-semibold">{data.summary.avg_hours_per_vendor}</dd></div>
+      </div>
+
+      {/* Export Buttons */}
+      <div className="flex gap-2 mb-4">
+        <button onClick={exportCSV} className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm">📥 Export CSV</button>
+        <button onClick={exportPDF} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm">📄 Export PDF</button>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Campaign</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Captures</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">First</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hours</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Distance</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">✅</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">⚠️</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">❌</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {data.rows.map((row: any, i: number) => (
+                <tr key={i} className="hover:bg-gray-50">
+                  <td className="px-3 py-2 text-sm">{row.date}</td>
+                  <td className="px-3 py-2 text-sm"><div className="font-medium">{row.campaign_name}</div><div className="text-xs text-gray-500">{row.campaign_code}</div></td>
+                  <td className="px-3 py-2 text-sm"><div>{row.vendor_name}</div><div className="text-xs text-gray-500">{row.vendor_id}</div></td>
+                  <td className="px-3 py-2 text-sm text-gray-500">{row.vendor_phone}</td>
+                  <td className="px-3 py-2 text-sm font-medium">{row.total_captures}</td>
+                  <td className="px-3 py-2 text-sm text-gray-500">{row.first_capture || '-'}</td>
+                  <td className="px-3 py-2 text-sm text-gray-500">{row.last_capture || '-'}</td>
+                  <td className="px-3 py-2 text-sm">{row.hours_active}h</td>
+                  <td className="px-3 py-2 text-sm font-medium">{row.distance_km} km</td>
+                  <td className="px-3 py-2 text-sm text-green-600 font-medium">{row.verified}</td>
+                  <td className="px-3 py-2 text-sm text-yellow-600 font-medium">{row.flagged}</td>
+                  <td className="px-3 py-2 text-sm text-red-600 font-medium">{row.rejected}</td>
+                </tr>
+              ))}
+              {data.rows.length === 0 && (
+                <tr><td colSpan={12} className="px-3 py-8 text-center text-gray-500">No site visits in this period</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Reports() {
   const [stats, setStats] = useState<ReportStats | null>(null)
   const [campaignStats, setCampaignStats] = useState<CampaignStats[]>([])
   const [vendorStats, setVendorStats] = useState<VendorStats[]>([])
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesData[]>([])
   const [tableData, setTableData] = useState<PhotoRow[]>([])
-  const [activeTab, setActiveTab] = useState<'charts' | 'table'>('charts')
+  const [activeTab, setActiveTab] = useState<'charts' | 'table' | 'site_visits'>('charts')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [dateRange, setDateRange] = useState({
@@ -316,6 +407,12 @@ export default function Reports() {
                 >
                   View Report Data ({tableData.length})
                 </button>
+                <button
+                  onClick={() => setActiveTab('site_visits')}
+                  className={`px-4 py-2 rounded-md font-medium ${activeTab === 'site_visits' ? 'bg-green-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'}`}
+                >
+                  📋 Site Visits
+                </button>
               </div>
 
               {activeTab === 'table' ? (
@@ -395,6 +492,9 @@ export default function Reports() {
                     </table>
                   </div>
                 </div>
+                </div>
+              ) : activeTab === 'site_visits' ? (
+                <SiteVisitsTab startDate={dateRange.start} endDate={dateRange.end} />
               ) : (
               <>
               {/* Charts Grid */}
