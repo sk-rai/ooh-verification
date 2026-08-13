@@ -492,7 +492,6 @@ export default function Reports() {
                     </table>
                   </div>
                 </div>
-                </div>
               ) : activeTab === 'site_visits' ? (
                 <SiteVisitsTab startDate={dateRange.start} endDate={dateRange.end} />
               ) : (
