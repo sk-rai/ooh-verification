@@ -17,6 +17,7 @@ import PhotoGallery from './pages/dashboard/PhotoGallery'
 import Reports from './pages/dashboard/Reports'
 import Subscription from './pages/dashboard/Subscription'
 import MapView from './pages/dashboard/MapView'
+import Tracking from './pages/dashboard/Tracking'
 import MapViewEnhanced from './pages/dashboard/MapViewEnhanced'
 import Analytics from './pages/dashboard/Analytics'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -127,6 +128,11 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MapView />
+                </Route>
+                <Route path="/tracking" element={<Tracking />} />
+                <Route path="/tracking" element={
+                  <Tracking />
+                }>
                 </ProtectedRoute>
               }
             />

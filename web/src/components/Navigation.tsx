@@ -53,6 +53,7 @@ export default function Navigation() {
     { to: '/photos', label: 'Photos' },
     { to: '/reports', label: 'Reports' },
     { to: '/map', label: 'Map' },
+    { to: '/tracking', label: 'Tracking' },
   ]
 
   const initials = user?.company_name
