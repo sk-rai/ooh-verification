@@ -128,10 +128,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MapView />
-                </Route>
-                                <Route path="/tracking" element={
-                  <Tracking />
-                }>
                 </ProtectedRoute>
               }
             />
