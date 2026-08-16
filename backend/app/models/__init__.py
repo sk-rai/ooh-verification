@@ -22,6 +22,7 @@ from app.models.audit_log import AuditLog
 from app.models.admin_user import AdminUser
 from app.models.task_queue import TaskQueue, TaskStatus
 from app.models.evidence import Evidence, GpsTrack, Case, EvidenceType, EvidenceStatus
+from app.models.vendor_track import VendorTrack
 
 # Export all models and enums
 __all__ = [

@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi import Request
 import os
 
-from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations, tenants, assignments, bulk, admin, vendor_campaigns, integrity, analytics, admin_queue, app_config, evidence, site_visits
+from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations, tenants, assignments, bulk, admin, vendor_campaigns, integrity, analytics, admin_queue, app_config, evidence, site_visits, tracks
 from app.core.database import close_db
 from app.core.config import settings
 from app.middleware.tenant_context import TenantContextMiddleware
@@ -86,6 +86,7 @@ app.include_router(admin_queue.router)
 app.include_router(app_config.router)
 app.include_router(evidence.router)
 app.include_router(site_visits.router)
+app.include_router(tracks.router)
 
 # Startup event
 @app.on_event("startup")
@@ -209,6 +210,28 @@ async def startup_event():
                 "EXCEPTION WHEN others THEN NULL; END $$;"
             ))
             print("✅ Evidence tables ready")
+            # Create vendor_tracks table
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS vendor_tracks (
+                    track_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    tenant_id UUID NOT NULL,
+                    vendor_id VARCHAR(6) NOT NULL,
+                    track_date DATE NOT NULL,
+                    points JSONB NOT NULL DEFAULT '[]',
+                    point_count INTEGER NOT NULL DEFAULT 0,
+                    total_distance_meters FLOAT,
+                    start_time TIMESTAMPTZ,
+                    end_time TIMESTAMPTZ,
+                    duration_seconds FLOAT,
+                    status VARCHAR(20) NOT NULL DEFAULT 'active',
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    UNIQUE(vendor_id, track_date)
+                );
+            """))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_vendor_tracks_vendor_date ON vendor_tracks (vendor_id, track_date);"))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_vendor_tracks_tenant ON vendor_tracks (tenant_id);"))
+            print("✅ Vendor tracks table ready")
 
 
             # Create Play Store review test vendor if not exists

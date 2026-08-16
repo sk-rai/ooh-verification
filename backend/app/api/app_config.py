@@ -75,13 +75,13 @@ DEFAULT_UI_CONFIG = {
         "tracking": False,
     },
     "maintenance": {
-        "enabled": False,
+        "enabled": True,
         "message": "",
     },
 }
 
 DEFAULT_TRACKING_CONFIG = {
-    "enabled": False,
+    "enabled": True,
     "interval_minutes": 30,
     "max_duration_hours": 8,
     "sync_interval_minutes": 30,
