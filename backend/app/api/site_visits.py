@@ -76,7 +76,7 @@ async def get_site_visits(
     # Get eligible campaigns (active or ended during/after report start)
     campaign_query = select(Campaign).where(
         Campaign.client_id == client.client_id,
-        Campaign.end_date >= datetime.fromisoformat(start_date),  # Not expired before report start
+        Campaign.start_date <= end_dt,  # Campaign started before report ends
     )
     if campaign_id:
         campaign_query = campaign_query.where(Campaign.campaign_id == campaign_id)
