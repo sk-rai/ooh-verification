@@ -493,6 +493,193 @@ async def get_evidence(
     }
 
 
+
+
+@router.get("/distance")
+async def get_evidence_distance(
+    id1: str,
+    id2: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Calculate haversine distance between two evidence items."""
+    import math
+    tenant_id = get_current_tenant(request)
+
+    result1 = await db.execute(
+        select(Evidence).where(Evidence.evidence_id == id1, Evidence.tenant_id == tenant_id)
+    )
+    result2 = await db.execute(
+        select(Evidence).where(Evidence.evidence_id == id2, Evidence.tenant_id == tenant_id)
+    )
+    ev1 = result1.scalar_one_or_none()
+    ev2 = result2.scalar_one_or_none()
+
+    if not ev1 or not ev2:
+        raise HTTPException(status_code=404, detail="Evidence not found")
+
+    lat1, lon1 = ev1.latitude or 0, ev1.longitude or 0
+    lat2, lon2 = ev2.latitude or 0, ev2.longitude or 0
+
+    if not lat1 or not lon1 or not lat2 or not lon2:
+        return {"distance_meters": None, "error": "GPS coordinates missing on one or both items"}
+
+    # Haversine
+    R = 6371000
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlam = math.radians(lon2 - lon1)
+    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlam/2)**2
+    distance = 2 * R * math.atan2(math.sqrt(a), math.sqrt(1-a))
+
+    # Time difference
+    time_diff = None
+    speed_kmh = None
+    if ev1.created_at and ev2.created_at:
+        time_diff = abs((ev2.created_at - ev1.created_at).total_seconds())
+        if time_diff > 0:
+            speed_kmh = round((distance / 1000) / (time_diff / 3600), 1)
+
+    return {
+        "distance_meters": round(distance, 1),
+        "distance_km": round(distance / 1000, 2),
+        "time_difference_seconds": time_diff,
+        "speed_kmh": speed_kmh,
+        "evidence_1": {"id": str(ev1.evidence_id), "lat": lat1, "lon": lon1, "time": ev1.created_at.isoformat() if ev1.created_at else None},
+        "evidence_2": {"id": str(ev2.evidence_id), "lat": lat2, "lon": lon2, "time": ev2.created_at.isoformat() if ev2.created_at else None},
+        "flags": ["IMPOSSIBLE_SPEED"] if speed_kmh and speed_kmh > 150 else [],
+    }
+
+
+@router.get("/route-analysis")
+async def get_route_analysis(
+    campaign_id: Optional[str] = None,
+    vendor_id: Optional[str] = None,
+    date: Optional[str] = None,
+    request: Request = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Analyze route for a vendor on a given day — sequential distances, gaps, speed.
+    Returns ordered captures with distance from previous.
+    """
+    import math
+    from datetime import datetime as dt, timedelta
+    tenant_id = get_current_tenant(request)
+
+    query = select(Evidence).where(Evidence.tenant_id == tenant_id)
+    if campaign_id:
+        query = query.where(Evidence.campaign_id == campaign_id)
+    if vendor_id:
+        query = query.where(Evidence.vendor_id == vendor_id)
+    if date:
+        try:
+            day_start = dt.fromisoformat(date)
+            day_end = day_start + timedelta(days=1)
+            query = query.where(Evidence.created_at >= day_start, Evidence.created_at < day_end)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format")
+
+    query = query.order_by(Evidence.created_at)
+    result = await db.execute(query)
+    items = result.scalars().all()
+
+    # Also get from photos table
+    from app.models import Photo, SensorData
+    photo_query = (
+        select(Photo, SensorData.gps_latitude, SensorData.gps_longitude)
+        .join(SensorData, SensorData.photo_id == Photo.photo_id, isouter=True)
+        .where(Photo.tenant_id == tenant_id)
+    )
+    if campaign_id:
+        photo_query = photo_query.where(Photo.campaign_id == campaign_id)
+    if vendor_id:
+        photo_query = photo_query.where(Photo.vendor_id == vendor_id)
+    if date:
+        day_start = dt.fromisoformat(date)
+        day_end = day_start + timedelta(days=1)
+        photo_query = photo_query.where(Photo.created_at >= day_start, Photo.created_at < day_end)
+    photo_query = photo_query.order_by(Photo.created_at)
+    photo_result = await db.execute(photo_query)
+    photo_rows = photo_result.all()
+
+    # Combine into unified points list
+    points = []
+    for ev in items:
+        if ev.latitude and ev.longitude:
+            points.append({
+                "id": str(ev.evidence_id),
+                "lat": ev.latitude,
+                "lon": ev.longitude,
+                "time": ev.created_at.isoformat() if ev.created_at else None,
+                "type": ev.evidence_type,
+                "status": ev.verification_status,
+            })
+    for row in photo_rows:
+        lat = float(row.gps_latitude) if row.gps_latitude else None
+        lon = float(row.gps_longitude) if row.gps_longitude else None
+        if lat and lon:
+            points.append({
+                "id": str(row[0].photo_id),
+                "lat": lat,
+                "lon": lon,
+                "time": row[0].created_at.isoformat() if row[0].created_at else None,
+                "type": "photo",
+                "status": row[0].verification_status.value if hasattr(row[0].verification_status, 'value') else str(row[0].verification_status),
+            })
+
+    # Sort by time
+    points.sort(key=lambda p: p["time"] or "")
+
+    # Calculate sequential distances
+    R = 6371000
+    total_distance = 0.0
+    max_gap = 0.0
+    flags = []
+    for i in range(len(points)):
+        if i == 0:
+            points[i]["distance_from_prev_m"] = 0
+            points[i]["distance_from_prev_km"] = 0
+            continue
+        lat1, lon1 = points[i-1]["lat"], points[i-1]["lon"]
+        lat2, lon2 = points[i]["lat"], points[i]["lon"]
+        phi1, phi2 = math.radians(lat1), math.radians(lat2)
+        dphi = math.radians(lat2 - lat1)
+        dlam = math.radians(lon2 - lon1)
+        a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlam/2)**2
+        dist = 2 * R * math.atan2(math.sqrt(a), math.sqrt(1-a))
+        points[i]["distance_from_prev_m"] = round(dist, 1)
+        points[i]["distance_from_prev_km"] = round(dist / 1000, 2)
+        total_distance += dist
+        if dist > max_gap:
+            max_gap = dist
+
+        # Speed check
+        if points[i]["time"] and points[i-1]["time"]:
+            from datetime import datetime as dtt
+            t1 = dtt.fromisoformat(points[i-1]["time"])
+            t2 = dtt.fromisoformat(points[i]["time"])
+            secs = (t2 - t1).total_seconds()
+            if secs > 0:
+                speed = (dist / 1000) / (secs / 3600)
+                points[i]["speed_kmh"] = round(speed, 1)
+                if speed > 150:
+                    flags.append({"point": i, "flag": "IMPOSSIBLE_SPEED", "speed_kmh": round(speed, 1)})
+
+    # Gap detection (>2km between consecutive points)
+    for i in range(1, len(points)):
+        if points[i].get("distance_from_prev_m", 0) > 2000:
+            flags.append({"point": i, "flag": "LARGE_GAP", "distance_km": points[i]["distance_from_prev_km"]})
+
+    return {
+        "total_points": len(points),
+        "total_distance_km": round(total_distance / 1000, 2),
+        "max_gap_km": round(max_gap / 1000, 2),
+        "flags": flags,
+        "points": points,
+    }
+
+
 @router.post("/fix-video-thumbnails")
 async def fix_video_thumbnails(
     request: Request,
