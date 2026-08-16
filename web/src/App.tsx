@@ -129,15 +129,22 @@ function App() {
                 <ProtectedRoute>
                   <MapView />
                 </Route>
-                <Route path="/tracking" element={<Tracking />} />
-                <Route path="/tracking" element={
+                                <Route path="/tracking" element={
                   <Tracking />
                 }>
                 </ProtectedRoute>
               }
             />
             <Route
-              path="/map-enhanced"
+              path="/tracking"
+                element={
+                  <ProtectedRoute>
+                    <Tracking />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/map-enhanced"
               element={
                 <ProtectedRoute>
                   <MapViewEnhanced />
