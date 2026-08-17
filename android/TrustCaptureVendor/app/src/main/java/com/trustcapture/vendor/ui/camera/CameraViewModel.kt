@@ -110,7 +110,13 @@ data class CameraUiState(
     val videoFilePath: String? = null,
     val gpsTrackJson: String? = null,
     val photoSequenceNumber: Int = 1,
-    val hipaaFlagged: Boolean = false
+    val hipaaFlagged: Boolean = false,
+    // Per-campaign config enforcement
+    val videoEnabled: Boolean = true,
+    val voiceNoteEnabled: Boolean = true,
+    val textNoteEnabled: Boolean = true,
+    val maxPhotosPerLocation: Int = 10,
+    val maxVideosPerLocation: Int = 5
 )
 
 @HiltViewModel
@@ -128,6 +134,7 @@ class CameraViewModel @Inject constructor(
     private val securityManager: SecurityManager,
     private val keystoreManager: KeystoreManager,
     private val appConfigRepository: com.trustcapture.vendor.domain.repository.AppConfigRepository,
+    private val campaignRepository: com.trustcapture.vendor.domain.repository.CampaignRepository,
     private val evidenceDao: EvidenceDao,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
@@ -174,6 +181,24 @@ class CameraViewModel @Inject constructor(
         }
 
         // Start collecting environmental sensor data (graceful degradation)
+        viewModelScope.launch {
+            // Load effective capture config (per-campaign override merged with global)
+            try {
+                val campaignId = _uiState.value.campaignId
+                val campaignOverride = campaignRepository.getCampaignCaptureConfig(campaignId)
+                val effective = appConfigRepository.getEffectiveCaptureConfig(campaignOverride)
+                _uiState.value = _uiState.value.copy(
+                    videoEnabled = effective.videoEnabled,
+                    voiceNoteEnabled = effective.voiceNoteEnabled,
+                    textNoteEnabled = effective.textNoteEnabled,
+                    maxVideoDurationSeconds = effective.maxVideoDurationSeconds,
+                    maxPhotosPerLocation = effective.maxPhotosPerLocation,
+                    maxVideosPerLocation = effective.maxVideosPerLocation
+                )
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to load campaign config, using defaults", e)
+            }
+        }
         viewModelScope.launch {
             try {
                 environmentalSensors.observe(appContext).collect { env ->
@@ -577,6 +602,8 @@ class CameraViewModel @Inject constructor(
     // --- Video Mode ---
 
     fun toggleVideoMode() {
+        // Only allow video mode if video is enabled by campaign config
+        if (!_uiState.value.videoEnabled) return
         _uiState.value = _uiState.value.copy(isVideoMode = !_uiState.value.isVideoMode)
     }
 

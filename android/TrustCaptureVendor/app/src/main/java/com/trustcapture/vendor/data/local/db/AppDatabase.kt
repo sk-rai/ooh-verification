@@ -11,7 +11,7 @@ import com.trustcapture.vendor.data.local.entity.PhotoEntity
 
 @Database(
     entities = [CampaignEntity::class, CampaignLocationEntity::class, PhotoEntity::class, AuditEntity::class, EvidenceEntity::class],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

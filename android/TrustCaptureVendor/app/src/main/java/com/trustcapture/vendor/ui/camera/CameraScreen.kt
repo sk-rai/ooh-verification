@@ -179,6 +179,7 @@ fun CameraScreen(
                     isVideoMode = uiState.isVideoMode,
                     isRecordingVideo = uiState.isRecordingVideo,
                     videoRecordingSeconds = uiState.videoRecordingSeconds,
+                    videoEnabled = uiState.videoEnabled,
                     onPhotoCaptured = { uri -> viewModel.onPhotoCaptured(uri) },
                     onToggleVideoMode = viewModel::toggleVideoMode,
                     onVideoRecordingStarted = viewModel::onVideoRecordingStarted,
@@ -242,6 +243,7 @@ private fun CameraPreviewContent(
     isVideoMode: Boolean = false,
     isRecordingVideo: Boolean = false,
     videoRecordingSeconds: Int = 0,
+    videoEnabled: Boolean = true,
     onPhotoCaptured: (Uri) -> Unit,
     onToggleVideoMode: () -> Unit = {},
     onVideoRecordingStarted: () -> Unit = {},
@@ -413,8 +415,8 @@ private fun CameraPreviewContent(
 
                 // Capture/Record button
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                    // Photo/Video toggle (left side)
-                    if (!isRecordingVideo) {
+                    // Photo/Video toggle (left side) — only show when video is enabled
+                    if (!isRecordingVideo && videoEnabled) {
                         IconButton(
                             onClick = onToggleVideoMode,
                             modifier = Modifier.size(44.dp),
@@ -723,78 +725,82 @@ private fun PhotoReviewContent(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Text notes (always available)
-            OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Notes (optional)", style = MaterialTheme.typography.labelMedium)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = uiState.textNote,
-                        onValueChange = onTextNoteChanged,
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Add observations, comments, or details...") },
-                        minLines = 2,
-                        maxLines = 4,
-                        textStyle = MaterialTheme.typography.bodySmall,
-                        supportingText = { Text("${uiState.textNote.length}/500") }
-                    )
+            // Text notes (shown when text notes are enabled by campaign config)
+            if (uiState.textNoteEnabled) {
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("Notes (optional)", style = MaterialTheme.typography.labelMedium)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = uiState.textNote,
+                            onValueChange = onTextNoteChanged,
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("Add observations, comments, or details...") },
+                            minLines = 2,
+                            maxLines = 4,
+                            textStyle = MaterialTheme.typography.bodySmall,
+                            supportingText = { Text("${uiState.textNote.length}/500") }
+                        )
+                    }
                 }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Voice note recording
-            val audioPermissionLauncher = rememberLauncherForActivityResult(
-                ActivityResultContracts.RequestPermission()
-            ) { granted ->
-                if (granted) onStartVoiceRecording()
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
-            OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Voice Note (optional)", style = MaterialTheme.typography.labelMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    if (uiState.voiceNotePath != null && !uiState.isRecordingVoice) {
-                        // Voice note recorded — show status
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Default.Mic, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Voice note recorded (${uiState.voiceRecordingSeconds}s)", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                            IconButton(onClick = onDeleteVoiceNote) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete voice note", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
-                            }
-                        }
-                    } else if (uiState.isRecordingVoice) {
-                        // Currently recording
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Default.FiberManualRecord, contentDescription = null, tint = Color.Red, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Recording... ${uiState.voiceRecordingSeconds}s", style = MaterialTheme.typography.bodySmall, color = Color.Red, modifier = Modifier.weight(1f))
-                            FilledTonalButton(onClick = onStopVoiceRecording) { Text("Stop") }
-                        }
-                    } else {
-                        // No voice note — request audio permission then start
-                        val context2 = LocalContext.current
-                        FilledTonalButton(
-                            onClick = {
-                                val hasPermission = ContextCompat.checkSelfPermission(
-                                    context2, android.Manifest.permission.RECORD_AUDIO
-                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                                if (hasPermission) {
-                                    onStartVoiceRecording()
-                                } else {
-                                    audioPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+            // Voice note recording (shown when voice notes are enabled by campaign config)
+            if (uiState.voiceNoteEnabled) {
+                val audioPermissionLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestPermission()
+                ) { granted ->
+                    if (granted) onStartVoiceRecording()
+                }
+
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("Voice Note (optional)", style = MaterialTheme.typography.labelMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        if (uiState.voiceNotePath != null && !uiState.isRecordingVoice) {
+                            // Voice note recorded — show status
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Default.Mic, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Voice note recorded (${uiState.voiceRecordingSeconds}s)", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                IconButton(onClick = onDeleteVoiceNote) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete voice note", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                                 }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Default.Mic, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Record Voice Note")
+                            }
+                        } else if (uiState.isRecordingVoice) {
+                            // Currently recording
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Default.FiberManualRecord, contentDescription = null, tint = Color.Red, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Recording... ${uiState.voiceRecordingSeconds}s", style = MaterialTheme.typography.bodySmall, color = Color.Red, modifier = Modifier.weight(1f))
+                                FilledTonalButton(onClick = onStopVoiceRecording) { Text("Stop") }
+                            }
+                        } else {
+                            // No voice note — request audio permission then start
+                            val context2 = LocalContext.current
+                            FilledTonalButton(
+                                onClick = {
+                                    val hasPermission = ContextCompat.checkSelfPermission(
+                                        context2, android.Manifest.permission.RECORD_AUDIO
+                                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                    if (hasPermission) {
+                                        onStartVoiceRecording()
+                                    } else {
+                                        audioPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.Mic, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Record Voice Note")
+                            }
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
             }
-            Spacer(modifier = Modifier.height(8.dp))
 
             // Upload success message
             if (uiState.uploadSuccess) {

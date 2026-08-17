@@ -17,6 +17,9 @@ interface CampaignDao {
     @Query("SELECT * FROM campaigns WHERE campaignCode = :code LIMIT 1")
     suspend fun getByCode(code: String): CampaignEntity?
 
+    @Query("SELECT * FROM campaigns WHERE campaignId = :campaignId LIMIT 1")
+    suspend fun getById(campaignId: String): CampaignEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(campaigns: List<CampaignEntity>)
 
