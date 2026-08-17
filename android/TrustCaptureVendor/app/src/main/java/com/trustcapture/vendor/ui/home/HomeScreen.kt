@@ -1,18 +1,30 @@
 package com.trustcapture.vendor.ui.home
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.trustcapture.vendor.service.TrackingService
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,6 +36,111 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    // --- Background Location Permission Handling (Task A2) ---
+
+    // Step 1: Fine location permission launcher (needed before background on Android 10+)
+    var fineLocationGranted by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                    PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    // Step 2: Background location launcher
+    val backgroundLocationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        viewModel.onBackgroundLocationPermissionResult(granted)
+        if (granted) {
+            TrackingService.startService(context)
+        }
+    }
+
+    // Step 1 launcher: request fine location first, then background
+    val fineLocationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        fineLocationGranted = granted
+        if (granted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Now request background location
+            backgroundLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        } else if (granted) {
+            // Pre-Android 10: fine location is sufficient for background
+            viewModel.onBackgroundLocationPermissionResult(true)
+            TrackingService.startService(context)
+        } else {
+            viewModel.onBackgroundLocationPermissionResult(false)
+        }
+    }
+
+    // Start tracking service if permission was already granted and tracking enabled
+    LaunchedEffect(uiState.trackingEnabled, uiState.backgroundLocationGranted) {
+        if (uiState.trackingEnabled && uiState.backgroundLocationGranted) {
+            TrackingService.startService(context)
+        }
+    }
+
+    // Also auto-start if permission was previously granted (returning user)
+    LaunchedEffect(uiState.trackingEnabled) {
+        if (uiState.trackingEnabled) {
+            val hasFine = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+            val hasBackground = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+            } else {
+                hasFine
+            }
+            if (hasFine && hasBackground) {
+                TrackingService.startService(context)
+            }
+        }
+    }
+
+    // Background Location Rationale Dialog (Task A2)
+    if (uiState.showBackgroundLocationDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissBackgroundLocationDialog() },
+            icon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
+            title = { Text("Background Location Access") },
+            text = {
+                Text(
+                    "TrustCapture collects location periodically to verify field attendance. " +
+                            "This helps ensure accurate tracking of your work locations.\n\n" +
+                            "You can disable this anytime from Settings.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (!fineLocationGranted) {
+                            // Request fine location first
+                            fineLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            // Already have fine, request background
+                            backgroundLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                        } else {
+                            // Pre-Q: fine is enough
+                            viewModel.onBackgroundLocationPermissionResult(true)
+                            TrackingService.startService(context)
+                        }
+                    }
+                ) {
+                    Text("Allow")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissBackgroundLocationDialog() }) {
+                    Text("Not Now")
+                }
+            }
+        )
+    }
 
     // Maintenance mode — show full-screen message
     if (uiState.maintenanceEnabled) {
