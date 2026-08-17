@@ -57,6 +57,14 @@ export default function CreateCampaign() {
   ])
 
   const [geocoding, setGeocoding] = useState(false)
+  const [campaignConfig, setCampaignConfig] = useState({
+    photo_enabled: true,
+    video_enabled: true,
+    voice_note_enabled: true,
+    max_photos_per_location: 10,
+    max_video_duration_seconds: 60,
+    max_videos_per_location: 5,
+  })
   const [geocodeMessage, setGeocodeMessage] = useState('')
 
   const geocodeAddress = async (locationId: string) => {
@@ -189,6 +197,7 @@ export default function CreateCampaign() {
         start_date: new Date(formData.start_date).toISOString(),
         end_date: new Date(formData.end_date).toISOString(),
         location_profile: locationProfile,
+        config: campaignConfig,
       })
 
       navigate('/campaigns')
@@ -562,6 +571,40 @@ export default function CreateCampaign() {
                 <li>• <strong>Regional:</strong> Multiple locations in a city/region (e.g., 10 stores)</li>
                 <li>• <strong>National:</strong> Locations across the country (e.g., 100+ stores)</li>
               </ul>
+            </div>
+
+            {/* Campaign Config */}
+            <div className="bg-white shadow rounded-lg p-6 space-y-4">
+              <h3 className="text-lg font-medium text-gray-900">Capture Settings</h3>
+              <p className="text-sm text-gray-500">Configure what vendors can capture for this campaign</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <label className="flex items-center space-x-2">
+                  <input type="checkbox" checked={campaignConfig.photo_enabled} onChange={(e) => setCampaignConfig({...campaignConfig, photo_enabled: e.target.checked})} className="rounded" />
+                  <span className="text-sm">Photos</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input type="checkbox" checked={campaignConfig.video_enabled} onChange={(e) => setCampaignConfig({...campaignConfig, video_enabled: e.target.checked})} className="rounded" />
+                  <span className="text-sm">Videos</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input type="checkbox" checked={campaignConfig.voice_note_enabled} onChange={(e) => setCampaignConfig({...campaignConfig, voice_note_enabled: e.target.checked})} className="rounded" />
+                  <span className="text-sm">Voice Notes</span>
+                </label>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Max Photos/Location</label>
+                  <input type="number" value={campaignConfig.max_photos_per_location} onChange={(e) => setCampaignConfig({...campaignConfig, max_photos_per_location: parseInt(e.target.value) || 10})} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm" min="1" max="50" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Max Video Duration (s)</label>
+                  <input type="number" value={campaignConfig.max_video_duration_seconds} onChange={(e) => setCampaignConfig({...campaignConfig, max_video_duration_seconds: parseInt(e.target.value) || 60})} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm" min="10" max="120" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Max Videos/Location</label>
+                  <input type="number" value={campaignConfig.max_videos_per_location} onChange={(e) => setCampaignConfig({...campaignConfig, max_videos_per_location: parseInt(e.target.value) || 5})} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm" min="1" max="20" />
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end space-x-3 pt-6">
