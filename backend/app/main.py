@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi import Request
 import os
 
-from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations, tenants, assignments, bulk, admin, vendor_campaigns, integrity, analytics, admin_queue, app_config, evidence, site_visits, tracks, verify_api
+from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations, tenants, assignments, bulk, admin, vendor_campaigns, integrity, analytics, admin_queue, app_config, evidence, site_visits, tracks, verify_api, report_email
 from app.core.database import close_db
 from app.core.config import settings
 from app.middleware.tenant_context import TenantContextMiddleware
@@ -88,6 +88,7 @@ app.include_router(evidence.router)
 app.include_router(site_visits.router)
 app.include_router(tracks.router)
 app.include_router(verify_api.router)
+app.include_router(report_email.router)
 
 # Startup event
 @app.on_event("startup")
@@ -253,6 +254,8 @@ async def startup_event():
             await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_api_keys_prefix ON api_keys (key_prefix);"))
             await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_api_keys_tenant ON api_keys (tenant_id);"))
             print("✅ API keys table ready")
+            await conn.execute(text("ALTER TABLE clients ADD COLUMN IF NOT EXISTS report_settings JSONB;"))
+            print("✅ Report settings column ready")
 
 
             # Create Play Store review test vendor if not exists
