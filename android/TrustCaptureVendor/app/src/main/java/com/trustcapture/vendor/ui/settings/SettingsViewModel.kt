@@ -1,12 +1,18 @@
 package com.trustcapture.vendor.ui.settings
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.trustcapture.vendor.data.local.datastore.UserPreferences
 import com.trustcapture.vendor.domain.gdpr.GdprManager
+import com.trustcapture.vendor.domain.repository.AppConfigRepository
 import com.trustcapture.vendor.domain.repository.AuthRepository
 import com.trustcapture.vendor.domain.repository.PhotoRepository
+import com.trustcapture.vendor.service.TrackingService
 import com.trustcapture.vendor.util.KeystoreManager
 import com.trustcapture.vendor.util.SecurityManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -36,7 +42,12 @@ data class SettingsUiState(
     val privacyModeEnabled: Boolean = false,
     val isExporting: Boolean = false,
     val exportPath: String? = null,
-    val isDeleting: Boolean = false
+    val isDeleting: Boolean = false,
+    // Tracking
+    val trackingUserEnabled: Boolean = true,
+    val trackingBackendEnabled: Boolean = false,
+    val trackingEffective: Boolean = false,
+    val hasBackgroundLocationPermission: Boolean = false
 )
 
 @HiltViewModel
@@ -44,6 +55,7 @@ class SettingsViewModel @Inject constructor(
     private val userPreferences: UserPreferences,
     private val authRepository: AuthRepository,
     private val photoRepository: PhotoRepository,
+    private val appConfigRepository: AppConfigRepository,
     private val keystoreManager: KeystoreManager,
     private val securityManager: SecurityManager,
     private val gdprManager: GdprManager,
@@ -66,7 +78,12 @@ class SettingsViewModel @Inject constructor(
             val vendorId = userPreferences.vendorId.first() ?: ""
             val phone = userPreferences.phoneNumber.first() ?: ""
             val privacyMode = userPreferences.privacyModeEnabled.first()
+            val trackingUserPref = userPreferences.trackingEnabled.first()
             val assessment = securityManager.assess()
+
+            val backendTrackingEnabled = appConfigRepository.config.value.trackingConfig.enabled
+            val hasPermission = hasBackgroundLocationPermission()
+            val effective = backendTrackingEnabled && trackingUserPref && hasPermission
 
             // Get public key fingerprint (first 16 chars of PEM hash)
             val pubKey = keystoreManager.getPublicKeyPem() ?: "Not registered"
@@ -98,9 +115,27 @@ class SettingsViewModel @Inject constructor(
                 isRooted = assessment.isRooted,
                 securityFlags = assessment.toAuditFlags(),
                 encryptedPhotosSize = sizeStr,
-                privacyModeEnabled = privacyMode
+                privacyModeEnabled = privacyMode,
+                trackingUserEnabled = trackingUserPref,
+                trackingBackendEnabled = backendTrackingEnabled,
+                trackingEffective = effective,
+                hasBackgroundLocationPermission = hasPermission
             )
         }
+    }
+
+    private fun hasBackgroundLocationPermission(): Boolean {
+        val hasFine = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        val hasBackground = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ContextCompat.checkSelfPermission(
+                context, Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            hasFine
+        }
+        return hasFine && hasBackground
     }
 
     private fun getAppVersion(): String {
@@ -108,6 +143,33 @@ class SettingsViewModel @Inject constructor(
             val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
             "${pInfo.versionName} (${pInfo.longVersionCode})"
         } catch (_: Exception) { "1.0" }
+    }
+
+    /**
+     * Toggle tracking user preference.
+     * When disabled → stop TrackingService.
+     * When enabled → start TrackingService if backend config also says enabled AND permission granted.
+     */
+    fun toggleTracking() {
+        viewModelScope.launch {
+            val newEnabled = !_uiState.value.trackingUserEnabled
+            userPreferences.setTrackingEnabled(newEnabled)
+
+            val backendEnabled = appConfigRepository.config.value.trackingConfig.enabled
+            val hasPermission = hasBackgroundLocationPermission()
+            val effective = backendEnabled && newEnabled && hasPermission
+
+            if (!newEnabled || !effective) {
+                TrackingService.stopService(context)
+            } else {
+                TrackingService.startService(context)
+            }
+
+            _uiState.value = _uiState.value.copy(
+                trackingUserEnabled = newEnabled,
+                trackingEffective = effective
+            )
+        }
     }
 
     fun clearCache() {

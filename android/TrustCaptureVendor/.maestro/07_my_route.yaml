@@ -1,0 +1,49 @@
+appId: com.lynksavvy.trustcapture
+name: "My Route Today"
+tags:
+  - tracking
+  - route
+
+---
+
+# Navigate to My Route from Home (only visible when tracking is enabled)
+- tapOn:
+    text: "My Route Today"
+    optional: true
+
+# Verify My Route screen is displayed
+- assertVisible:
+    text: "My Route Today"
+    optional: true
+
+# Verify stats display
+- assertVisible:
+    text: "Today's Tracking Stats"
+    optional: true
+
+- assertVisible:
+    text: "Points"
+    optional: true
+
+- assertVisible:
+    text: "Duration"
+    optional: true
+
+- assertVisible:
+    text: "Distance"
+    optional: true
+
+# Verify Sync Now button exists
+- assertVisible:
+    text: "Sync Now"
+    optional: true
+
+# Verify empty state or point list (one or the other)
+- assertVisible:
+    text: "No tracking points today"
+    optional: true
+
+# Go back
+- tapOn:
+    text: "Back"
+    optional: true

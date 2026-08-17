@@ -32,6 +32,7 @@ fun HomeScreen(
     onCampaigns: () -> Unit,
     onQuickCapture: () -> Unit,
     onSettings: () -> Unit,
+    onMyRoute: () -> Unit = {},
     onLoggedOut: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -263,6 +264,40 @@ fun HomeScreen(
                             )
                             Text(
                                 "Capture evidence without a campaign",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            // My Route Today card (shown when tracking feature visible)
+            if (uiState.trackingEnabled) {
+                Spacer(modifier = Modifier.height(16.dp))
+                ElevatedCard(
+                    onClick = onMyRoute,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Route,
+                            contentDescription = null,
+                            modifier = Modifier.size(40.dp),
+                            tint = MaterialTheme.colorScheme.tertiary
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                "My Route Today",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                "View today's GPS tracking points",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

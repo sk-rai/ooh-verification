@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -48,6 +49,79 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Location Tracking section (Task A4)
+            if (uiState.trackingBackendEnabled) {
+                SettingsSection(title = "Location Tracking") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.LocationOn,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                "Enable location tracking",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        Switch(
+                            checked = uiState.trackingUserEnabled,
+                            onCheckedChange = { viewModel.toggleTracking() }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Status text
+                    val statusText: String
+                    val statusColor: Color
+                    if (uiState.trackingEffective) {
+                        statusText = "Tracking active"
+                        statusColor = Color(0xFF22C55E) // green
+                    } else {
+                        statusText = "Tracking paused"
+                        statusColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (uiState.trackingEffective) Icons.Default.GpsFixed else Icons.Default.GpsOff,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = statusColor
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = statusText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = statusColor,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "Collects location every 30 min to verify field attendance",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    if (!uiState.hasBackgroundLocationPermission && uiState.trackingUserEnabled) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "⚠ Background location permission not granted",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+
             // Account section
             SettingsSection(title = "Account") {
                 SettingsInfoRow(Icons.Default.Badge, "Vendor ID", uiState.vendorId)
