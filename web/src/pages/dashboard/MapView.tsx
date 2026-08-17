@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap, Polyline } from 'react-leaflet'
 import Navigation from '../../components/Navigation'
 import api from '../../services/api'
 import 'leaflet/dist/leaflet.css'
@@ -193,6 +193,16 @@ export default function MapView() {
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
                     <FlyToLocation photo={selectedPhoto} />
+                    {/* Route polyline connecting photos chronologically */}
+                    {filteredPhotos.length > 1 && (
+                      <Polyline
+                        positions={filteredPhotos
+                          .filter(p => p.latitude && p.longitude && p.latitude !== 0)
+                          .sort((a, b) => (a.captured_at || '').localeCompare(b.captured_at || ''))
+                          .map(p => [p.latitude, p.longitude] as [number, number])}
+                        pathOptions={{ color: '#3b82f6', weight: 2, opacity: 0.6, dashArray: '5, 10' }}
+                      />
+                    )}
                     {filteredPhotos.map((photo) => (
                       <CircleMarker
                         key={photo.photo_id}
