@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi import Request
 import os
 
-from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations, tenants, assignments, bulk, admin, vendor_campaigns, integrity, analytics, admin_queue, app_config, evidence, site_visits, tracks
+from app.api import auth, clients, vendors, campaigns, photos, subscriptions, webhooks, reports, campaign_locations, tenants, assignments, bulk, admin, vendor_campaigns, integrity, analytics, admin_queue, app_config, evidence, site_visits, tracks, verify_api
 from app.core.database import close_db
 from app.core.config import settings
 from app.middleware.tenant_context import TenantContextMiddleware
@@ -87,6 +87,7 @@ app.include_router(app_config.router)
 app.include_router(evidence.router)
 app.include_router(site_visits.router)
 app.include_router(tracks.router)
+app.include_router(verify_api.router)
 
 # Startup event
 @app.on_event("startup")
@@ -232,6 +233,26 @@ async def startup_event():
             await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_vendor_tracks_vendor_date ON vendor_tracks (vendor_id, track_date);"))
             await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_vendor_tracks_tenant ON vendor_tracks (tenant_id);"))
             print("✅ Vendor tracks table ready")
+            # Create api_keys table
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS api_keys (
+                    key_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    client_id UUID NOT NULL,
+                    tenant_id UUID NOT NULL,
+                    key_hash VARCHAR(255) NOT NULL,
+                    key_prefix VARCHAR(12) NOT NULL,
+                    name VARCHAR(100) NOT NULL DEFAULT 'API Key',
+                    permissions JSONB NOT NULL DEFAULT '["verify"]',
+                    rate_limit_per_minute INTEGER NOT NULL DEFAULT 60,
+                    is_active BOOLEAN NOT NULL DEFAULT true,
+                    last_used_at TIMESTAMPTZ,
+                    total_calls INTEGER NOT NULL DEFAULT 0,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                );
+            """))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_api_keys_prefix ON api_keys (key_prefix);"))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_api_keys_tenant ON api_keys (tenant_id);"))
+            print("✅ API keys table ready")
 
 
             # Create Play Store review test vendor if not exists
