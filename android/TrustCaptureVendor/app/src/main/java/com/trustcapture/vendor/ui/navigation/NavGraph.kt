@@ -19,6 +19,7 @@ import com.trustcapture.vendor.ui.home.HomeScreen
 import com.trustcapture.vendor.ui.login.LoginScreen
 import com.trustcapture.vendor.ui.otp.OtpScreen
 import com.trustcapture.vendor.ui.privacy.PrivacyConsentScreen
+import com.trustcapture.vendor.ui.route.MyRouteScreen
 import com.trustcapture.vendor.ui.settings.SettingsScreen
 
 import java.net.URLEncoder
@@ -34,6 +35,7 @@ object Routes {
     const val LOCATIONS = "locations/{campaignId}/{campaignCode}/{campaignName}/{campaignType}"
     const val CAMERA = "camera/{campaignId}/{campaignCode}/{campaignType}"
     const val SETTINGS = "settings"
+    const val MY_ROUTE = "my_route"
 
     fun otp(phoneNumber: String, vendorId: String) =
         "otp/${URLEncoder.encode(phoneNumber, "UTF-8")}/$vendorId"
@@ -103,6 +105,7 @@ fun TrustCaptureNavGraph(
                 onCampaigns = { navController.navigate(Routes.CAMPAIGNS) },
                 onQuickCapture = { navController.navigate(Routes.QUICK_CAPTURE) },
                 onSettings = { navController.navigate(Routes.SETTINGS) },
+                onMyRoute = { navController.navigate(Routes.MY_ROUTE) },
                 onLoggedOut = {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(0) { inclusive = true }
@@ -205,6 +208,12 @@ fun TrustCaptureNavGraph(
                         popUpTo(0) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        composable(Routes.MY_ROUTE) {
+            MyRouteScreen(
+                onBack = { navController.popBackStack() }
             )
         }
     }

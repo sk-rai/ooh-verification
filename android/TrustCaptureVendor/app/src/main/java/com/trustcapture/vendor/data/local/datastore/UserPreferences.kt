@@ -24,6 +24,8 @@ class UserPreferences @Inject constructor(
         private val KEY_LOCATION_CONSENT = booleanPreferencesKey("location_consent")
         private val KEY_PRIVACY_MODE = booleanPreferencesKey("privacy_mode")
         private val KEY_DEVICE_REGISTERED = booleanPreferencesKey("device_registered")
+        private val KEY_BACKGROUND_LOCATION_PROMPTED = booleanPreferencesKey("background_location_prompted")
+        private val KEY_TRACKING_ENABLED = booleanPreferencesKey("tracking_enabled")
     }
 
     val authToken: Flow<String?> = dataStore.data.map { it[KEY_AUTH_TOKEN] }
@@ -38,6 +40,9 @@ class UserPreferences @Inject constructor(
     val hasLocationConsent: Flow<Boolean> = dataStore.data.map { it[KEY_LOCATION_CONSENT] == true }
     val privacyModeEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_PRIVACY_MODE] == true }
     val isDeviceRegistered: Flow<Boolean> = dataStore.data.map { it[KEY_DEVICE_REGISTERED] == true }
+    val hasBeenPromptedForBackgroundLocation: Flow<Boolean> = dataStore.data.map { it[KEY_BACKGROUND_LOCATION_PROMPTED] == true }
+    /** User preference for tracking — defaults to true (follows backend config) */
+    val trackingEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_TRACKING_ENABLED] != false }
 
     suspend fun saveAuthData(token: String, tenantId: String) {
         dataStore.edit { prefs ->
@@ -71,6 +76,18 @@ class UserPreferences @Inject constructor(
     suspend fun setDeviceRegistered(registered: Boolean) {
         dataStore.edit { prefs ->
             prefs[KEY_DEVICE_REGISTERED] = registered
+        }
+    }
+
+    suspend fun setBackgroundLocationPrompted(prompted: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_BACKGROUND_LOCATION_PROMPTED] = prompted
+        }
+    }
+
+    suspend fun setTrackingEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_TRACKING_ENABLED] = enabled
         }
     }
 

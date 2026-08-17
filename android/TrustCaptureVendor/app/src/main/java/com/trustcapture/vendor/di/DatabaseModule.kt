@@ -3,6 +3,7 @@ package com.trustcapture.vendor.di
 import android.content.Context
 import androidx.room.Room
 import com.trustcapture.vendor.data.local.dao.EvidenceDao
+import com.trustcapture.vendor.data.local.dao.TrackingDao
 import com.trustcapture.vendor.data.local.db.AppDatabase
 import com.trustcapture.vendor.data.local.db.AuditDao
 import com.trustcapture.vendor.data.local.db.CampaignDao
@@ -57,4 +58,7 @@ object DatabaseModule {
 
     @Provides
     fun provideEvidenceDao(db: AppDatabase): EvidenceDao = db.evidenceDao()
+
+    @Provides
+    fun provideTrackingDao(db: AppDatabase): TrackingDao = db.trackingDao()
 }

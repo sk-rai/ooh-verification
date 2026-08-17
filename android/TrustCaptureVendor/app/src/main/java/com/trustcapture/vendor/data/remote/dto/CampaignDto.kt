@@ -24,7 +24,8 @@ data class CampaignResponse(
     @SerializedName("location_profile") val locationProfile: LocationProfileResponse? = null,
     @SerializedName("locations") val locations: List<CampaignLocationResponse>? = null,
     @SerializedName("location_count") val locationCount: Int? = null,
-    @SerializedName("created_at") val createdAt: String? = null
+    @SerializedName("created_at") val createdAt: String? = null,
+    @SerializedName("config") val config: CampaignCaptureConfig? = null
 )
 
 data class CampaignLocationResponse(

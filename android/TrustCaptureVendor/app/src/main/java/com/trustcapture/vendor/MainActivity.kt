@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.trustcapture.vendor.data.local.datastore.UserPreferences
 import com.trustcapture.vendor.data.remote.dto.AppVersionResponse
+import com.trustcapture.vendor.domain.repository.AppConfigRepository
+import com.trustcapture.vendor.service.TrackingService
 import com.trustcapture.vendor.ui.navigation.Routes
 import com.trustcapture.vendor.ui.navigation.TrustCaptureNavGraph
 import com.trustcapture.vendor.ui.theme.TrustCaptureTheme
@@ -37,6 +39,18 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var updateChecker: UpdateChecker
+
+    @Inject
+    lateinit var appConfigRepository: AppConfigRepository
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Stop tracking service on app close if configured
+        val config = appConfigRepository.config.value.trackingConfig
+        if (config.enabled && config.stopOnAppClose) {
+            TrackingService.stopService(this)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

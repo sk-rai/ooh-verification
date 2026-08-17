@@ -13,5 +13,7 @@ data class CampaignEntity(
     val endDate: String,
     val status: String,
     val locationCount: Int = 0,
-    val lastValidatedAt: Long = System.currentTimeMillis()
+    val lastValidatedAt: Long = System.currentTimeMillis(),
+    /** Per-campaign capture config JSON (null = use global config) */
+    val configJson: String? = null
 )
