@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navigation from '../../components/Navigation'
 import api from '../../services/api'
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
 
 interface Location {
   id: string
@@ -10,6 +11,31 @@ interface Location {
   longitude: string
   radius_meters: string
 }
+
+
+function MapPicker({ onLocationSelect, lat, lon }: { onLocationSelect: (lat: number, lon: number) => void, lat?: number, lon?: number }) {
+  function ClickHandler() {
+    useMapEvents({
+      click(e) {
+        onLocationSelect(e.latlng.lat, e.latlng.lng)
+      },
+    })
+    return null
+  }
+  const center: [number, number] = lat && lon ? [lat, lon] : [20.5937, 78.9629]
+  const zoom = lat && lon ? 14 : 5
+  return (
+    <div className="mt-2 border rounded-lg overflow-hidden" style={{ height: '250px' }}>
+      <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }} scrollWheelZoom={true}>
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
+        <ClickHandler />
+        {lat && lon && <Marker position={[lat, lon]} />}
+      </MapContainer>
+    </div>
+  )
+}
+
+
 
 export default function CreateCampaign() {
   const navigate = useNavigate()
