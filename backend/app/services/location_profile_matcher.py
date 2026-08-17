@@ -36,6 +36,73 @@ class LocationProfileMatcher:
         """Initialize the location profile matcher."""
         pass
     
+
+    def _point_to_segment_distance_meters(self, px, py, ax, ay, bx, by):
+        """Approximate distance from point P to line segment A-B in meters."""
+        import math
+        # Convert to approximate meters (at given latitude)
+        cos_lat = math.cos(math.radians(px))
+        # Vector AB in meters
+        abx = (bx - ax) * 111320 * cos_lat
+        aby = (by - ay) * 110540
+        # Vector AP in meters
+        apx = (px - ax) * 111320 * cos_lat
+        apy = (py - ay) * 110540
+        ab_sq = abx * abx + aby * aby
+        if ab_sq < 1e-10:
+            return math.sqrt(apx * apx + apy * apy)
+        t = max(0, min(1, (apx * abx + apy * aby) / ab_sq))
+        # Closest point on segment
+        cx = t * abx
+        cy = t * aby
+        dx = apx - cx
+        dy = apy - cy
+        return math.sqrt(dx * dx + dy * dy)
+
+    def _check_bbox(self, lat, lon, profile):
+        """Check if point is within bounding box."""
+        ne_lat = getattr(profile, 'viewport_ne_lat', None)
+        ne_lon = getattr(profile, 'viewport_ne_lon', None)
+        sw_lat = getattr(profile, 'viewport_sw_lat', None)
+        sw_lon = getattr(profile, 'viewport_sw_lon', None)
+        if ne_lat and ne_lon and sw_lat and sw_lon:
+            return sw_lat <= lat <= ne_lat and sw_lon <= lon <= ne_lon
+        return None
+
+    def _check_polygon(self, lat, lon, profile):
+        """Ray casting - check if point is inside polygon."""
+        polygon = getattr(profile, 'polygon_points', None)
+        if not polygon or not isinstance(polygon, list) or len(polygon) < 3:
+            return None
+        n = len(polygon)
+        inside = False
+        j = n - 1
+        for i in range(n):
+            xi = polygon[i].get("lat", 0)
+            yi = polygon[i].get("lon", 0)
+            xj = polygon[j].get("lat", 0)
+            yj = polygon[j].get("lon", 0)
+            if ((yi > lon) != (yj > lon)) and (lat < (xj - xi) * (lon - yi) / (yj - yi) + xi):
+                inside = not inside
+            j = i
+        return inside
+
+    def _check_corridor(self, lat, lon, profile):
+        """Check if point is within buffer distance of any segment in the route."""
+        polygon = getattr(profile, 'polygon_points', None)
+        buffer = getattr(profile, 'corridor_buffer_meters', None)
+        if not polygon or not isinstance(polygon, list) or len(polygon) < 2 or not buffer:
+            return None
+        for i in range(len(polygon) - 1):
+            dist = self._point_to_segment_distance_meters(
+                lat, lon,
+                polygon[i].get("lat", 0), polygon[i].get("lon", 0),
+                polygon[i+1].get("lat", 0), polygon[i+1].get("lon", 0)
+            )
+            if dist <= buffer:
+                return True
+        return False
+
     def match_location(
         self,
         captured_data: Dict[str, Any],
@@ -63,6 +130,29 @@ class LocationProfileMatcher:
             Returns None if location_profile is None (profiles are optional)
         """
         # Handle optional location profile
+        # Check geofence type (bbox/polygon/corridor before circle fallback)
+        geofence_type = getattr(location_profile, 'geofence_type', 'circle') if location_profile else 'circle'
+        
+        if location_profile and geofence_type != 'circle':
+            lat = captured_data.get("latitude", 0)
+            lon = captured_data.get("longitude", 0)
+            if lat and lon:
+                if geofence_type == "bbox":
+                    result = self._check_bbox(lat, lon, location_profile)
+                    if result is not None:
+                        score = 90 if result else 10
+                        return {"match_score": score, "distance_meters": 0 if result else 99999, "geofence_type": "bbox", "inside": result}
+                elif geofence_type == "polygon":
+                    result = self._check_polygon(lat, lon, location_profile)
+                    if result is not None:
+                        score = 90 if result else 10
+                        return {"match_score": score, "distance_meters": 0 if result else 99999, "geofence_type": "polygon", "inside": result}
+                elif geofence_type == "corridor":
+                    result = self._check_corridor(lat, lon, location_profile)
+                    if result is not None:
+                        score = 90 if result else 10
+                        return {"match_score": score, "distance_meters": 0 if result else 99999, "geofence_type": "corridor", "inside": result}
+
         if location_profile is None:
             return None
         

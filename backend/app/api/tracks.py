@@ -237,3 +237,45 @@ async def get_tracking_summary(
         "total_tracks": len(tracks),
         "rows": rows,
     }
+
+
+@router.get("/me")
+async def get_my_track(
+    track_date: str = Query(None, alias="date", description="Date YYYY-MM-DD, defaults to today"),
+    request: Request = None,
+    db: AsyncSession = Depends(get_db),
+    vendor: Vendor = Depends(get_current_active_vendor),
+):
+    """Get current vendor own GPS track. Used by Android My Route Today screen."""
+    if track_date:
+        try:
+            query_date = datetime.fromisoformat(track_date).date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format")
+    else:
+        query_date = date.today()
+
+    result = await db.execute(
+        select(VendorTrack).where(
+            VendorTrack.vendor_id == vendor.vendor_id,
+            VendorTrack.track_date == query_date,
+        )
+    )
+    track = result.scalar_one_or_none()
+
+    if not track:
+        return {"vendor_id": vendor.vendor_id, "date": str(query_date), "points": [], "stats": None}
+
+    return {
+        "vendor_id": vendor.vendor_id,
+        "date": str(query_date),
+        "track_id": str(track.track_id),
+        "points": track.points or [],
+        "point_count": track.point_count,
+        "stats": {
+            "distance_km": round((track.total_distance_meters or 0) / 1000, 2),
+            "start_time": track.start_time.isoformat() if track.start_time else None,
+            "end_time": track.end_time.isoformat() if track.end_time else None,
+            "duration_hours": round((track.duration_seconds or 0) / 3600, 2),
+        },
+    }

@@ -256,6 +256,20 @@ async def startup_event():
             print("✅ API keys table ready")
             await conn.execute(text("ALTER TABLE clients ADD COLUMN IF NOT EXISTS report_settings JSONB;"))
             print("✅ Report settings column ready")
+            # Geofence columns for polygon/bbox/corridor verification
+            await conn.execute(text(
+                "DO $$ BEGIN "
+                "ALTER TABLE location_profiles ADD COLUMN IF NOT EXISTS geofence_type VARCHAR(20) DEFAULT 'circle'; "
+                "ALTER TABLE location_profiles ADD COLUMN IF NOT EXISTS viewport_ne_lat FLOAT; "
+                "ALTER TABLE location_profiles ADD COLUMN IF NOT EXISTS viewport_ne_lon FLOAT; "
+                "ALTER TABLE location_profiles ADD COLUMN IF NOT EXISTS viewport_sw_lat FLOAT; "
+                "ALTER TABLE location_profiles ADD COLUMN IF NOT EXISTS viewport_sw_lon FLOAT; "
+                "ALTER TABLE location_profiles ADD COLUMN IF NOT EXISTS polygon_points JSONB; "
+                "ALTER TABLE location_profiles ADD COLUMN IF NOT EXISTS corridor_buffer_meters FLOAT; "
+                "ALTER TABLE location_profiles ADD COLUMN IF NOT EXISTS geocode_accuracy VARCHAR(20); "
+                "EXCEPTION WHEN others THEN NULL; END $$;"
+            ))
+            print("✅ Geofence columns ready")
 
 
             # Create Play Store review test vendor if not exists
