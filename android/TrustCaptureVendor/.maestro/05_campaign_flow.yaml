@@ -3,6 +3,14 @@ name: "Campaign Flow - Assigned Location"
 ---
 - launchApp
 
+# Handle privacy consent if first launch
+- runFlow:
+    when:
+      visible: "Privacy & Data Collection"
+    commands:
+      - tapOn: "Location Data Collection"
+      - tapOn: "Accept & Continue"
+
 - runFlow:
     when:
       visible: "Background Location Access"
@@ -61,3 +69,4 @@ name: "Campaign Flow - Assigned Location"
 - extendedWaitUntil:
     visible: "uploaded successfully"
     timeout: 5000
+

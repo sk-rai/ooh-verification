@@ -3,7 +3,37 @@ name: "Full Regression - All Screens Accessible"
 ---
 - launchApp
 
-# Dismiss dialogs
+# Privacy consent screen appears on first launch — must accept before proceeding
+- runFlow:
+    when:
+      visible: "Privacy & Data Collection"
+    commands:
+      # Check the Location Data Collection checkbox (required to enable Accept button)
+      - tapOn: "Location Data Collection"
+      # Tap Accept & Continue
+      - tapOn: "Accept & Continue"
+
+# Login screen may appear (if not logged in)
+- runFlow:
+    when:
+      visible: "Vendor Photo Capture"
+    commands:
+      - tapOn: "Vendor ID"
+      - inputText: "9BIZMV"
+      - tapOn: "Phone Number"
+      - inputText: "9876543210"
+      - tapOn: "Request OTP"
+      - extendedWaitUntil:
+          visible: "Enter Verification Code"
+          timeout: 10000
+      - tapOn: "6-digit OTP"
+      - inputText: "123456"
+      - tapOn: "Verify & Login"
+      - extendedWaitUntil:
+          visible: "What would you like to do?"
+          timeout: 15000
+
+# Dismiss background location dialog if it appears
 - runFlow:
     when:
       visible: "Background Location Access"
