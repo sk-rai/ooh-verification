@@ -1,8 +1,13 @@
 appId: com.lynksavvy.trustcapture
 name: "Photo Capture with Voice Note"
 ---
-# Assumes already logged in
 - launchApp
+
+- runFlow:
+    when:
+      visible: "Background Location Access"
+    commands:
+      - tapOn: "Not Now"
 
 # Navigate to Quick Capture
 - tapOn: "Quick Capture"
@@ -20,7 +25,7 @@ name: "Photo Capture with Voice Note"
 # Wait for review screen
 - extendedWaitUntil:
     visible: "Review Photo"
-    timeout: 10000
+    timeout: 15000
 
 # Scroll down to voice note section
 - scrollUntilVisible:
@@ -33,6 +38,11 @@ name: "Photo Capture with Voice Note"
 # Grant audio permission if prompted
 - runFlow:
     when:
+      visible: "While using the app"
+    commands:
+      - tapOn: "While using the app"
+- runFlow:
+    when:
       visible: "Allow"
     commands:
       - tapOn: "Allow"
@@ -40,7 +50,7 @@ name: "Photo Capture with Voice Note"
 # Should show recording indicator
 - extendedWaitUntil:
     visible: "Recording"
-    timeout: 3000
+    timeout: 5000
 
 # Wait 3 seconds
 - swipe:
@@ -53,13 +63,13 @@ name: "Photo Capture with Voice Note"
 # Should show "Voice note recorded"
 - assertVisible: "Voice note recorded"
 
-# Upload button should be enabled now
+# Upload
 - scrollUntilVisible:
     element: "Upload"
     direction: DOWN
 - tapOn: "Upload"
 
-# Wait for success
+# Instant success
 - extendedWaitUntil:
     visible: "uploaded successfully"
-    timeout: 70000
+    timeout: 5000

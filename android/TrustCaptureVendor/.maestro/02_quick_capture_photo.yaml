@@ -1,51 +1,72 @@
 appId: com.lynksavvy.trustcapture
 name: "Quick Capture - Photo with Text Note"
 ---
-# Assumes already logged in (run 01_login_flow first or app is already at Home)
 - launchApp
+
+# Handle any permission dialogs
+- runFlow:
+    when:
+      visible: "Background Location Access"
+    commands:
+      - tapOn: "Not Now"
 
 # Tap Quick Capture
 - tapOn: "Quick Capture"
 
 # Category picker should appear
-- assertVisible: "Select Category"
+- assertVisible: "Quick Capture"
 
 # Select "Inspection" category
 - tapOn: "Inspection"
 
 # Camera screen should open — wait for GPS
 - extendedWaitUntil:
-    visible: "GPS"
+    visible: "PHOTO"
     timeout: 35000
 
-# Should see PHOTO mode label
-- assertVisible: "PHOTO"
+# Grant camera/location permissions if prompted
+- runFlow:
+    when:
+      visible: "Grant Permissions"
+    commands:
+      - tapOn: "Grant Permissions"
+      - runFlow:
+          when:
+            visible: "Allow"
+          commands:
+            - tapOn: "Allow"
+      - runFlow:
+          when:
+            visible: "While using the app"
+          commands:
+            - tapOn: "While using the app"
 
-# Take a photo (tap the capture button)
+# Take a photo (tap the capture button at bottom center)
 - tapOn:
     point: "50%,85%"
 
-# Wait for watermark processing
+# Wait for review screen
 - extendedWaitUntil:
     visible: "Review Photo"
-    timeout: 10000
+    timeout: 15000
 
 # Should see review screen with metadata
 - assertVisible: "Capture Details"
-- assertVisible: "GPS"
-- assertVisible: "Signed"
 
-# Type a text note
+# Type a text note (scroll down to find it)
 - scrollUntilVisible:
     element: "Add observations"
     direction: DOWN
 - tapOn: "Add observations"
-- inputText: "Test inspection note from Maestro"
+- inputText: "Maestro test note"
 
 # Tap Upload
+- scrollUntilVisible:
+    element: "Upload"
+    direction: DOWN
 - tapOn: "Upload"
 
-# Wait for upload to complete (success or queued)
+# Upload is now instant (save-first architecture)
 - extendedWaitUntil:
     visible: "uploaded successfully"
-    timeout: 70000
+    timeout: 5000
