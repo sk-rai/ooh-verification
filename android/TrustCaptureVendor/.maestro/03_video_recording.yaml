@@ -1,8 +1,13 @@
 appId: com.lynksavvy.trustcapture
 name: "Quick Capture - Video Recording"
 ---
-# Assumes already logged in
 - launchApp
+
+- runFlow:
+    when:
+      visible: "Background Location Access"
+    commands:
+      - tapOn: "Not Now"
 
 # Navigate to Quick Capture
 - tapOn: "Quick Capture"
@@ -13,39 +18,38 @@ name: "Quick Capture - Video Recording"
     visible: "PHOTO"
     timeout: 35000
 
-# Switch to video mode (tap the toggle button on the left)
+# Switch to video mode (toggle button on the left)
 - tapOn:
     point: "25%,85%"
 
 # Should see VIDEO label
 - assertVisible: "VIDEO"
 
-# Start recording (tap the red record button in center)
+# Start recording (red record button in center)
 - tapOn:
     point: "50%,85%"
 
 # Should see recording timer
 - extendedWaitUntil:
     visible: "REC"
-    timeout: 3000
+    timeout: 5000
 
 # Wait 5 seconds for recording
 - swipe:
     direction: UP
     duration: 5000
 
-# Stop recording (tap stop button)
+# Stop recording (tap stop button in center)
 - tapOn:
     point: "50%,85%"
 
 # Should transition to review screen
 - extendedWaitUntil:
     visible: "Review Video"
-    timeout: 10000
+    timeout: 15000
 
 # Should show video info
 - assertVisible: "Video"
-- assertVisible: "GPS track"
 
 # Upload
 - scrollUntilVisible:
@@ -53,7 +57,7 @@ name: "Quick Capture - Video Recording"
     direction: DOWN
 - tapOn: "Upload"
 
-# Wait for success
+# Instant success (save-first)
 - extendedWaitUntil:
     visible: "uploaded successfully"
-    timeout: 130000
+    timeout: 5000

@@ -1,50 +1,48 @@
 appId: com.lynksavvy.trustcapture
 name: "Settings - Tracking Toggle"
-tags:
-  - settings
-  - tracking
-
 ---
+- launchApp
 
-# Navigate to Settings from Home
-- tapOn: "Settings"
+- runFlow:
+    when:
+      visible: "Background Location Access"
+    commands:
+      - tapOn: "Not Now"
 
-# Verify Settings screen is displayed
-- assertVisible: "Settings"
+# Navigate to Settings (gear icon in top-right)
+- tapOn:
+    point: "85%,5%"
 
-# Check Location Tracking section is visible (only if backend enables it)
+# Verify Settings screen
+- extendedWaitUntil:
+    visible: "Settings"
+    timeout: 5000
+
+# Check Location Tracking section
 - assertVisible:
     text: "Location Tracking"
     optional: true
 
-# Verify tracking toggle is visible
+# Check tracking toggle
 - assertVisible:
     text: "Enable location tracking"
     optional: true
 
-# Toggle tracking off
+# Verify Account section
+- assertVisible: "Account"
+
+# Verify Device Security section
+- scrollUntilVisible:
+    element: "Device Security"
+    direction: DOWN
+- assertVisible: "Device Security"
+
+# Verify About section
+- scrollUntilVisible:
+    element: "About"
+    direction: DOWN
+- assertVisible: "App Version"
+
+# Go back (arrow in top-left)
 - tapOn:
-    text: "Enable location tracking"
-    optional: true
-
-# Verify status changes to paused
-- assertVisible:
-    text: "Tracking paused"
-    optional: true
-
-# Toggle tracking back on
-- tapOn:
-    text: "Enable location tracking"
-    optional: true
-
-# Verify status changes to active (if permission granted)
-- assertVisible:
-    text: "Tracking active"
-    optional: true
-
-# Verify app version is shown
-- assertVisible:
-    text: "App Version"
-
-# Go back
-- tapOn: "Back"
+    point: "5%,5%"

@@ -1,0 +1,64 @@
+appId: com.lynksavvy.trustcapture
+name: "Full Regression - All Screens Accessible"
+---
+- launchApp
+
+# Dismiss dialogs
+- runFlow:
+    when:
+      visible: "Background Location Access"
+    commands:
+      - tapOn: "Not Now"
+
+# HOME SCREEN — verify all elements
+- assertVisible: "What would you like to do?"
+- assertVisible: "My Campaigns"
+- assertVisible: "Quick Capture"
+
+# SETTINGS — navigate and verify
+- tapOn:
+    point: "85%,5%"
+- extendedWaitUntil:
+    visible: "Settings"
+    timeout: 5000
+- assertVisible: "Account"
+- scrollUntilVisible:
+    element: "About"
+    direction: DOWN
+- assertVisible: "About"
+- tapOn:
+    point: "5%,5%"
+
+# QUICK CAPTURE — navigate and verify categories
+- tapOn: "Quick Capture"
+- assertVisible: "Accident"
+- assertVisible: "Damage"
+- assertVisible: "Inspection"
+- assertVisible: "Delivery"
+- assertVisible: "Hazard"
+- assertVisible: "Other"
+# Go back
+- tapOn:
+    point: "5%,5%"
+
+# MY CAMPAIGNS — navigate and verify
+- tapOn: "My Campaigns"
+- extendedWaitUntil:
+    visible: "CAM-"
+    timeout: 15000
+# Go back
+- tapOn:
+    point: "5%,5%"
+
+# MY ROUTE (if visible)
+- runFlow:
+    when:
+      visible: "My Route Today"
+    commands:
+      - tapOn: "My Route Today"
+      - assertVisible: "Today's Tracking Stats"
+      - tapOn:
+          point: "5%,5%"
+
+# All screens accessible ✓
+- assertVisible: "What would you like to do?"

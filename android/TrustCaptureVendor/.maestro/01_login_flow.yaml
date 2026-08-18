@@ -1,28 +1,50 @@
 appId: com.lynksavvy.trustcapture
 name: "Login Flow - OTP"
 ---
-# Launch app
 - launchApp
 
-# Should see login screen with phone number field
-- assertVisible: "Enter Phone Number"
+# Privacy consent screen may appear on first launch
+- runFlow:
+    when:
+      visible: "Privacy Policy"
+    commands:
+      - tapOn: "I Agree"
 
-# Enter test vendor phone number
-- tapOn:
-    id: "phone_input"  
+# Should see login screen
+- assertVisible: "TrustCapture"
+- assertVisible: "Vendor Photo Capture"
+
+# Enter Vendor ID
+- tapOn: "Vendor ID"
+- inputText: "9BIZMV"
+
+# Enter Phone Number
+- tapOn: "Phone Number"
 - inputText: "9876543210"
 
-# Tap Send OTP
-- tapOn: "Send OTP"
+# Tap Request OTP
+- tapOn: "Request OTP"
 
 # Wait for OTP screen
-- assertVisible: "Enter OTP"
+- extendedWaitUntil:
+    visible: "Enter Verification Code"
+    timeout: 10000
 
-# Enter test OTP (backend test mode: 123456)
+# Enter OTP
+- tapOn: "6-digit OTP"
 - inputText: "123456"
 
 # Tap Verify
-- tapOn: "Verify"
+- tapOn: "Verify & Login"
 
 # Should land on Home screen
-- assertVisible: "What would you like to do?"
+- extendedWaitUntil:
+    visible: "What would you like to do?"
+    timeout: 10000
+
+# Handle background location permission dialog if it appears
+- runFlow:
+    when:
+      visible: "Background Location Access"
+    commands:
+      - tapOn: "Not Now"

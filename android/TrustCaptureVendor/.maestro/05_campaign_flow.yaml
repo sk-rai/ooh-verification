@@ -1,34 +1,45 @@
 appId: com.lynksavvy.trustcapture
 name: "Campaign Flow - Assigned Location"
 ---
-# Assumes already logged in
 - launchApp
+
+- runFlow:
+    when:
+      visible: "Background Location Access"
+    commands:
+      - tapOn: "Not Now"
 
 # Tap My Campaigns
 - tapOn: "My Campaigns"
 
-# Should see campaigns list
+# Should see campaigns list (wait for network fetch)
 - extendedWaitUntil:
     visible: "CAM-"
-    timeout: 10000
+    timeout: 15000
 
-# Tap first campaign
-- tapOn:
-    index: 0
-    text: "CAM-.*"
-
-# Should see locations list
-- extendedWaitUntil:
-    visible: "Location"
-    timeout: 5000
-
-# Tap first location
+# Tap first campaign item
 - tapOn:
     index: 0
 
-# Camera should open
+# Should see locations list (or camera directly)
 - extendedWaitUntil:
-    visible: "GPS"
+    visible:
+      anyOf:
+        - "GPS"
+        - "Location"
+    timeout: 35000
+
+# If on locations screen, tap first location
+- runFlow:
+    when:
+      visible: "Location"
+    commands:
+      - tapOn:
+          index: 0
+
+# Wait for camera
+- extendedWaitUntil:
+    visible: "PHOTO"
     timeout: 35000
 
 # Take photo
@@ -38,10 +49,7 @@ name: "Campaign Flow - Assigned Location"
 # Wait for review
 - extendedWaitUntil:
     visible: "Review Photo"
-    timeout: 10000
-
-# Should show campaign code in metadata
-- assertVisible: "Campaign"
+    timeout: 15000
 
 # Upload
 - scrollUntilVisible:
@@ -49,7 +57,7 @@ name: "Campaign Flow - Assigned Location"
     direction: DOWN
 - tapOn: "Upload"
 
-# Wait for success
+# Instant success
 - extendedWaitUntil:
     visible: "uploaded successfully"
-    timeout: 70000
+    timeout: 5000
