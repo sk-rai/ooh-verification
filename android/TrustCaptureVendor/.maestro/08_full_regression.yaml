@@ -12,18 +12,19 @@ name: "Full Regression - All Screens Accessible"
       - scrollUntilVisible:
           element: "Location Data Collection"
           direction: DOWN
-      # Check the Location Data Collection checkbox (required to enable Accept button)
-      - tapOn: "Location Data Collection"
-      # Tap Accept & Continue
+      # Tap the checkbox (left side of "Location Data Collection" row)
+      - tapOn:
+          point: "7%,73%"
+      # Wait a moment for button to enable
+      - swipe:
+          direction: UP
+          duration: 500
+      # Tap Accept & Continue button
       - tapOn: "Accept & Continue"
 
 # After consent, wait for next screen to load (login or home)
 - extendedWaitUntil:
-    visible:
-      anyOf:
-        - "Vendor Photo Capture"
-        - "What would you like to do?"
-        - "TrustCapture"
+    visible: "TrustCapture"
     timeout: 10000
 
 # Login screen — handle if not logged in
