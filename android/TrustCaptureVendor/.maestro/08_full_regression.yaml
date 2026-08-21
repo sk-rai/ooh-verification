@@ -8,17 +8,16 @@ name: "Full Regression - All Screens Accessible"
     when:
       visible: "Privacy & Data Collection"
     commands:
-      # Scroll down to find the Location Data Collection checkbox
+      # Scroll down to make checkbox and button visible
       - scrollUntilVisible:
-          element: "Location Data Collection"
+          element: "Accept & Continue"
           direction: DOWN
-      # Tap the checkbox (left side of "Location Data Collection" row)
-      - tapOn:
-          point: "7%,73%"
-      # Wait a moment for button to enable
+      # Tap the consent subtitle text (triggers the row/checkbox)
+      - tapOn: "I consent to collection of GPS"
+      # Wait for button to enable
       - swipe:
           direction: UP
-          duration: 500
+          duration: 1000
       # Tap Accept & Continue button
       - tapOn: "Accept & Continue"
 
