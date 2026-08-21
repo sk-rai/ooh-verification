@@ -8,6 +8,9 @@ name: "Quick Capture - Video Recording"
     when:
       visible: "Privacy & Data Collection"
     commands:
+      - scrollUntilVisible:
+          element: "Location Data Collection"
+          direction: DOWN
       - tapOn: "Location Data Collection"
       - tapOn: "Accept & Continue"
 

@@ -8,6 +8,10 @@ name: "Full Regression - All Screens Accessible"
     when:
       visible: "Privacy & Data Collection"
     commands:
+      # Scroll down to find the Location Data Collection checkbox
+      - scrollUntilVisible:
+          element: "Location Data Collection"
+          direction: DOWN
       # Check the Location Data Collection checkbox (required to enable Accept button)
       - tapOn: "Location Data Collection"
       # Tap Accept & Continue
