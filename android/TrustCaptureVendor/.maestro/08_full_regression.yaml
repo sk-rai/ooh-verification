@@ -17,7 +17,16 @@ name: "Full Regression - All Screens Accessible"
       # Tap Accept & Continue
       - tapOn: "Accept & Continue"
 
-# Login screen may appear (if not logged in)
+# After consent, wait for next screen to load (login or home)
+- extendedWaitUntil:
+    visible:
+      anyOf:
+        - "Vendor Photo Capture"
+        - "What would you like to do?"
+        - "TrustCapture"
+    timeout: 10000
+
+# Login screen — handle if not logged in
 - runFlow:
     when:
       visible: "Vendor Photo Capture"
@@ -44,8 +53,10 @@ name: "Full Regression - All Screens Accessible"
     commands:
       - tapOn: "Not Now"
 
-# HOME SCREEN — verify all elements
-- assertVisible: "What would you like to do?"
+# HOME SCREEN — verify all elements (wait for it to load)
+- extendedWaitUntil:
+    visible: "What would you like to do?"
+    timeout: 15000
 - assertVisible: "My Campaigns"
 - assertVisible: "Quick Capture"
 
