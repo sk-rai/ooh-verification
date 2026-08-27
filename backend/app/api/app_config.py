@@ -75,7 +75,7 @@ DEFAULT_UI_CONFIG = {
         "tracking": False,
     },
     "maintenance": {
-        "enabled": True,
+        "enabled": False,
         "message": "",
     },
 }
