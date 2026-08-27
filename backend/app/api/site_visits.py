@@ -133,14 +133,16 @@ async def get_site_visits(
     groups: Dict[tuple, List[Dict[str, Any]]] = defaultdict(list)
 
     for e in evidence_items:
-        capture_date = e.created_at.strftime("%Y-%m-%d") if e.created_at else None
+        # Use capture_timestamp (device time) if available, fallback to created_at
+        ts = e.capture_timestamp or e.created_at
+        capture_date = ts.strftime("%Y-%m-%d") if ts else None
         if not capture_date:
             continue
         key = (str(e.campaign_id), e.vendor_id, capture_date)
         groups[key].append({
             "lat": e.latitude or 0,
             "lon": e.longitude or 0,
-            "time": e.created_at,
+            "time": e.capture_timestamp or e.created_at,
             "type": e.evidence_type,
             "status": e.verification_status,
         })
