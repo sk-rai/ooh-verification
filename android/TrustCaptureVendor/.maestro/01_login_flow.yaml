@@ -3,12 +3,16 @@ name: "Login Flow - OTP"
 ---
 - launchApp
 
-# Privacy consent screen may appear on first launch
+# Privacy consent screen appears on first launch
 - runFlow:
     when:
-      visible: "Privacy Policy"
+      visible: "Privacy & Data Collection"
     commands:
-      - tapOn: "I Agree"
+      - scrollUntilVisible:
+          element: "Location Data Collection"
+          direction: DOWN
+      - tapOn: "Location Data Collection"
+      - tapOn: "Accept & Continue"
 
 # Should see login screen
 - assertVisible: "TrustCapture"

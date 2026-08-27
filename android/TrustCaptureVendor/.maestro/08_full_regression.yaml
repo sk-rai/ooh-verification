@@ -3,15 +3,60 @@ name: "Full Regression - All Screens Accessible"
 ---
 - launchApp
 
-# Dismiss dialogs
+# Privacy consent screen appears on first launch — must accept before proceeding
+- runFlow:
+    when:
+      visible: "Privacy & Data Collection"
+    commands:
+      # Scroll down to make checkbox and button visible
+      - scrollUntilVisible:
+          element: "Accept & Continue"
+          direction: DOWN
+      # Tap the consent subtitle text (triggers the row/checkbox)
+      - tapOn: "I consent to collection of GPS"
+      # Wait for button to enable
+      - swipe:
+          direction: UP
+          duration: 1000
+      # Tap Accept & Continue button
+      - tapOn: "Accept & Continue"
+
+# After consent, wait for next screen to load (login or home)
+- extendedWaitUntil:
+    visible: "TrustCapture"
+    timeout: 10000
+
+# Login screen — handle if not logged in
+- runFlow:
+    when:
+      visible: "Vendor Photo Capture"
+    commands:
+      - tapOn: "Vendor ID"
+      - inputText: "9BIZMV"
+      - tapOn: "Phone Number"
+      - inputText: "9876543210"
+      - tapOn: "Request OTP"
+      - extendedWaitUntil:
+          visible: "Enter Verification Code"
+          timeout: 10000
+      - tapOn: "6-digit OTP"
+      - inputText: "123456"
+      - tapOn: "Verify & Login"
+      - extendedWaitUntil:
+          visible: "What would you like to do?"
+          timeout: 15000
+
+# Dismiss background location dialog if it appears
 - runFlow:
     when:
       visible: "Background Location Access"
     commands:
       - tapOn: "Not Now"
 
-# HOME SCREEN — verify all elements
-- assertVisible: "What would you like to do?"
+# HOME SCREEN — verify all elements (wait for it to load)
+- extendedWaitUntil:
+    visible: "What would you like to do?"
+    timeout: 15000
 - assertVisible: "My Campaigns"
 - assertVisible: "Quick Capture"
 

@@ -3,6 +3,17 @@ name: "My Route Today"
 ---
 - launchApp
 
+# Handle privacy consent if first launch
+- runFlow:
+    when:
+      visible: "Privacy & Data Collection"
+    commands:
+      - scrollUntilVisible:
+          element: "Location Data Collection"
+          direction: DOWN
+      - tapOn: "Location Data Collection"
+      - tapOn: "Accept & Continue"
+
 - runFlow:
     when:
       visible: "Background Location Access"
@@ -25,3 +36,4 @@ name: "My Route Today"
       # Go back
       - tapOn:
           point: "5%,5%"
+

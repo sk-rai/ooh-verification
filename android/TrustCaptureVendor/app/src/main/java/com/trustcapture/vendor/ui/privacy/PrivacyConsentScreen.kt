@@ -1,5 +1,6 @@
 package com.trustcapture.vendor.ui.privacy
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -113,7 +114,9 @@ fun PrivacyConsentScreen(
 
             // Location consent checkbox
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().then(
+                    Modifier.clickable { locationConsent = !locationConsent }
+                ),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Checkbox(

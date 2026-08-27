@@ -3,6 +3,17 @@ name: "Photo Capture with Voice Note"
 ---
 - launchApp
 
+# Handle privacy consent if first launch
+- runFlow:
+    when:
+      visible: "Privacy & Data Collection"
+    commands:
+      - scrollUntilVisible:
+          element: "Location Data Collection"
+          direction: DOWN
+      - tapOn: "Location Data Collection"
+      - tapOn: "Accept & Continue"
+
 - runFlow:
     when:
       visible: "Background Location Access"
@@ -73,3 +84,4 @@ name: "Photo Capture with Voice Note"
 - extendedWaitUntil:
     visible: "uploaded successfully"
     timeout: 5000
+

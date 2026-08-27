@@ -3,6 +3,17 @@ name: "Quick Capture - Photo with Text Note"
 ---
 - launchApp
 
+# Handle privacy consent if first launch
+- runFlow:
+    when:
+      visible: "Privacy & Data Collection"
+    commands:
+      - scrollUntilVisible:
+          element: "Location Data Collection"
+          direction: DOWN
+      - tapOn: "Location Data Collection"
+      - tapOn: "Accept & Continue"
+
 # Handle any permission dialogs
 - runFlow:
     when:
