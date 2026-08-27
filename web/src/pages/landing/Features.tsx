@@ -1,10 +1,14 @@
 const features = [
+  { icon: '🎬', title: 'Photo, Video & Voice Evidence', desc: 'Capture photos, video, and voice notes — plus Quick Capture for evidence not tied to a campaign. Every media type is GPS-stamped and signed.' },
   { icon: '🔒', title: 'Tamper-Proof Watermarks', desc: 'GPS, timestamp, vendor ID burned into pixels. Any edit visibly corrupts the image — no forensic tools needed.' },
   { icon: '🛡️', title: 'Multi-Sensor Fraud Detection', desc: 'GPS + pressure + magnetic field + tremor + cryptographic signature. Spoofing one sensor is easy — spoofing five is practically impossible.' },
-  { icon: '🔐', title: 'Bank-Level Security', desc: 'Photos signed with hardware-backed keys (Android StrongBox/TEE). Private key never leaves the device.' },
-  { icon: '📡', title: 'Zero Data Loss in the Field', desc: 'Photos encrypted locally (AES-256). Background sync uploads automatically when connected. Works in remote areas.' },
+  { icon: '🔐', title: 'Bank-Level Security', desc: 'Media signed with hardware-backed keys (Android StrongBox/TEE). Private key never leaves the device.' },
+  { icon: '📡', title: 'Zero Data Loss in the Field', desc: 'Evidence encrypted locally (AES-256). Background sync uploads automatically when connected. Works in remote areas.' },
+  { icon: '🛰️', title: 'GPS Tracking & Route Analysis', desc: 'Background GPS tracks with attendance logs, route maps, distance travelled, and flags for coverage gaps and impossible speeds.' },
+  { icon: '📐', title: 'Advanced Geofencing', desc: 'Choose circle, bounding box, polygon, or route corridor per location. Configurable radius and per-campaign verification thresholds.' },
   { icon: '🌍', title: 'Setup Locations in Seconds', desc: 'Enter address or coordinates — auto-resolved both ways. Pressure and magnetic baselines auto-populated. No manual config.' },
-  { icon: '📊', title: 'Actionable Reports', desc: 'PDF, CSV, GeoJSON exports. Charts, map views, vendor performance, time-series analytics — all in your dashboard.' },
+  { icon: '📊', title: 'Reports & Site Visits', desc: 'PDF, CSV, GeoJSON exports and site visit reports. Charts, map views, vendor performance, scheduled email delivery.' },
+  { icon: '🔌', title: '3rd Party API', desc: 'REST API with managed keys. POST /api/v1/verify lets your own systems submit and verify evidence programmatically.' },
   { icon: '📦', title: 'Built for Scale', desc: 'Upload campaigns, vendors, assignments via CSV. Download templates. Process hundreds of records in seconds.' },
   { icon: '⚖️', title: 'Legally Defensible Proof', desc: 'Hash-chained, append-only audit trail. Flags rooted devices, emulators, GPS spoofing. Court-admissible documentation.' },
 ]

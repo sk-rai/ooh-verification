@@ -10,14 +10,15 @@ export default function Hero() {
               Built for OOH agencies, logistics companies, construction firms, and field survey teams
             </p>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight tracking-tight">
-              Tamper-Proof Photo Verification for Field Operations
+              Tamper-Proof Evidence Verification for Field Operations
             </h1>
             <p className="mt-6 text-lg text-gray-600 leading-relaxed">
-              Prevent fraud at the point of capture. GPS-stamped, sensor-validated,
-              cryptographically signed and encrypted at rest — photos your field teams can't fake.
+              Prevent fraud at the point of capture. Photos, video, and voice notes —
+              GPS-stamped, sensor-validated, cryptographically signed and encrypted at rest.
+              Evidence your field teams can't fake.
             </p>
             <p className="mt-3 text-sm text-gray-500">
-              📱 Available on Android &nbsp;|&nbsp; iOS Coming Soon
+              📱 Available on Google Play &nbsp;|&nbsp; iOS Coming Soon
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
               <Link
@@ -43,6 +44,9 @@ export default function Hero() {
                 <div className="text-6xl">📱</div>
                 <div className="bg-white rounded-xl p-4 shadow-sm space-y-2">
                   <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">📷 Photo · 🎥 Video · 🎙️ Voice</span>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">GPS Match</span>
                     <span className="text-xs font-semibold text-emerald-600">98.2%</span>
                   </div>
@@ -53,6 +57,10 @@ export default function Hero() {
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">Signature</span>
                     <span className="text-xs font-semibold text-emerald-600">✓ Verified</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">GPS Track</span>
+                    <span className="text-xs font-semibold text-emerald-600">✓ Logged</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">Confidence</span>

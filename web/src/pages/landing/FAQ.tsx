@@ -3,7 +3,7 @@ import { useState } from 'react'
 const faqs = [
   {
     q: 'How accurate is the GPS verification?',
-    a: 'We use a configurable geofence radius (default 50m for OOH, 150m for delivery). Combined with barometric pressure and magnetic field validation, our 5-layer system catches location spoofing that GPS-only solutions miss.',
+    a: 'Each campaign location uses a configurable geofence. Choose the shape that fits the job — circle (radius), bounding box, polygon, or route corridor (default radius 1000m, tunable per campaign). Combined with barometric pressure and magnetic field validation, our multi-layer system catches location spoofing that GPS-only solutions miss.',
   },
   {
     q: 'What happens if vendors have no internet in the field?',
@@ -31,11 +31,23 @@ const faqs = [
   },
   {
     q: 'What does the Android app do?',
-    a: "The purpose-built Android app handles the vendor side: OTP login, hardware key registration, camera-only photo capture (gallery blocked), sensor data collection, encrypted local storage, and background sync. Available for sideloading now, Play Store listing coming soon. iOS coming soon.",
+    a: "The purpose-built Android app handles the vendor side: OTP login, hardware key registration, camera-only capture of photos, video, and voice notes (gallery blocked), sensor data collection, GPS tracking, encrypted local storage, and background sync. Available now on Google Play. iOS coming soon.",
+  },
+  {
+    q: 'Can vendors capture video and voice notes too?',
+    a: "Yes. Beyond photos, the app captures video and voice notes, plus a Quick Capture mode for evidence that isn't tied to a specific campaign. Every media type carries the same GPS, sensor, and cryptographic signature verification, and video/voice are location-checked when a campaign is assigned.",
+  },
+  {
+    q: 'Do you offer GPS tracking and route analysis?',
+    a: "Yes. The app logs vendor GPS tracks in the background, and the dashboard shows attendance logs, route maps, distance travelled, and route analysis that flags coverage gaps and physically impossible speeds. Site visit reports can be exported to CSV or PDF and emailed on a schedule.",
+  },
+  {
+    q: 'Is there an API for integration?',
+    a: "Yes. Enterprise plans include a REST API with managed API keys — POST /api/v1/verify lets your own systems submit and verify evidence. Interactive API documentation is available at api.trustcaptures.com/api/docs.",
   },
   {
     q: 'What services power TrustCapture?',
-    a: "We're built on trusted infrastructure: Twilio (SMS), SendGrid (email), Google Maps (geocoding), NOAA World Magnetic Model (magnetic field baselines), Open-Meteo (elevation/pressure), and Razorpay (payments).",
+    a: "We're built on trusted infrastructure: Twilio (SMS), Google Maps (geocoding), NOAA World Magnetic Model (magnetic field baselines), Open-Meteo (elevation/pressure), Cloudinary (media storage), and Razorpay (payments).",
   },
 ]
 

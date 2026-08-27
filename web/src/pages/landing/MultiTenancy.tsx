@@ -26,7 +26,7 @@ export default function MultiTenancy() {
             Pricing is tailored to your organization's scale and requirements.
           </p>
           <a
-            href="mailto:sales@lynksavvy.com"
+            href="mailto:sales@trustcaptures.com"
             className="inline-block mt-4 px-6 py-2.5 text-sm font-medium text-primary-600 border border-primary-600 rounded-md hover:bg-primary-50 transition-colors"
           >
             Contact Sales for White-Label Pricing

@@ -8,7 +8,7 @@ const tiers = [
     priceUSD: '$0',
     period: '/month',
     desc: 'Get started and explore',
-    features: ['50 photos/month', '5 vendors', '10 campaigns', '5 locations/campaign', '100 MB storage', 'Email notifications'],
+    features: ['50 evidence captures/month', 'Photo, video & voice', '5 vendors', '10 campaigns', '5 locations/campaign', '100 MB storage', 'Email notifications'],
     cta: 'Start Free Trial',
     ctaLink: '/register',
     badge: null,
@@ -23,7 +23,7 @@ const tiers = [
     yearlyINR: '₹9,990/year + GST — save 17%',
     yearlyUSD: '$150/year — save 17%',
     desc: 'For growing teams',
-    features: ['1,000 photos/month', '10 vendors', '50 campaigns', '500 locations/campaign', '10 GB storage', 'Priority support', 'PDF, CSV, GeoJSON exports', 'Bulk CSV operations'],
+    features: ['1,000 evidence captures/month', 'Photo, video & voice', '10 vendors', '50 campaigns', '500 locations/campaign', '10 GB storage', 'GPS tracking & route analysis', 'Site visit reports (CSV/PDF)', 'Priority support', 'PDF, CSV, GeoJSON exports', 'Bulk CSV operations'],
     cta: 'Start Free Trial',
     ctaLink: '/register',
     badge: 'Most Popular',
@@ -38,9 +38,9 @@ const tiers = [
     yearlyINR: '₹49,990/year + GST — save 17%',
     yearlyUSD: '$750/year — save 17%',
     desc: 'For large organizations',
-    features: ['Unlimited photos', 'Unlimited vendors', 'Unlimited campaigns', 'Unlimited locations/campaign', '100 GB storage', 'Dedicated support', 'Custom branding & domain', 'API access', 'White-label & deep-link SSO', 'Custom workflow integration'],
+    features: ['Unlimited evidence captures', 'Unlimited vendors', 'Unlimited campaigns', 'Unlimited locations/campaign', '100 GB storage', 'Dedicated support', '3rd party API access', 'Advanced geofencing (circle/box/polygon/corridor)', 'Per-campaign verification config', 'Custom branding & domain', 'White-label & deep-link SSO', 'Custom workflow integration'],
     cta: 'Contact Sales',
-    ctaLink: 'mailto:sales@lynksavvy.com',
+    ctaLink: 'mailto:sales@trustcaptures.com',
     badge: 'Best Value',
     highlight: false,
     micro: '',
@@ -133,8 +133,8 @@ export default function Pricing() {
         </div>
 
         <p className="mt-10 text-sm text-gray-500 max-w-2xl mx-auto">
-          All plans include: Tamper-proof watermarks, 5-layer verification, hardware-backed signatures,
-          offline capture, audit trail, SMS & email notifications.
+          All plans include: Tamper-proof watermarks, multi-layer verification, hardware-backed signatures,
+          photo/video/voice capture, offline capture, audit trail, SMS & email notifications.
         </p>
       </div>
     </section>

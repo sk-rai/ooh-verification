@@ -49,6 +49,66 @@ const tabs = [
       'Coverage dashboard shows visited, pending, and flagged survey points',
     ],
   },
+  {
+    id: 'security',
+    label: '🛡️ Security & Patrol',
+    problem: "Guard patrols are hard to verify. Checkpoint logs are easily faked, and there's no proof a guard actually walked the route or visited every point.",
+    points: [
+      'GPS tracking logs the full patrol route with attendance timestamps',
+      'Route analysis flags skipped checkpoints, coverage gaps, and impossible speeds',
+      'Photo, video, and voice notes document incidents at each checkpoint',
+      'Route corridor geofencing confirms the guard stayed on the assigned path',
+      'Site visit reports exportable to PDF/CSV for clients and audits',
+    ],
+  },
+  {
+    id: 'insurance',
+    label: '📋 Insurance & Claims',
+    problem: "Claim inspectors and adjusters submit photos that can be recycled, edited, or taken away from the actual loss site — inflating fraud and payout errors.",
+    points: [
+      'Forced live capture — gallery uploads blocked, no recycled or edited images',
+      'GPS geofencing confirms the inspector was at the insured property',
+      'Hash-chained audit trail creates tamper-evident, court-admissible records',
+      'Video and voice notes capture damage walkthroughs with full context',
+      'Confidence score per item flags suspicious submissions for review',
+    ],
+  },
+  {
+    id: 'retail',
+    label: '🛍️ Retail & Merchandising',
+    problem: "Field merchandisers claim store visits and shelf compliance without showing up. Brands can't verify planogram execution across thousands of outlets.",
+    points: [
+      'Geofenced store check-ins confirm the merchandiser was physically in the outlet',
+      'Photo evidence documents shelf, display, and planogram compliance',
+      'Bulk campaigns — load thousands of stores via CSV, assign reps in bulk',
+      'Time-window validation catches visits logged outside store hours',
+      'Coverage dashboard shows visited, pending, and flagged outlets',
+    ],
+  },
+  {
+    id: 'utilities',
+    label: '⚡ Utilities & Field Service',
+    problem: "Technicians close work orders for meter reads, inspections, and repairs without completing them on site, leading to billing disputes and safety risks.",
+    points: [
+      'GPS-locked job documentation — photos must be within the site geofence',
+      'Barometric pressure confirms the correct floor for multi-story installations',
+      'Video and voice notes record repair steps and equipment condition',
+      'GPS tracking and route analysis verify the technician visited every job',
+      'Legally defensible audit trail for compliance and dispute resolution',
+    ],
+  },
+  {
+    id: 'realestate',
+    label: '🏠 Real Estate & Property',
+    problem: "Property managers and valuers rely on photos that may be old, edited, or from the wrong unit — undermining inspections, valuations, and tenant records.",
+    points: [
+      'GPS geofencing confirms photos were taken at the actual property',
+      'Altitude verification via pressure confirms the correct floor or unit',
+      'Timestamped, watermarked evidence creates an unalterable inspection record',
+      'Video walkthroughs and voice notes capture condition in full context',
+      'Site visit reports exportable to PDF/CSV for owners and lenders',
+    ],
+  },
 ]
 
 export default function UseCases() {
@@ -60,7 +120,7 @@ export default function UseCases() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900">
-            Built for Every Industry That Relies on Field Photos
+            Built for Every Industry That Relies on Field Evidence
           </h2>
           <p className="mt-3 text-gray-600">Select your industry to see how TrustCapture addresses your challenges.</p>
         </div>

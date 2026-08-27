@@ -1,6 +1,6 @@
 const integrations = [
   { name: 'Twilio', desc: 'SMS' },
-  { name: 'SendGrid', desc: 'Email' },
+  { name: 'Cloudinary', desc: 'Media Storage' },
   { name: 'Google Maps', desc: 'Geocoding' },
   { name: 'NOAA', desc: 'Magnetic Field' },
   { name: 'Open-Meteo', desc: 'Elevation' },

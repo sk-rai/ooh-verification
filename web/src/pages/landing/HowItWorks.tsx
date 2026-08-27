@@ -15,13 +15,13 @@ const steps = [
     num: '3',
     icon: '📱',
     title: 'Capture',
-    desc: 'Vendor opens app, enters campaign code, takes photo. GPS, pressure, magnetic field collected automatically. Photo signed with hardware key. Works offline.',
+    desc: 'Vendor opens app, enters campaign code, captures photo, video, or voice note. GPS, pressure, magnetic field collected automatically. Signed with hardware key. GPS tracks logged. Works offline.',
   },
   {
     num: '4',
     icon: '✅',
     title: 'Review',
-    desc: 'Dashboard shows verification status and confidence score. Flagged photos highlighted. Export PDF, CSV, GeoJSON. Interactive map view.',
+    desc: 'Dashboard shows verification status and confidence score. Flagged evidence highlighted. Route analysis, site visit reports, and PDF/CSV/GeoJSON exports. Interactive map view.',
   },
 ]
 

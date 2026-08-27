@@ -3,12 +3,12 @@ const productLinks = [
   { label: 'Use Cases', href: '#use-cases' },
   { label: 'Features', href: '#features' },
   { label: 'Pricing', href: '#pricing' },
-  { label: 'API Documentation', href: 'https://ooh-verification.onrender.com/docs', external: true },
+  { label: 'API Documentation', href: 'https://api.trustcaptures.com/api/docs', external: true },
 ]
 
 const companyLinks = [
   { label: 'About Us', href: '#' },
-  { label: 'Contact Us', href: 'mailto:support@lynksavvy.com', external: true },
+  { label: 'Contact Us', href: 'mailto:support@trustcaptures.com', external: true },
   { label: 'Careers', href: '#' },
   { label: 'Blog', href: '#' },
 ]

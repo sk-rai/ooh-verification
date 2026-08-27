@@ -2,9 +2,9 @@ const steps = [
   { num: '1', title: 'OTP Login', desc: 'First login via SMS (Twilio). No passwords.' },
   { num: '2', title: 'Device Registration', desc: 'Hardware key pair generated on-device. Public key sent to server.' },
   { num: '3', title: 'Subsequent Logins', desc: 'Challenge-response with hardware key. No SMS cost.' },
-  { num: '4', title: 'Photo Capture', desc: 'Camera-only (gallery blocked). GPS, pressure, magnetic, accelerometer collected at capture time.' },
+  { num: '4', title: 'Photo, Video & Voice Capture', desc: 'Camera-only (gallery blocked). Photos, video, voice notes, plus Quick Capture. GPS, pressure, magnetic, accelerometer collected at capture time.' },
   { num: '5', title: 'Offline Storage', desc: 'Encrypted local database (SQLCipher). Nothing lost if connectivity drops.' },
-  { num: '6', title: 'Background Sync', desc: 'WorkManager handles upload with retry. Verified server-side on upload.' },
+  { num: '6', title: 'Background Sync & GPS Tracking', desc: 'WorkManager handles upload with retry, and logs GPS tracks in the background. Verified server-side on upload.' },
 ]
 
 export default function AndroidApp() {
@@ -64,8 +64,8 @@ export default function AndroidApp() {
         </div>
 
         <div className="mt-10 flex flex-wrap justify-center gap-4 text-sm text-gray-500">
-          <span className="bg-white px-4 py-2 rounded-full border border-gray-200">📱 Android app available for sideloading</span>
-          <span className="bg-white px-4 py-2 rounded-full border border-gray-200">🏪 Play Store listing coming soon</span>
+          <span className="bg-white px-4 py-2 rounded-full border border-gray-200">▶️ Available now on Google Play</span>
+          <span className="bg-white px-4 py-2 rounded-full border border-gray-200">🎬 Photo, video & voice capture</span>
           <span className="bg-white px-4 py-2 rounded-full border border-gray-200">🍎 iOS coming soon</span>
         </div>
       </div>

@@ -1,5 +1,7 @@
 const rows = [
-  { feature: 'Location Verification', manual: 'Manual (slow)', basic: 'GPS only (fakeable)', tc: '5-layer multi-sensor' },
+  { feature: 'Location Verification', manual: 'Manual (slow)', basic: 'GPS only (fakeable)', tc: 'Multi-sensor + geofence shapes' },
+  { feature: 'Media Types', manual: 'Photos only', basic: 'Photos only', tc: 'Photo, video & voice' },
+  { feature: 'GPS Tracking & Routes', manual: '✗', basic: '✗', tc: '✓ Tracks + route analysis' },
   { feature: 'Offline Capture', manual: '✗', basic: '✗', tc: '✓ Encrypted local storage' },
   { feature: 'Tamper-Proof Watermark', manual: '✗', basic: '✗', tc: '✓ Burned into pixels' },
   { feature: 'Audit Trail', manual: 'Paper-based', basic: 'None', tc: 'Cryptographic hash chain' },
