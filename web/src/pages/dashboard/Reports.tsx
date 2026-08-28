@@ -78,10 +78,10 @@ function SiteVisitsTab({ startDate, endDate }: { startDate: string; endDate: str
     <div>
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white shadow rounded-lg p-4"><dt className="text-sm text-gray-500">Active Vendors</dt><dd className="text-2xl font-semibold">{data.summary.total_vendors_active}</dd></div>
-        <div className="bg-white shadow rounded-lg p-4"><dt className="text-sm text-gray-500">Total Captures</dt><dd className="text-2xl font-semibold">{data.summary.total_captures}</dd></div>
-        <div className="bg-white shadow rounded-lg p-4"><dt className="text-sm text-gray-500">Total Distance</dt><dd className="text-2xl font-semibold">{data.summary.total_distance_km} km</dd></div>
-        <div className="bg-white shadow rounded-lg p-4"><dt className="text-sm text-gray-500">Avg Hours/Vendor</dt><dd className="text-2xl font-semibold">{data.summary.avg_hours_per_vendor}</dd></div>
+        <div className="bg-white shadow rounded-lg p-4"><p className="text-sm text-gray-500">Active Vendors</p><p className="text-2xl font-semibold">{data.summary?.total_vendors_active ?? '-'}</p></div>
+        <div className="bg-white shadow rounded-lg p-4"><p className="text-sm text-gray-500">Total Captures</p><p className="text-2xl font-semibold">{data.summary?.total_captures ?? '-'}</p></div>
+        <div className="bg-white shadow rounded-lg p-4"><p className="text-sm text-gray-500">Total Distance</p><p className="text-2xl font-semibold">{data.summary?.total_distance_km ?? '-'} km</p></div>
+        <div className="bg-white shadow rounded-lg p-4"><p className="text-sm text-gray-500">Avg Hours/Vendor</p><p className="text-2xl font-semibold">{data.summary?.avg_hours_per_vendor ?? '-'}</p></div>
       </div>
 
       {/* Export Buttons */}
@@ -113,7 +113,7 @@ function SiteVisitsTab({ startDate, endDate }: { startDate: string; endDate: str
             <tbody className="bg-white divide-y divide-gray-200">
               {data.rows.map((row: any, i: number) => (
                 <tr key={i} className="hover:bg-gray-50">
-                  <td className="px-3 py-2 text-sm">{row.date || "-"}</td>
+                  <td className="px-3 py-2 text-sm text-gray-700 font-medium whitespace-nowrap">{row.date ? row.date : '-'}</td>
                   <td className="px-3 py-2 text-sm"><div className="font-medium">{row.campaign_name}</div><div className="text-xs text-gray-500">{row.campaign_code}</div></td>
                   <td className="px-3 py-2 text-sm"><div>{row.vendor_name}</div><div className="text-xs text-gray-500">{row.vendor_id}</div></td>
                   <td className="px-3 py-2 text-sm text-gray-500">{row.vendor_phone}</td>
