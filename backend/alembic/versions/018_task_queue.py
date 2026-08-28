@@ -16,35 +16,32 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create TaskStatus enum
-    task_status_enum = sa.Enum(
-        'pending', 'running', 'completed', 'failed', 'dead',
-        name='taskstatus'
-    )
-    task_status_enum.create(op.get_bind(), checkfirst=True)
+    # Use raw SQL throughout — checkfirst=True is unreliable with asyncpg
+    op.execute("CREATE TYPE IF NOT EXISTS taskstatus AS ENUM ('pending', 'running', 'completed', 'failed', 'dead')")
 
-    op.create_table('task_queue',
-        sa.Column('id', UUID(as_uuid=True), primary_key=True, server_default=sa.text('gen_random_uuid()')),
-        sa.Column('task_type', sa.String(100), nullable=False),
-        sa.Column('payload', JSONB, nullable=False, server_default='{}'),
-        sa.Column('status', task_status_enum, nullable=False, server_default='pending'),
-        sa.Column('priority', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column('scheduled_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('retry_count', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('max_retries', sa.Integer(), nullable=False, server_default='3'),
-        sa.Column('last_error', sa.Text(), nullable=True),
-        sa.Column('tenant_id', UUID(as_uuid=True), nullable=True),
-    )
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS task_queue (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            task_type VARCHAR(100) NOT NULL,
+            payload JSONB NOT NULL DEFAULT '{}',
+            status TEXT NOT NULL DEFAULT 'pending',
+            priority INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            scheduled_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            started_at TIMESTAMPTZ,
+            completed_at TIMESTAMPTZ,
+            retry_count INTEGER NOT NULL DEFAULT 0,
+            max_retries INTEGER NOT NULL DEFAULT 3,
+            last_error TEXT,
+            tenant_id UUID
+        )
+    """)
 
-    # Indexes for efficient polling and filtering
-    op.create_index('ix_task_queue_task_type', 'task_queue', ['task_type'])
-    op.create_index('ix_task_queue_status', 'task_queue', ['status'])
-    op.create_index('ix_task_queue_tenant_id', 'task_queue', ['tenant_id'])
-    op.create_index('ix_task_queue_poll', 'task_queue', ['status', 'scheduled_at', 'priority'])
+    op.execute("CREATE INDEX IF NOT EXISTS ix_task_queue_task_type ON task_queue (task_type)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_task_queue_status ON task_queue (status)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_task_queue_tenant_id ON task_queue (tenant_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_task_queue_poll ON task_queue (status, scheduled_at, priority)")
 
 
 def downgrade() -> None:
