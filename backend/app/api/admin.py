@@ -784,3 +784,82 @@ async def fix_tenant_email(db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"status": "Tenant email updated", "rows_updated": result.rowcount}
 
+
+
+@router.post("/set-client-subscription")
+async def set_client_subscription(
+    client_id: str,
+    tier: str = "enterprise",
+    billing_cycle: str = "yearly",
+    base_amount: float = 5999.0,
+    gst_amount: float = 1079.82,
+    total_amount: float = 7078.82,
+    currency: str = "INR",
+    vendors_quota: int = 99999,
+    campaigns_quota: int = 99999,
+    photos_quota: int = 99999,
+    storage_quota_mb: int = 999999,
+    period_months: int = 12,
+    db: AsyncSession = Depends(get_db),
+):
+    """Set subscription details for a specific client. Used for manual client onboarding."""
+    from sqlalchemy import text
+    from datetime import datetime, timedelta
+    now = datetime.utcnow()
+    period_end = now + timedelta(days=period_months * 30)
+
+    result = await db.execute(text("""
+        UPDATE subscriptions SET
+            tier                 = :tier,
+            billing_cycle        = :billing_cycle,
+            amount               = :total_amount,
+            base_amount          = :base_amount,
+            gst_amount           = :gst_amount,
+            total_amount         = :total_amount,
+            currency             = :currency,
+            vendors_quota        = :vendors_quota,
+            campaigns_quota      = :campaigns_quota,
+            photos_quota         = :photos_quota,
+            storage_quota_mb     = :storage_quota_mb,
+            current_period_start = :now,
+            current_period_end   = :period_end,
+            status               = 'active',
+            updated_at           = :now
+        WHERE client_id = :client_id
+    """), {
+        "tier": tier,
+        "billing_cycle": billing_cycle,
+        "base_amount": base_amount,
+        "gst_amount": gst_amount,
+        "total_amount": total_amount,
+        "currency": currency,
+        "vendors_quota": vendors_quota,
+        "campaigns_quota": campaigns_quota,
+        "photos_quota": photos_quota,
+        "storage_quota_mb": storage_quota_mb,
+        "now": now,
+        "period_end": period_end,
+        "client_id": client_id,
+    })
+
+    # Also update clients table tier
+    await db.execute(text("""
+        UPDATE clients SET
+            subscription_tier   = :tier,
+            subscription_status = 'active',
+            updated_at          = :now
+        WHERE client_id = :client_id
+    """), {"tier": tier, "now": now, "client_id": client_id})
+
+    await db.commit()
+    return {
+        "status": "updated",
+        "client_id": client_id,
+        "tier": tier,
+        "billing_cycle": billing_cycle,
+        "base_amount": base_amount,
+        "gst_amount": gst_amount,
+        "total_amount": total_amount,
+        "period_end": period_end.date().isoformat(),
+        "rows_updated": result.rowcount,
+    }
