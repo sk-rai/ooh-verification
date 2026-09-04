@@ -45,18 +45,13 @@ async def list_photos(
     """List photos and evidence for the current client."""
     from sqlalchemy import func
     from app.models.evidence import Evidence
+    from app.models import SensorData as SD, Campaign as Cam, Vendor as Ven
+    from app.models.vendor_client_association import VendorClientAssociation
 
     # --- Query old photos table ---
-    query = select(Photo).where(Photo.tenant_id == client.tenant_id)
-    if campaign_code:
-        campaign = await db.execute(
-            select(Campaign).where(Campaign.campaign_code == campaign_code, Campaign.tenant_id == client.tenant_id)
-        )
-        campaign = campaign.scalar_one_or_none()
-        if campaign:
-            query = query.where(Photo.campaign_id == campaign.campaign_id)
-    # Join with SensorData, Campaign, Vendor for full details
-    from app.models import SensorData as SD, Campaign as Cam, Vendor as Ven
+    # Filter by client's campaigns (client_id isolation, not just tenant_id)
+    client_campaign_ids = select(Campaign.campaign_id).where(Campaign.client_id == client.client_id)
+
     detail_query = (
         select(Photo, SD.gps_latitude, SD.gps_longitude, SD.gps_accuracy,
                Cam.name.label("campaign_name"), Cam.campaign_code,
@@ -64,15 +59,8 @@ async def list_photos(
         .join(SD, SD.photo_id == Photo.photo_id, isouter=True)
         .join(Cam, Cam.campaign_id == Photo.campaign_id, isouter=True)
         .join(Ven, Ven.vendor_id == Photo.vendor_id, isouter=True)
-        .where(Photo.tenant_id == client.tenant_id)
+        .where(Photo.campaign_id.in_(client_campaign_ids))
     )
-    if campaign_code:
-        campaign_result = await db.execute(
-            select(Campaign).where(Campaign.campaign_code == campaign_code, Campaign.tenant_id == client.tenant_id)
-        )
-        campaign_obj = campaign_result.scalar_one_or_none()
-        if campaign_obj:
-            detail_query = detail_query.where(Photo.campaign_id == campaign_obj.campaign_id)
     detail_query = detail_query.order_by(Photo.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(detail_query)
     rows = result.all()
@@ -105,16 +93,25 @@ async def list_photos(
     ]
 
     # --- Query new evidence table ---
+    # Filter evidence by client's campaigns + quick capture by client's vendors
+    from app.models.vendor_client_association import VendorClientAssociation
+    client_vendor_ids_q = select(VendorClientAssociation.vendor_id).where(
+        VendorClientAssociation.client_id == client.client_id
+    )
+
     evidence_query = (
         select(Evidence, Cam.name.label("campaign_name"), Cam.campaign_code,
                Ven.name.label("vendor_name"))
         .join(Cam, Cam.campaign_id == Evidence.campaign_id, isouter=True)
         .join(Ven, Ven.vendor_id == Evidence.vendor_id, isouter=True)
-        .where(Evidence.tenant_id == client.tenant_id)
+        .where(
+            (Evidence.campaign_id.in_(client_campaign_ids)) |
+            (Evidence.campaign_id.is_(None) & Evidence.vendor_id.in_(client_vendor_ids_q))
+        )
     )
     if campaign_code:
         campaign_result2 = await db.execute(
-            select(Campaign).where(Campaign.campaign_code == campaign_code, Campaign.tenant_id == client.tenant_id)
+            select(Campaign).where(Campaign.campaign_code == campaign_code, Campaign.client_id == client.client_id)
         )
         campaign_obj2 = campaign_result2.scalar_one_or_none()
         if campaign_obj2:
@@ -162,6 +159,7 @@ async def get_photo_locations(
 ):
     """Get photo locations for map view."""
     from app.models import SensorData as SD, Campaign as Cam, Vendor as Ven
+    client_campaign_ids = select(Campaign.campaign_id).where(Campaign.client_id == client.client_id)
     query = (
         select(Photo, SD.gps_latitude, SD.gps_longitude, SD.gps_accuracy,
                Cam.name.label("campaign_name"), Cam.campaign_code,
@@ -170,7 +168,7 @@ async def get_photo_locations(
         .join(Cam, Cam.campaign_id == Photo.campaign_id, isouter=True)
         .join(Ven, Ven.vendor_id == Photo.vendor_id, isouter=True)
         .where(
-            Photo.tenant_id == client.tenant_id,
+            Photo.campaign_id.in_(client_campaign_ids),
             SD.gps_latitude.isnot(None),
             SD.gps_longitude.isnot(None)
         )

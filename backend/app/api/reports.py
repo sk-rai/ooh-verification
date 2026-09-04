@@ -285,53 +285,58 @@ async def get_aggregate_statistics(
     from app.models.photo import VerificationStatus
     from app.models.campaign import CampaignStatus
     from app.models.vendor import VendorStatus
+    from app.models.vendor_client_association import VendorClientAssociation
+
+    # Client-scoped subqueries for proper data isolation
+    client_campaign_ids = select(Campaign.campaign_id).where(Campaign.client_id == client.client_id)
+    client_vendor_ids = select(VendorClientAssociation.vendor_id).where(VendorClientAssociation.client_id == client.client_id)
 
     total_photos = (await db.execute(
-        select(func.count()).select_from(Photo).where(Photo.tenant_id == client.tenant_id)
+        select(func.count()).select_from(Photo).where(Photo.campaign_id.in_(client_campaign_ids))
     )).scalar() or 0
     verified = (await db.execute(
         select(func.count()).select_from(Photo).where(
-            Photo.tenant_id == client.tenant_id, Photo.verification_status == VerificationStatus.VERIFIED
+            Photo.campaign_id.in_(client_campaign_ids), Photo.verification_status == VerificationStatus.VERIFIED
         )
     )).scalar() or 0
     rejected = (await db.execute(
         select(func.count()).select_from(Photo).where(
-            Photo.tenant_id == client.tenant_id, Photo.verification_status == VerificationStatus.REJECTED
+            Photo.campaign_id.in_(client_campaign_ids), Photo.verification_status == VerificationStatus.REJECTED
         )
     )).scalar() or 0
     pending = total_photos - verified - rejected
 
     total_campaigns = (await db.execute(
-        select(func.count()).select_from(Campaign).where(Campaign.tenant_id == client.tenant_id)
+        select(func.count()).select_from(Campaign).where(Campaign.client_id == client.client_id)
     )).scalar() or 0
     active_campaigns = (await db.execute(
         select(func.count()).select_from(Campaign).where(
-            Campaign.tenant_id == client.tenant_id, Campaign.status == CampaignStatus.ACTIVE
+            Campaign.client_id == client.client_id, Campaign.status == CampaignStatus.ACTIVE
         )
     )).scalar() or 0
 
     total_vendors = (await db.execute(
-        select(func.count()).select_from(Vendor).where(Vendor.tenant_id == client.tenant_id)
+        select(func.count()).select_from(VendorClientAssociation).where(VendorClientAssociation.client_id == client.client_id)
     )).scalar() or 0
     active_vendors = (await db.execute(
         select(func.count()).select_from(Vendor).where(
-            Vendor.tenant_id == client.tenant_id, Vendor.status == VendorStatus.ACTIVE
+            Vendor.vendor_id.in_(client_vendor_ids), Vendor.status == VendorStatus.ACTIVE
         )
     )).scalar() or 0
 
     # Also count evidence table records
     from app.models.evidence import Evidence
     evidence_total = (await db.execute(
-        select(func.count()).select_from(Evidence).where(Evidence.tenant_id == client.tenant_id)
+        select(func.count()).select_from(Evidence).where(Evidence.campaign_id.in_(client_campaign_ids))
     )).scalar() or 0
     evidence_verified = (await db.execute(
         select(func.count()).select_from(Evidence).where(
-            Evidence.tenant_id == client.tenant_id, Evidence.verification_status == "verified"
+            Evidence.campaign_id.in_(client_campaign_ids), Evidence.verification_status == "verified"
         )
     )).scalar() or 0
     evidence_rejected = (await db.execute(
         select(func.count()).select_from(Evidence).where(
-            Evidence.tenant_id == client.tenant_id, Evidence.verification_status == "rejected"
+            Evidence.campaign_id.in_(client_campaign_ids), Evidence.verification_status == "rejected"
         )
     )).scalar() or 0
     evidence_pending = evidence_total - evidence_verified - evidence_rejected
@@ -357,7 +362,7 @@ async def get_campaigns_report(
     from app.models import Campaign, Photo
 
     campaigns = await db.execute(
-        select(Campaign).where(Campaign.tenant_id == client.tenant_id).order_by(Campaign.created_at.desc())
+        select(Campaign).where(Campaign.client_id == client.client_id).order_by(Campaign.created_at.desc())
     )
     from app.models.photo import VerificationStatus
     result = []
@@ -392,9 +397,12 @@ async def get_vendors_report(
     """Get vendor-level report data."""
     from sqlalchemy import func
     from app.models import Vendor, Photo
+    from app.models.vendor_client_association import VendorClientAssociation
 
     vendors = await db.execute(
-        select(Vendor).where(Vendor.tenant_id == client.tenant_id)
+        select(Vendor).join(
+            VendorClientAssociation, Vendor.vendor_id == VendorClientAssociation.vendor_id
+        ).where(VendorClientAssociation.client_id == client.client_id)
     )
     from app.models.photo import VerificationStatus
     result = []
@@ -428,13 +436,14 @@ async def get_time_series(
 ):
     """Get photo upload time series data."""
     from sqlalchemy import func, cast, Date
-    from app.models import Photo
+    from app.models import Photo, Campaign
     from datetime import datetime, timedelta, timedelta
 
+    client_campaign_ids = select(Campaign.campaign_id).where(Campaign.client_id == client.client_id)
     query = select(
         cast(Photo.created_at, Date).label("date"),
         func.count().label("count")
-    ).where(Photo.tenant_id == client.tenant_id)
+    ).where(Photo.campaign_id.in_(client_campaign_ids))
 
     if start:
         query = query.where(Photo.created_at >= datetime.fromisoformat(start))
@@ -457,6 +466,7 @@ async def export_csv(
     from app.models import Photo, Campaign, Vendor, SensorData
     from datetime import datetime, timedelta
 
+    client_campaign_ids = select(Campaign.campaign_id).where(Campaign.client_id == client.client_id)
     query = (
         select(Photo, Campaign.name.label("campaign_name"), Campaign.campaign_code,
                Vendor.name.label("vendor_name"), Vendor.vendor_id.label("vid"),
@@ -464,7 +474,7 @@ async def export_csv(
         .join(Campaign, Campaign.campaign_id == Photo.campaign_id, isouter=True)
         .join(Vendor, Vendor.vendor_id == Photo.vendor_id, isouter=True)
         .join(SensorData, SensorData.photo_id == Photo.photo_id, isouter=True)
-        .where(Photo.tenant_id == client.tenant_id)
+        .where(Photo.campaign_id.in_(client_campaign_ids))
     )
     if start_date:
         query = query.where(Photo.created_at >= datetime.fromisoformat(start_date))
@@ -514,6 +524,7 @@ async def get_table_data(
     from app.models import Photo, Campaign, Vendor, SensorData
     from datetime import datetime, timedelta
 
+    client_campaign_ids = select(Campaign.campaign_id).where(Campaign.client_id == client.client_id)
     query = (
         select(Photo, Campaign.name.label("campaign_name"), Campaign.campaign_code,
                Vendor.name.label("vendor_name"), Vendor.vendor_id.label("vid"),
@@ -521,7 +532,7 @@ async def get_table_data(
         .join(Campaign, Campaign.campaign_id == Photo.campaign_id, isouter=True)
         .join(Vendor, Vendor.vendor_id == Photo.vendor_id, isouter=True)
         .join(SensorData, SensorData.photo_id == Photo.photo_id, isouter=True)
-        .where(Photo.tenant_id == client.tenant_id)
+        .where(Photo.campaign_id.in_(client_campaign_ids))
     )
     if start_date:
         query = query.where(Photo.created_at >= datetime.fromisoformat(start_date))
@@ -553,12 +564,17 @@ async def get_table_data(
 
     # Also include evidence table records
     from app.models.evidence import Evidence
+    from app.models.vendor_client_association import VendorClientAssociation
+    client_vendor_ids = select(VendorClientAssociation.vendor_id).where(VendorClientAssociation.client_id == client.client_id)
     evidence_query = (
         select(Evidence, Campaign.name.label("campaign_name"), Campaign.campaign_code,
                Vendor.name.label("vendor_name"), Vendor.vendor_id.label("vid"))
         .join(Campaign, Campaign.campaign_id == Evidence.campaign_id, isouter=True)
         .join(Vendor, Vendor.vendor_id == Evidence.vendor_id, isouter=True)
-        .where(Evidence.tenant_id == client.tenant_id)
+        .where(
+            (Evidence.campaign_id.in_(client_campaign_ids)) |
+            (Evidence.campaign_id.is_(None) & Evidence.vendor_id.in_(client_vendor_ids))
+        )
     )
     if start_date:
         evidence_query = evidence_query.where(Evidence.created_at >= datetime.fromisoformat(start_date))
@@ -608,13 +624,16 @@ async def export_pdf(
     from datetime import datetime, timedelta
     from fpdf import FPDF
 
+    from app.models.vendor_client_association import VendorClientAssociation
+    client_campaign_ids = select(Campaign.campaign_id).where(Campaign.client_id == client.client_id)
+
     # Gather stats
-    total = (await db.execute(select(func.count()).select_from(Photo).where(Photo.tenant_id == client.tenant_id))).scalar() or 0
-    verified = (await db.execute(select(func.count()).select_from(Photo).where(Photo.tenant_id == client.tenant_id, Photo.verification_status == VerificationStatus.VERIFIED))).scalar() or 0
-    rejected = (await db.execute(select(func.count()).select_from(Photo).where(Photo.tenant_id == client.tenant_id, Photo.verification_status == VerificationStatus.REJECTED))).scalar() or 0
+    total = (await db.execute(select(func.count()).select_from(Photo).where(Photo.campaign_id.in_(client_campaign_ids)))).scalar() or 0
+    verified = (await db.execute(select(func.count()).select_from(Photo).where(Photo.campaign_id.in_(client_campaign_ids), Photo.verification_status == VerificationStatus.VERIFIED))).scalar() or 0
+    rejected = (await db.execute(select(func.count()).select_from(Photo).where(Photo.campaign_id.in_(client_campaign_ids), Photo.verification_status == VerificationStatus.REJECTED))).scalar() or 0
     pending = total - verified - rejected
-    num_campaigns = (await db.execute(select(func.count()).select_from(Campaign).where(Campaign.tenant_id == client.tenant_id))).scalar() or 0
-    num_vendors = (await db.execute(select(func.count()).select_from(Vendor).where(Vendor.tenant_id == client.tenant_id))).scalar() or 0
+    num_campaigns = (await db.execute(select(func.count()).select_from(Campaign).where(Campaign.client_id == client.client_id))).scalar() or 0
+    num_vendors = (await db.execute(select(func.count()).select_from(VendorClientAssociation).where(VendorClientAssociation.client_id == client.client_id))).scalar() or 0
 
     # Gather photo rows
     query = (
@@ -624,7 +643,7 @@ async def export_pdf(
         .join(Campaign, Campaign.campaign_id == Photo.campaign_id, isouter=True)
         .join(Vendor, Vendor.vendor_id == Photo.vendor_id, isouter=True)
         .join(SensorData, SensorData.photo_id == Photo.photo_id, isouter=True)
-        .where(Photo.tenant_id == client.tenant_id)
+        .where(Photo.campaign_id.in_(client_campaign_ids))
     )
     if start_date:
         query = query.where(Photo.created_at >= datetime.fromisoformat(start_date))
