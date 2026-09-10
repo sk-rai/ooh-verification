@@ -284,6 +284,48 @@ async def upload_evidence(
     verification_confidence = None
     verification_flags = []
 
+    async def _select_best_location_profile(campaign_id, cap_lat, cap_lon):
+        """
+        For campaigns with multiple locations, pick the profile the capture is
+        CLOSEST to. Evidence should verify if it matches ANY of the campaign's
+        locations — not just the first one. Returns (profile, match_result) or (None, None).
+        """
+        from app.services.location_profile_matcher import LocationProfileMatcher
+        from app.models.location_profile import LocationProfile as _LP
+
+        lp_res = await db.execute(
+            select(_LP).where(_LP.campaign_id == campaign_id)
+        )
+        profs = lp_res.scalars().all()
+        if not profs:
+            return None, None
+        if not (cap_lat and cap_lon):
+            return profs[0], None
+
+        matcher = LocationProfileMatcher()
+        base_captured = {"latitude": cap_lat, "longitude": cap_lon}
+        if parsed_sensor_data:
+            base_captured.update({
+                "wifi_bssids": parsed_sensor_data.get("wifi_bssids"),
+                "cell_tower_ids": parsed_sensor_data.get("cell_tower_ids"),
+                "pressure": parsed_sensor_data.get("barometric_pressure"),
+                "light_level": parsed_sensor_data.get("light_level"),
+            })
+
+        best_profile = profs[0]
+        best_result = None
+        best_distance = float("inf")
+        for prof in profs:
+            res = matcher.match_location(captured_data=dict(base_captured), location_profile=prof)
+            if res is None:
+                continue
+            dist = res.get("distance_meters", float("inf"))
+            if dist < best_distance:
+                best_distance = dist
+                best_result = res
+                best_profile = prof
+        return best_profile, best_result
+
     if evidence_type == "photo" and parsed_sensor_data:
         # Run the existing photo verification pipeline
         try:
@@ -291,36 +333,15 @@ async def upload_evidence(
             from app.services.location_profile_matcher import LocationProfileMatcher
             from app.models.location_profile import LocationProfile
 
-            # Get location profiles for campaign (if campaign exists)
+            # Get location profiles for campaign — pick the CLOSEST of all
+            # locations (multi-location campaigns must pass if capture matches ANY).
             location_profile = None
             location_match_result = None
 
             if resolved_campaign_id:
-                lp_result = await db.execute(
-                    select(LocationProfile).where(LocationProfile.campaign_id == resolved_campaign_id)
+                location_profile, location_match_result = await _select_best_location_profile(
+                    resolved_campaign_id, latitude, longitude
                 )
-                profiles = lp_result.scalars().all()
-                if profiles:
-                    location_profile = profiles[0]  # Use first profile
-                    # Run location matching
-                    if latitude and longitude:
-                        matcher = LocationProfileMatcher()
-                        captured_data = {
-                            "latitude": latitude,
-                            "longitude": longitude,
-                        }
-                        # Add optional sensor data if available
-                        if parsed_sensor_data:
-                            captured_data.update({
-                                "wifi_bssids": parsed_sensor_data.get("wifi_bssids"),
-                                "cell_tower_ids": parsed_sensor_data.get("cell_tower_ids"),
-                                "pressure": parsed_sensor_data.get("barometric_pressure"),
-                                "light_level": parsed_sensor_data.get("light_level"),
-                            })
-                        location_match_result = matcher.match_location(
-                            captured_data=captured_data,
-                            location_profile=location_profile
-                        )
 
             # Determine signature validity
             signature_valid = signature is not None and len(signature) > 0
@@ -362,23 +383,16 @@ async def upload_evidence(
 
         video_location_ok = True
         if resolved_campaign_id and latitude and longitude:
-            lp_result = await db.execute(
-                select(LocationProfile).where(LocationProfile.campaign_id == resolved_campaign_id)
+            _prof, match_result = await _select_best_location_profile(
+                resolved_campaign_id, latitude, longitude
             )
-            profiles = lp_result.scalars().all()
-            if profiles:
-                matcher = LocationProfileMatcher()
-                match_result = matcher.match_location(
-                    captured_data={"latitude": latitude, "longitude": longitude},
-                    location_profile=profiles[0]
-                )
-                if match_result:
-                    distance = match_result.get("distance_meters", 0)
-                    if distance > 1000:
-                        verification_flags.append("LOCATION_FAR_FROM_EXPECTED")
-                        video_location_ok = False
-                    elif distance > 200:
-                        verification_flags.append("LOCATION_MODERATE_DEVIATION")
+            if match_result:
+                distance = match_result.get("distance_meters", 0)
+                if distance > 1000:
+                    verification_flags.append("LOCATION_FAR_FROM_EXPECTED")
+                    video_location_ok = False
+                elif distance > 200:
+                    verification_flags.append("LOCATION_MODERATE_DEVIATION")
 
         if not video_location_ok:
             verification_status = "rejected"
@@ -401,23 +415,16 @@ async def upload_evidence(
 
         voice_location_ok = True
         if resolved_campaign_id and latitude and longitude:
-            lp_result = await db.execute(
-                select(LocationProfile).where(LocationProfile.campaign_id == resolved_campaign_id)
+            _prof, match_result = await _select_best_location_profile(
+                resolved_campaign_id, latitude, longitude
             )
-            profiles = lp_result.scalars().all()
-            if profiles:
-                matcher = LocationProfileMatcher()
-                match_result = matcher.match_location(
-                    captured_data={"latitude": latitude, "longitude": longitude},
-                    location_profile=profiles[0]
-                )
-                if match_result:
-                    distance = match_result.get("distance_meters", 0)
-                    if distance > 1000:
-                        verification_flags.append("LOCATION_FAR_FROM_EXPECTED")
-                        voice_location_ok = False
-                    elif distance > 200:
-                        verification_flags.append("LOCATION_MODERATE_DEVIATION")
+            if match_result:
+                distance = match_result.get("distance_meters", 0)
+                if distance > 1000:
+                    verification_flags.append("LOCATION_FAR_FROM_EXPECTED")
+                    voice_location_ok = False
+                elif distance > 200:
+                    verification_flags.append("LOCATION_MODERATE_DEVIATION")
 
         if not voice_location_ok:
             verification_status = "rejected"
