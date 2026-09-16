@@ -39,6 +39,31 @@ class CSVProcessor:
     MAX_ROWS_ASSIGNMENTS = 50000
     
 
+    @staticmethod
+    def _clean_cell(value: Optional[str]) -> Optional[str]:
+        """
+        Normalise a raw CSV cell value, stripping common Excel artifacts:
+        - surrounding whitespace
+        - Excel text-formula wrapper:  ="+9199..."  ->  +9199...
+        - leading apostrophe used to force text:  '+9199...  ->  +9199...
+        This makes bulk upload tolerant of files edited/saved in Excel.
+        """
+        if value is None:
+            return value
+        v = value.strip()
+        # Excel formula-text wrapper: ="..."  or  =...
+        if v.startswith('="') and v.endswith('"') and len(v) >= 3:
+            v = v[2:-1]
+        elif v.startswith('=') and len(v) > 1:
+            v = v[1:]
+        # Strip surrounding quotes left by some exporters
+        if len(v) >= 2 and v[0] == '"' and v[-1] == '"':
+            v = v[1:-1]
+        # Leading apostrophe (Excel text marker)
+        if v.startswith("'"):
+            v = v[1:]
+        return v.strip()
+
     def validate_file_type(self, file: UploadFile) -> tuple:
         """
         Validate that uploaded file is a CSV.
@@ -119,11 +144,11 @@ class CSVProcessor:
             # Parse all rows
             rows = []
             for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 (1 is header)
-                # Trim whitespace from all values
-                trimmed_row = {k: v.strip() if v else v for k, v in row.items()}
+                # Trim whitespace + clean Excel artifacts (="...", leading ')
+                cleaned_row = {k: self._clean_cell(v) for k, v in row.items()}
                 rows.append({
                     'row_number': row_num,
-                    'data': trimmed_row
+                    'data': cleaned_row
                 })
             
             if not rows:
