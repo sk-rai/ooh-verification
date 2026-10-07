@@ -78,14 +78,20 @@ export interface CampaignStatistics {
 
 
 // Bulk Operations Types
-export interface BulkOperationRow {
+// Matches backend schema: {total_rows, successful, failed, results[], errors[]}
+export interface BulkOperationRowResult {
   row: number
-  error: string
+  status: 'success' | 'error'
+  data?: Record<string, any> | null
+  error?: string | null
 }
 
 export interface BulkOperationResponse {
-  created: any[]
-  errors: BulkOperationRow[]
+  total_rows: number
+  successful: number
+  failed: number
+  results: BulkOperationRowResult[]
+  errors: string[] // global/file-level errors
 }
 
 

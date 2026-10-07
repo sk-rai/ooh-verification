@@ -1,0 +1,7 @@
+campaign_name,campaign_type,start_date,end_date,location_address,vendor_name,vendor_phone,vendor_email
+"Pipeline Survey - Phase 1","construction","2026-10-01","2026-10-31","Bandra Kurla Complex, Mumbai, India","Demo Surveyor A","=""+919000011101""",""
+"Pipeline Survey - Phase 1","construction","2026-10-01","2026-10-31","Bandra Kurla Complex, Mumbai, India","Demo Surveyor B","=""+919000011102""",""
+"Pipeline Survey - Phase 2","construction","2026-11-01","2026-11-30","Andheri East, Mumbai, India","Demo Surveyor A","=""+919000011101""",""
+"Pipeline Survey - Phase 2","construction","2026-11-01","2026-11-30","Andheri East, Mumbai, India","Demo Surveyor C","=""+919000011103""",""
+"Site Audit - Q4","construction","2026-12-01","2026-12-31","Powai, Mumbai, India","Demo Surveyor B","=""+919000011102""",""
+"Site Audit - Q4","construction","2026-12-01","2026-12-31","Powai, Mumbai, India","Demo Surveyor C","=""+919000011103""",""

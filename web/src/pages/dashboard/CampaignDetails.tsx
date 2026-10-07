@@ -163,7 +163,7 @@ export default function CampaignDetails() {
 
   const handleBulkAssignment = async (file: File): Promise<BulkOperationResponse> => {
     const response = await bulkOperations.uploadAssignments(file)
-    if (response.data.created.length > 0) {
+    if ((response.data.successful ?? 0) > 0) {
       fetchVendors()
     }
     return response.data

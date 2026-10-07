@@ -70,7 +70,7 @@ export default function VendorsList() {
 
   const handleBulkUpload = async (file: File): Promise<BulkOperationResponse> => {
     const response = await bulkOperations.uploadVendors(file)
-    if (response.data.created.length > 0) {
+    if ((response.data.successful ?? 0) > 0) {
       fetchVendors()
     }
     return response.data

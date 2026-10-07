@@ -5,7 +5,7 @@ import BulkOperationResults from './BulkOperationResults'
 import { BulkOperationResponse } from '../types'
 
 interface BulkUploadTabProps {
-  templateType: 'campaigns' | 'vendors' | 'assignments'
+  templateType: 'campaigns' | 'vendors' | 'assignments' | 'campaign-setup'
   onUpload: (file: File) => Promise<BulkOperationResponse>
   title: string
   description: string
@@ -46,14 +46,16 @@ export default function BulkUploadTab({
   const handleDownloadReport = () => {
     if (!results) return
 
+    const rowErrors = (results.results || []).filter((r) => r.status === 'error')
     const reportLines = [
       'Bulk Upload Report',
-      `Total Processed: ${results.created.length + results.errors.length}`,
-      `Successful: ${results.created.length}`,
-      `Failed: ${results.errors.length}`,
+      `Total Processed: ${results.total_rows}`,
+      `Successful: ${results.successful}`,
+      `Failed: ${results.failed}`,
       '',
       'Errors:',
-      ...results.errors.map((e) => `Row ${e.row}: ${e.error}`),
+      ...(results.errors || []).map((e) => `File: ${e}`),
+      ...rowErrors.map((e) => `Row ${e.row}: ${e.error}`),
     ]
 
     const blob = new Blob([reportLines.join('\n')], { type: 'text/plain' })

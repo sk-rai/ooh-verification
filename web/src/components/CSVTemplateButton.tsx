@@ -2,7 +2,7 @@ import { useState } from 'react'
 import api from '../services/api'
 
 interface CSVTemplateButtonProps {
-  templateType: 'campaigns' | 'vendors' | 'assignments'
+  templateType: 'campaigns' | 'vendors' | 'assignments' | 'campaign-setup'
   className?: string
 }
 

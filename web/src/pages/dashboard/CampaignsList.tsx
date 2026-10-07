@@ -50,6 +50,17 @@ export default function CampaignsList() {
       locked: !isPaidTier,
       lockedMessage: 'Upgrade to PRO or ENTERPRISE to access bulk uploads',
     },
+    {
+      id: 'setup',
+      label: 'Campaign Setup (All-in-One)',
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      ),
+      locked: !isPaidTier,
+      lockedMessage: 'Upgrade to PRO or ENTERPRISE to access bulk uploads',
+    },
   ]
 
   useEffect(() => {
@@ -72,7 +83,15 @@ export default function CampaignsList() {
 
   const handleBulkUpload = async (file: File): Promise<BulkOperationResponse> => {
     const response = await bulkOperations.uploadCampaigns(file)
-    if (response.data.created.length > 0) {
+    if ((response.data.successful ?? 0) > 0) {
+      fetchCampaigns()
+    }
+    return response.data
+  }
+
+  const handleCampaignSetup = async (file: File): Promise<BulkOperationResponse> => {
+    const response = await bulkOperations.uploadCampaignSetup(file)
+    if ((response.data.successful ?? 0) > 0) {
       fetchCampaigns()
     }
     return response.data
@@ -270,6 +289,29 @@ export default function CampaignsList() {
                 />
               ) : (
                 <UpgradePrompt feature="Bulk Campaign Upload" />
+              )}
+            </div>
+          )}
+
+          {activeTab === 'setup' && (
+            <div className="bg-white shadow rounded-lg p-6">
+              {isPaidTier ? (
+                <BulkUploadTab
+                  templateType="campaign-setup"
+                  onUpload={handleCampaignSetup}
+                  title="Campaign Setup — All-in-One"
+                  description="One CSV creates campaigns, vendors, vendor assignments, and geocoded locations together. Supports multiple campaigns with different start/end dates in a single upload."
+                  instructions={[
+                    'Download the template below',
+                    'Columns: campaign_name, campaign_type, start_date, end_date, location_address, vendor_name, vendor_phone, vendor_email',
+                    'One row per vendor-per-campaign. Repeat the campaign columns to assign multiple vendors; reuse a vendor phone to assign the same person across campaigns.',
+                    'Existing vendors are matched by phone number — no duplicates are created.',
+                    'Addresses are geocoded automatically into a location geofence.',
+                    'Upload the completed CSV and review the results.',
+                  ]}
+                />
+              ) : (
+                <UpgradePrompt feature="Campaign Setup (All-in-One)" />
               )}
             </div>
           )}

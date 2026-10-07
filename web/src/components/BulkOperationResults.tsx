@@ -7,10 +7,13 @@ interface BulkOperationResultsProps {
 }
 
 export default function BulkOperationResults({ results, onClose, onDownloadReport }: BulkOperationResultsProps) {
-  const hasErrors = results.errors.length > 0
-  const successCount = results.created.length
-  const errorCount = results.errors.length
-  const totalProcessed = successCount + errorCount
+  const successCount = results.successful ?? 0
+  const errorCount = results.failed ?? 0
+  const totalProcessed = results.total_rows ?? (successCount + errorCount)
+  // Per-row failures (status==='error') + any global/file-level errors
+  const rowErrors = (results.results || []).filter((r) => r.status === 'error')
+  const globalErrors = results.errors || []
+  const hasErrors = rowErrors.length > 0 || globalErrors.length > 0
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
@@ -70,13 +73,23 @@ export default function BulkOperationResults({ results, onClose, onDownloadRepor
           <h4 className="text-sm font-medium text-gray-900 mb-2">Errors</h4>
           <div className="bg-red-50 border border-red-200 rounded-md max-h-60 overflow-y-auto">
             <ul className="divide-y divide-red-200">
-              {results.errors.map((error, index) => (
-                <li key={index} className="p-3">
+              {globalErrors.map((error, index) => (
+                <li key={`g-${index}`} className="p-3">
                   <div className="flex items-start">
                     <span className="flex-shrink-0 text-xs font-medium text-red-700 bg-red-100 rounded px-2 py-1">
-                      Row {error.row}
+                      File
                     </span>
-                    <p className="ml-3 text-sm text-red-800">{error.error}</p>
+                    <p className="ml-3 text-sm text-red-800">{error}</p>
+                  </div>
+                </li>
+              ))}
+              {rowErrors.map((r, index) => (
+                <li key={`r-${index}`} className="p-3">
+                  <div className="flex items-start">
+                    <span className="flex-shrink-0 text-xs font-medium text-red-700 bg-red-100 rounded px-2 py-1">
+                      Row {r.row}
+                    </span>
+                    <p className="ml-3 text-sm text-red-800">{r.error}</p>
                   </div>
                 </li>
               ))}

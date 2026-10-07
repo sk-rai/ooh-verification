@@ -78,4 +78,14 @@ export const bulkOperations = {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
+
+  // All-in-one: creates campaigns + vendors + associations + assignments + geocoded
+  // locations from a single CSV. Backed by POST /api/bulk/campaign-setup.
+  uploadCampaignSetup: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/api/bulk/campaign-setup', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
 }
