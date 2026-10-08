@@ -161,6 +161,15 @@ test.describe('TrustCapture demo capture', () => {
     await page.waitForTimeout(800)
     await shot(page, 'vendor-create-form')
 
+    // ── 7. DATA-RICH + PAID-TIER SCREENS (switch to rai_sk, Enterprise) ───────
+    // Note: the fresh demo account is Free tier (bulk locked). rai_sk is Enterprise,
+    // so the all-in-one Campaign Setup + bulk features are captured here.
+    await page.goto('/login')
+    // logout first if needed
+    await page.evaluate(() => localStorage.removeItem('token')).catch(() => {})
+    await login(page, CONFIG.dataAccount.email, CONFIG.dataAccount.password)
+    await shot(page, 'dashboard-with-data')
+
     // ── 6. BULK — Campaign Setup (All-in-One) with LIVE upload + results ──────
     await page.goto('/campaigns')
     await page.waitForTimeout(800)
@@ -185,13 +194,6 @@ test.describe('TrustCapture demo capture', () => {
     } else {
       await shot(page, 'bulk-setup-no-input')
     }
-
-    // ── 7. DATA-RICH SCREENS (switch to rai_sk) ──────────────────────────────
-    await page.goto('/login')
-    // logout first if needed
-    await page.evaluate(() => localStorage.removeItem('token')).catch(() => {})
-    await login(page, CONFIG.dataAccount.email, CONFIG.dataAccount.password)
-    await shot(page, 'dashboard-with-data')
 
     // Campaigns (with data)
     await page.goto('/campaigns'); await page.waitForTimeout(1000)
