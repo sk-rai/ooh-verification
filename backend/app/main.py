@@ -302,6 +302,16 @@ async def startup_event():
         await task_worker.start()
     except Exception as e:
         print(f"Warning: Task worker failed to start: {e}")
+
+    # One-time demo tracking seed (guarded by SEED_DEMO_TRACKS=1). Safe no-op
+    # otherwise; never raises. See app/core/demo_seed.py.
+    try:
+        from app.core.database import engine as _engine
+        from app.core.demo_seed import seed_demo_tracks
+        await seed_demo_tracks(_engine)
+    except Exception as e:
+        print(f"Warning: demo track seed skipped: {e}")
+
     print("🚀 TrustCapture API starting up...")
     print(f"📚 API Documentation: http://localhost:8000/api/docs")
     print(f"🔐 Authentication endpoints available at /api/auth")
