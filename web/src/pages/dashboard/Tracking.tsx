@@ -1,8 +1,27 @@
 import { useState, useEffect } from 'react'
-import { MapContainer, TileLayer, Polyline, CircleMarker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, Polyline, CircleMarker, Popup, useMap } from 'react-leaflet'
+import type { LatLngExpression, LatLngBoundsExpression } from 'leaflet'
 import Navigation from '../../components/Navigation'
 import api from '../../services/api'
 import 'leaflet/dist/leaflet.css'
+
+/**
+ * Fits the map viewport to the selected route whenever it changes.
+ * MapContainer only reads center/zoom at mount, so without this the map stays
+ * at the initial (whole-country) view after a track is selected. This zooms to
+ * frame just the vendor's plotted path.
+ */
+function FitToRoute({ positions }: { positions: LatLngExpression[] }) {
+  const map = useMap()
+  useEffect(() => {
+    if (positions.length === 1) {
+      map.setView(positions[0], 15)
+    } else if (positions.length > 1) {
+      map.fitBounds(positions as LatLngBoundsExpression, { padding: [40, 40], maxZoom: 16 })
+    }
+  }, [map, positions])
+  return null
+}
 
 export default function Tracking() {
   const [summary, setSummary] = useState<any>(null)
@@ -65,6 +84,7 @@ export default function Tracking() {
               <div className="bg-white shadow rounded-lg overflow-hidden">
                 <MapContainer center={center} zoom={polyline.length > 0 ? 14 : 5} style={{ height: '500px', width: '100%' }} scrollWheelZoom={true}>
                   <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  {polyline.length > 0 && <FitToRoute positions={polyline} />}
                   {polyline.length > 0 && (
                     <>
                       <Polyline positions={polyline} pathOptions={{ color: '#3b82f6', weight: 3 }} />
