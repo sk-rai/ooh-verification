@@ -3,9 +3,10 @@
 ## Current Status: LIVE on Production
 
 - **Google identity verification:** Approved (account active).
-- **Current production release:** versionCode 11 / versionName 1.3.0 — active, 16 countries/regions, ~33 installs.
-- **Next release ready to upload:** versionCode 14 / versionName 1.4.1 — AAB built & signed 18 Oct 2026. See `RELEASE_NOTES_1.4.1.md`.
-  - vc12 (API 35) rejected for Production. vc13 was consumed by a prior upload attempt. Current uploadable build is vc14 (API 36). Always confirm the next free code in Play Console before building.
+- **Current production release:** versionCode 14 / versionName 1.4.1 — LIVE on Google Play since 21 Oct 2026, 16 countries/regions, ~33 installs, 100% rollout. See `RELEASE_NOTES_1.4.1.md`.
+  - Background-location + foreground-service (location) declarations approved; walkthrough video linked.
+  - targetSdk/compileSdk 36 (API 36) via AGP 8.10.0; native debug symbols included.
+- **Version-code history:** vc11 (1.3.0) was the prior live release. vc12 (API 35) and vc13 were consumed by earlier upload attempts and can never be reused. vc14 is live. Always confirm the next free code in Play Console before building the next release.
 - **App signing:** Google Play App Signing in use; local keystore is the upload key.
 
 ---
@@ -116,12 +117,13 @@ cmd /c "gradlew.bat bundleRelease 2>&1"
 4. Play Console → upload to internal/closed testing first, then promote to Production.
 5. Paste release notes (see `RELEASE_NOTES_<version>.md`).
 
-### vc14 / 1.4.1 — ready now
+### vc14 / 1.4.1 — PUBLISHED
 - [x] Code at vc14 / 1.4.1, targetSdk/compileSdk = 36 (AGP 8.10.0)
 - [x] Signed AAB built & verified (18 Oct 2026, native debug symbols included)
 - [x] Release notes drafted — `RELEASE_NOTES_1.4.1.md`
-- [ ] Upload to Play Console internal testing (manual web step)
-- [ ] Verify install on a device, then promote to Production
+- [x] Uploaded to internal testing, verified
+- [x] Background-location + foreground-service declarations approved
+- [x] Rolled out to Production (100%) — LIVE since 21 Oct 2026
 
 > Version-code history: vc11 = live Production (1.3.0). vc12 (API 35) and vc13
 > were consumed by earlier upload attempts and can never be reused. vc14 is the
