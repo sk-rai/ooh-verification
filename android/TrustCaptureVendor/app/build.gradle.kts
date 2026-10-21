@@ -10,14 +10,14 @@ plugins {
 
 android {
     namespace = "com.trustcapture.vendor"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.lynksavvy.trustcapture"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 12
-        versionName = "1.4.0"
+        targetSdk = 36
+        versionCode = 14
+        versionName = "1.4.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "BASE_URL", "\"https://ooh-verification.onrender.com/\"")
@@ -53,6 +53,9 @@ android {
             signingConfig = signingConfigs.getByName("release")
             buildConfigField("String", "BASE_URL", "\"https://api.trustcaptures.com/\"")
             manifestPlaceholders["cleartextTrafficPermitted"] = "false"
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
         }
     }
     compileOptions {
