@@ -1,6 +1,13 @@
 # Pre-Deployment Checklist (Play Store)
 
-## Current Status: Waiting for Google Identity Verification (submitted 29 Mar 2026)
+## Current Status: LIVE on Production
+
+- **Google identity verification:** Approved (account active).
+- **Current production release:** versionCode 14 / versionName 1.4.1 — LIVE on Google Play since 21 Oct 2026, 16 countries/regions, ~33 installs, 100% rollout. See `RELEASE_NOTES_1.4.1.md`.
+  - Background-location + foreground-service (location) declarations approved; walkthrough video linked.
+  - targetSdk/compileSdk 36 (API 36) via AGP 8.10.0; native debug symbols included.
+- **Version-code history:** vc11 (1.3.0) was the prior live release. vc12 (API 35) and vc13 were consumed by earlier upload attempts and can never be reused. vc14 is live. Always confirm the next free code in Play Console before building the next release.
+- **App signing:** Google Play App Signing in use; local keystore is the upload key.
 
 ---
 
@@ -30,15 +37,23 @@ RELEASE_KEY_PASSWORD=TrustCapture2026!
 ## Release AAB (Ready to Upload)
 
 **File:** `app/build/outputs/bundle/release/app-release.aab`
-**Size:** 12.82 MB
-**Built:** 29 Mar 2026
-**Version:** versionCode=1, versionName="1.0.0"
+**Size:** 16.56 MB
+**Built:** 18 Oct 2026
+**Version:** versionCode=14, versionName="1.4.1"
+**target/compileSdk:** 36 (Android 16) — AGP bumped 8.7.3 → 8.10.0 to support it
+**Native debug symbols:** included (`ndk { debugSymbolLevel = "FULL" }` in release buildType)
+**Signature:** `jar verified` (self-signed upload key — correct for Play App Signing)
 
 **To rebuild:**
 ```powershell
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 cmd /c "gradlew.bat bundleRelease 2>&1"
 ```
+
+> **Build gotcha (seen 18 Oct 2026):** a `clean` interrupted mid-run left `app/build`
+> in a bad state and spawned duplicate Kotlin daemons, causing
+> `[ksp] [Hilt] failed to make parent directories`. Fix: `gradlew.bat --stop`,
+> delete `app/build`, then `gradlew.bat bundleRelease --no-daemon`.
 
 ---
 
@@ -47,8 +62,12 @@ cmd /c "gradlew.bat bundleRelease 2>&1"
 **Account:** LynkSavvy Technologies (Personal account)
 **Console URL:** https://play.google.com/console
 **Registration fee:** $25 USD (paid)
-**Identity verification:** Submitted 29 Mar 2026 — waiting for approval (1-5 business days)
+**Identity verification:** Approved — account active, app published.
 **D-U-N-S application:** Submitted (ref: DR032920262404761726) — for future Organization account migration
+
+### Open recommendations on current release (vc11 / 1.3.0) — non-blocking
+- Edge-to-edge may not display for all users (deprecated APIs/params) — future code change.
+- R8 optimization — already enabled in vc12 build; should clear on next release.
 
 ---
 
@@ -58,7 +77,7 @@ cmd /c "gradlew.bat bundleRelease 2>&1"
 - [x] Debug Log.d statements removed from LoginViewModel, AuthRepository, UploadManager, UploadWorker, LocationHelper (Log.w/Log.e/Log.i kept)
 - [x] Release signing config in `build.gradle.kts` — reads from `local.properties`
 - [x] Release keystore generated and AAB built successfully
-- [x] Version scheme set — versionCode=1, versionName="1.0.0"
+- [x] Version scheme — currently versionCode=12, versionName="1.4.0" (production live at vc11/1.3.0)
 - [x] Custom app icon — shield with camera lens + green verification checkmark (replaces default Android robot)
 - [x] Certificate pinning framework in place (placeholder pins — replace before production domain switch)
 - [x] `android:usesCleartextTraffic` restricted to debug builds only
@@ -73,26 +92,49 @@ cmd /c "gradlew.bat bundleRelease 2>&1"
 
 ---
 
-## Remaining — After Google Verification Approves
+## Store Listing (completed at initial launch — app is live)
 
-### Play Store Listing (in Play Console)
-- [ ] Short description (80 chars max)
-- [ ] Full description (4000 chars max)
-- [ ] App icon upload (512x512 PNG — generate from the vector drawable)
-- [ ] Feature graphic (1024x500 PNG)
-- [ ] Phone screenshots (minimum 2, recommended 4-8)
-- [ ] Privacy policy URL (host on website or GitHub Pages)
-- [ ] Data safety section declaration (location, camera, phone state, network)
-- [ ] Content rating questionnaire
-- [ ] Select app category: Business or Productivity
-- [ ] Target audience: 18+ (business tool)
-- [ ] Upload AAB to internal/closed testing track first, then promote to production
+- [x] Short description, full description
+- [x] App icon (512x512), feature graphic (1024x500), phone screenshots
+- [x] Privacy policy URL
+- [x] Data safety declaration (location, camera, phone state, network)
+- [x] Content rating questionnaire
+- [x] App category + target audience (18+ business tool)
 
-### Optional Before Launch
-- [ ] Replace placeholder certificate pins with real SHA-256 fingerprints (when switching to production domain)
+---
+
+## Per-Release Upload Process (repeat for each new version)
+
+1. Bump `versionCode` (and `versionName` if appropriate) in `app/build.gradle.kts`.
+   - **Rule:** the new `versionCode` MUST be greater than the highest code uploaded
+     to ANY track. Production is currently vc11; the next upload is vc12.
+2. Build the signed AAB (see "Release AAB" section above).
+3. Verify version + signature before upload:
+   ```powershell
+   $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+   & "$env:JAVA_HOME\bin\jarsigner.exe" -verify app\build\outputs\bundle\release\app-release.aab
+   ```
+4. Play Console → upload to internal/closed testing first, then promote to Production.
+5. Paste release notes (see `RELEASE_NOTES_<version>.md`).
+
+### vc14 / 1.4.1 — PUBLISHED
+- [x] Code at vc14 / 1.4.1, targetSdk/compileSdk = 36 (AGP 8.10.0)
+- [x] Signed AAB built & verified (18 Oct 2026, native debug symbols included)
+- [x] Release notes drafted — `RELEASE_NOTES_1.4.1.md`
+- [x] Uploaded to internal testing, verified
+- [x] Background-location + foreground-service declarations approved
+- [x] Rolled out to Production (100%) — LIVE since 21 Oct 2026
+
+> Version-code history: vc11 = live Production (1.3.0). vc12 (API 35) and vc13
+> were consumed by earlier upload attempts and can never be reused. vc14 is the
+> current uploadable build. Before any future build, check Play Console for the
+> next free version code.
+
+## Still Optional / Future
+- [ ] Replace placeholder certificate pins with real SHA-256 fingerprints
 - [ ] Play Integrity API (requires Google Cloud project + API key)
 - [ ] Generate raster mipmap PNGs from vector icon for pre-API-26 devices
-- [ ] Test release build on physical device (verify ProGuard didn't break anything)
+- [ ] Address edge-to-edge deprecation (Play Console recommendation on vc11)
 
 ---
 
