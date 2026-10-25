@@ -16,8 +16,17 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Use raw SQL throughout — checkfirst=True is unreliable with asyncpg
-    op.execute("CREATE TYPE IF NOT EXISTS taskstatus AS ENUM ('pending', 'running', 'completed', 'failed', 'dead')")
+    # taskstatus enum and task_queue table — fully idempotent
+    # Use DO block since CREATE TYPE IF NOT EXISTS requires PostgreSQL 9.1+
+    # and some hosted versions don't support it via asyncpg driver
+    op.execute("""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'taskstatus') THEN
+                CREATE TYPE taskstatus AS ENUM ('pending', 'running', 'completed', 'failed', 'dead');
+            END IF;
+        END$$
+    """)
 
     op.execute("""
         CREATE TABLE IF NOT EXISTS task_queue (
