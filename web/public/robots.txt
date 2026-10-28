@@ -1,0 +1,26 @@
+# robots.txt for app.trustcaptures.com
+# NOTE: robots.txt is a crawler convention, NOT access control or security.
+# Authenticated routes are protected by app auth; listing them here only keeps
+# them out of search indexes.
+
+User-agent: *
+Allow: /$
+Allow: /privacy
+Allow: /terms
+
+# Keep authenticated application routes out of the index
+Disallow: /dashboard
+Disallow: /campaigns
+Disallow: /vendors
+Disallow: /photos
+Disallow: /reports
+Disallow: /subscription
+Disallow: /map
+Disallow: /map-enhanced
+Disallow: /tracking
+Disallow: /analytics
+Disallow: /admin
+Disallow: /login
+Disallow: /register
+
+Sitemap: https://app.trustcaptures.com/sitemap.xml

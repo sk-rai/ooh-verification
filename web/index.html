@@ -2,9 +2,89 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TrustCapture - Photo Verification Platform</title>
+
+    <!-- Primary SEO -->
+    <title>TrustCapture — Tamper-Proof Photo Verification for Field Operations</title>
+    <meta
+      name="description"
+      content="TrustCapture verifies field photos with GPS, barometric pressure, magnetic field, tremor analysis and hardware-backed cryptographic signatures. Built for OOH advertising, delivery, construction and field survey teams. Available on Android."
+    />
+    <meta name="theme-color" content="#3B82F6" />
+    <link rel="canonical" href="https://app.trustcaptures.com/" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+
+    <!-- Open Graph (LinkedIn, WhatsApp, Facebook) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="TrustCapture" />
+    <meta property="og:title" content="TrustCapture — Tamper-Proof Photo Verification for Field Operations" />
+    <meta
+      property="og:description"
+      content="Prevent field photo fraud at the point of capture. GPS-stamped, sensor-validated and cryptographically signed photos your field teams can't fake."
+    />
+    <meta property="og:url" content="https://app.trustcaptures.com/" />
+    <meta property="og:image" content="https://app.trustcaptures.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="TrustCapture — tamper-proof photo verification for field operations" />
+
+    <!-- Twitter / X Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="TrustCapture — Tamper-Proof Photo Verification for Field Operations" />
+    <meta
+      name="twitter:description"
+      content="Prevent field photo fraud at the point of capture. GPS-stamped, sensor-validated and cryptographically signed photos your field teams can't fake."
+    />
+    <meta name="twitter:image" content="https://app.trustcaptures.com/og-image.png" />
+
+    <!-- Structured data: Organization + SoftwareApplication.
+         Only describes actually-implemented capabilities. No ratings, customer
+         counts, certifications or performance claims. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://app.trustcaptures.com/#organization",
+          "name": "LynkSavvy Technologies",
+          "url": "https://app.trustcaptures.com/",
+          "description": "Builder of TrustCapture, a tamper-proof field-evidence verification platform.",
+          "foundingLocation": "Lucknow, India"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://app.trustcaptures.com/#software",
+          "name": "TrustCapture",
+          "url": "https://app.trustcaptures.com/",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Android",
+          "installUrl": "https://play.google.com/store/apps/details?id=com.lynksavvy.trustcapture",
+          "publisher": { "@id": "https://app.trustcaptures.com/#organization" },
+          "description": "Field-evidence verification platform. Field vendors capture photos, video, voice notes and text notes with GPS and sensor data, cryptographically signed on-device. The backend verifies location, sensor and signature data and produces a confidence score. Includes campaign management, bulk CSV setup, GPS route tracking, site-visit reports and exports.",
+          "featureList": [
+            "GPS, barometric pressure and magnetic-field verification",
+            "Hand-tremor (human-capture) analysis",
+            "Hardware-backed cryptographic photo signatures",
+            "Offline-first capture with background sync",
+            "Campaign and multi-location geofencing",
+            "GPS route tracking and site-visit reports",
+            "PDF, CSV and GeoJSON exports"
+          ],
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "INR",
+            "description": "Free tier available; paid Pro and Enterprise plans."
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
