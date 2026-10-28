@@ -1,15 +1,16 @@
-# Release Notes — TrustCapture Vendor 1.4.1 (versionCode 13)
+# Release Notes — TrustCapture Vendor 1.4.1 (versionCode 14)
 
+**Status:** LIVE on Google Play Production since 21 Oct 2026 (100% rollout).
 **Previous production release:** 1.3.0 (versionCode 11)
 **Package:** `com.lynksavvy.trustcapture`
 **Build date:** 18 Oct 2026
 **AAB:** `app/build/outputs/bundle/release/app-release.aab` (16.56 MB, signed, native debug symbols included)
 **targetSdk / compileSdk:** 36 (Android 16) — required by Play Console
 
-> Note: versionCode 12 / 1.4.0 was built but never published. It failed Play
-> Console's "must target API 36" check. This 1.4.1 build raises targetSdk to 36
-> (AGP bumped 8.7.3 → 8.10.0) and is the version to upload. The feature set is
-> identical to 1.4.0 plus the API-36 target.
+> Version-code note: vc12 / 1.4.0 was built but failed Play Console's "must
+> target API 36" check. vc13 was consumed by a subsequent upload attempt. The
+> shipped build is **vc14**, which raises targetSdk to 36 (AGP 8.7.3 → 8.10.0).
+> Feature set is identical to the intended 1.4.0 plus the API-36 target.
 
 ---
 
