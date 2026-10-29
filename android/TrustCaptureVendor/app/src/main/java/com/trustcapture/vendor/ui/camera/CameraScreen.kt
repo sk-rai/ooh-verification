@@ -55,6 +55,7 @@ import java.util.*
 @Composable
 fun CameraScreen(
     onBack: () -> Unit,
+    onReRegister: () -> Unit = onBack,
     viewModel: CameraViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -163,7 +164,9 @@ fun CameraScreen(
             if (uiState.captureBlocked) {
                 CaptureBlockedContent(
                     reason = uiState.captureBlockedReason ?: "Device security not supported",
-                    onBack = onBack
+                    reRegistrationRequired = uiState.reRegistrationRequired,
+                    onBack = onBack,
+                    onReRegister = { viewModel.reRegisterDevice(onNavigateToLogin = onReRegister) }
                 )
             } else if (hasCameraPermission) {
                 CameraPreviewContent(
@@ -870,15 +873,33 @@ private fun MetadataRow(icon: androidx.compose.ui.graphics.vector.ImageVector, l
 }
 
 @Composable
-private fun CaptureBlockedContent(reason: String, onBack: () -> Unit) {
+private fun CaptureBlockedContent(
+    reason: String,
+    onBack: () -> Unit,
+    reRegistrationRequired: Boolean = false,
+    onReRegister: () -> Unit = {}
+) {
     Column(modifier = Modifier.fillMaxSize().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(80.dp), tint = MaterialTheme.colorScheme.error)
         Spacer(modifier = Modifier.height(16.dp))
-        Text("Capture Unavailable", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Text(
+            if (reRegistrationRequired) "Re-registration Required" else "Capture Unavailable",
+            style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
+        )
         Spacer(modifier = Modifier.height(8.dp))
         Text(reason, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onBack) { Text("Go Back") }
+        if (reRegistrationRequired) {
+            Button(onClick = onReRegister, modifier = Modifier.fillMaxWidth(0.7f)) {
+                Icon(Icons.Default.Fingerprint, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Re-register with OTP")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(onClick = onBack) { Text("Go Back") }
+        } else {
+            Button(onClick = onBack) { Text("Go Back") }
+        }
     }
 }
 

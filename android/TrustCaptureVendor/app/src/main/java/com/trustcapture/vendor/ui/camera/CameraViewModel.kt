@@ -95,6 +95,10 @@ data class CameraUiState(
     val keystoreAvailable: Boolean = true,
     val captureBlocked: Boolean = false,
     val captureBlockedReason: String? = null,
+    /** True when capture is blocked specifically because the device key must be
+     *  re-registered (regenerated key). Surfaces a "Re-register" action that routes
+     *  the vendor to the OTP flow. Distinct from terminal "device not supported". */
+    val reRegistrationRequired: Boolean = false,
     // Campaign-type-specific fields
     val safetyTags: List<String> = emptyList(),
     val roomLabel: String = "",
@@ -133,6 +137,7 @@ class CameraViewModel @Inject constructor(
     private val uploadManager: UploadManager,
     private val securityManager: SecurityManager,
     private val keystoreManager: KeystoreManager,
+    private val authRepository: com.trustcapture.vendor.domain.repository.AuthRepository,
     private val appConfigRepository: com.trustcapture.vendor.domain.repository.AppConfigRepository,
     private val campaignRepository: com.trustcapture.vendor.domain.repository.CampaignRepository,
     private val evidenceDao: EvidenceDao,
@@ -162,7 +167,14 @@ class CameraViewModel @Inject constructor(
 
         // Check Keystore availability — block capture if unavailable
         try {
-            keystoreManager.generateKeyPairIfNeeded()
+            val newKey = keystoreManager.generateKeyPairIfNeeded()
+            if (newKey) {
+                // The signing key was just (re)generated — e.g. after reinstall /
+                // clear-data / device restore / Keystore eviction. It has NOT been
+                // registered with the backend, so any capture signed now would fail
+                // server-side verification. Block capture until re-registration.
+                Log.w(TAG, "Signing key was regenerated — capture blocked pending re-registration")
+            }
             if (!keystoreManager.hasKeyPair()) {
                 Log.e(TAG, "Keystore key pair generation failed silently")
                 _uiState.value = _uiState.value.copy(
@@ -178,6 +190,25 @@ class CameraViewModel @Inject constructor(
                 captureBlocked = true,
                 captureBlockedReason = "Device security not supported"
             )
+        }
+
+        // Key-registration consistency gate: if the current device key does not match
+        // the key registered with the backend (regenerated key), block capture and
+        // require re-registration via OTP (per owner policy). Prevents silently
+        // signing evidence with a key the server does not hold.
+        viewModelScope.launch {
+            try {
+                if (keystoreManager.hasKeyPair() && !authRepository.isCurrentKeyRegistered()) {
+                    authRepository.ensureKeyRegistrationConsistent()
+                    _uiState.value = _uiState.value.copy(
+                        captureBlocked = true,
+                        reRegistrationRequired = true,
+                        captureBlockedReason = "This device's security key changed and must be re-registered before you can capture. Please sign in again with OTP."
+                    )
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Key-registration consistency check failed", e)
+            }
         }
 
         // Start collecting environmental sensor data (graceful degradation)
@@ -421,6 +452,24 @@ class CameraViewModel @Inject constructor(
             error = null,
             uploadSuccess = false
         )
+    }
+
+    /**
+     * Re-registration flow for a regenerated device key: clears the session so the
+     * vendor is routed back through OTP (per owner policy, OTP is required on every
+     * key regeneration). The LOGIN screen presents OTP because the divergence check
+     * already cleared `isDeviceRegistered`. On completing OTP, the app re-registers
+     * the new public key with the backend.
+     */
+    fun reRegisterDevice(onNavigateToLogin: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                authRepository.logout()
+            } catch (e: Exception) {
+                Log.w(TAG, "logout during re-registration failed", e)
+            }
+            onNavigateToLogin()
+        }
     }
 
     fun uploadPhoto() {

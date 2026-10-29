@@ -127,7 +127,14 @@ fun TrustCaptureNavGraph(
             route = Routes.QUICK_CAMERA,
             arguments = listOf(navArgument("category") { type = NavType.StringType })
         ) {
-            CameraScreen(onBack = { navController.popBackStack() })
+            CameraScreen(
+                onBack = { navController.popBackStack() },
+                onReRegister = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
 
         composable(Routes.CAMPAIGNS) {
@@ -196,7 +203,12 @@ fun TrustCaptureNavGraph(
             )
         ) {
             CameraScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onReRegister = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
 

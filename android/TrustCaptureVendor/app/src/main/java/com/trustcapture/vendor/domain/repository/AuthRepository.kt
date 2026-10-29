@@ -83,7 +83,10 @@ class AuthRepository @Inject constructor(
      * and registers the public key with the backend.
      */
     private suspend fun registerDeviceIfNeeded() {
-        keystoreManager.generateKeyPairIfNeeded()
+        val newlyGenerated = keystoreManager.generateKeyPairIfNeeded()
+        if (newlyGenerated) {
+            Log.i(TAG, "New device key generated — (re-)registering with backend")
+        }
 
         val publicKeyPem = keystoreManager.getPublicKeyPem() ?: return
         val deviceId = getDeviceId()
@@ -94,6 +97,9 @@ class AuthRepository @Inject constructor(
             )
             if (response.isSuccessful) {
                 userPreferences.setDeviceRegistered(true)
+                // Record WHICH key is now registered, so we can later detect a
+                // regenerated (diverged) key and force re-registration before capture.
+                userPreferences.setRegisteredKeyFingerprint(keystoreManager.getPublicKeyFingerprint())
                 Log.i(TAG, "Device registered successfully (deviceId=$deviceId, code=${response.code()})")
             } else {
                 Log.w(TAG, "Device registration failed: ${response.code()} ${response.errorBody()?.string()}")
@@ -102,6 +108,55 @@ class AuthRepository @Inject constructor(
             Log.w(TAG, "Device registration exception", e)
             // Will retry on next login
         }
+    }
+
+    /**
+     * True if the device's CURRENT Keystore public key matches the key registered
+     * with the backend. Returns false if no key exists or the key has been
+     * regenerated (reinstall / clear-data / device restore / Keystore eviction) —
+     * in which case the device MUST re-register (via OTP, per policy) before any
+     * capture is signed/uploaded, otherwise the server will reject the signatures.
+     *
+     * Backward-compat: an existing install that registered BEFORE fingerprint
+     * tracking has `isDeviceRegistered == true` but no stored fingerprint. In that
+     * case we trust the existing registration and backfill the fingerprint from the
+     * current key (the key has not changed for these users), rather than falsely
+     * blocking them.
+     */
+    suspend fun isCurrentKeyRegistered(): Boolean {
+        if (!keystoreManager.hasKeyPair()) return false
+        val currentFp = keystoreManager.getPublicKeyFingerprint() ?: return false
+        val registeredFp = userPreferences.registeredKeyFingerprint.first()
+        if (registeredFp == null) {
+            // Legacy registration without a recorded fingerprint.
+            if (userPreferences.isDeviceRegistered.first()) {
+                // Trust existing registration; backfill fingerprint for future checks.
+                userPreferences.setRegisteredKeyFingerprint(currentFp)
+                return true
+            }
+            return false
+        }
+        return registeredFp == currentFp
+    }
+
+    /**
+     * Detects a regenerated/diverged device key. If the current key no longer
+     * matches what was registered, clears the local registered flag so the app
+     * routes the vendor back through OTP re-registration before capture.
+     * Returns true if a divergence was detected and the flag was cleared.
+     * No-op for legacy registrations missing a fingerprint (handled/backfilled
+     * by isCurrentKeyRegistered()).
+     */
+    suspend fun ensureKeyRegistrationConsistent(): Boolean {
+        if (!keystoreManager.hasKeyPair()) return false
+        val registeredFp = userPreferences.registeredKeyFingerprint.first() ?: return false
+        val currentFp = keystoreManager.getPublicKeyFingerprint() ?: return false
+        if (registeredFp != currentFp) {
+            Log.w(TAG, "Device key diverged from registered key — clearing registration; OTP re-registration required")
+            userPreferences.setDeviceRegistered(false)
+            return true
+        }
+        return false
     }
 
     // ── Device Attestation Flow (subsequent logins) ─────────────────────
