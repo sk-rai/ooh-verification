@@ -343,8 +343,40 @@ async def upload_evidence(
                     resolved_campaign_id, latitude, longitude
                 )
 
-            # Determine signature validity
-            signature_valid = signature is not None and len(signature) > 0
+            # ── Real signature verification against device-key HISTORY (warn-mode) ──
+            # Replaces the old non-empty check. Verifies the signature against the
+            # vendor's key active at capture time (falling back to any known key),
+            # so key-rotation no longer silently passes OR wrongly rejects.
+            #
+            # WARN-MODE: only a genuine mismatch (outcome == "invalid": a key covering
+            # this capture exists but the signature doesn't verify) counts as an
+            # invalid signature. "verified" is valid; "unverifiable_rotated"/"no_keys"
+            # are treated as NEUTRAL (valid for status purposes) so we never newly
+            # hard-reject legitimate captures signed under a key we no longer retain.
+            signature_outcome = "unknown"
+            try:
+                from app.services.device_key_service import verify_against_history
+                sig_result = await verify_against_history(
+                    db,
+                    vendor_id=current_vendor.vendor_id,
+                    photo_hash_hex=file_hash,
+                    signature_field=signature or "",
+                    capture_time=parsed_timestamp,
+                )
+                signature_outcome = sig_result["outcome"]
+                # Stamp the evidence row for auditability / later re-verification.
+                evidence.signing_key_id = sig_result["matched_key_id"]
+                evidence.signing_key_fingerprint = sig_result["matched_fingerprint"]
+                evidence.signature_outcome = signature_outcome
+            except Exception as e:
+                logger.warning(f"history signature verify skipped for evidence "
+                               f"{evidence.evidence_id}: {e}")
+                # Fall back to the legacy non-empty heuristic if history check errors.
+                signature_outcome = "verified" if (signature and len(signature) > 0) else "no_keys"
+
+            # Map outcome -> signature_valid for the scoring pipeline (warn-mode):
+            # only "invalid" degrades; rotated/no_keys/verified do not hard-fail.
+            signature_valid = signature_outcome != "invalid"
 
             # Run verification
             result = run_enhanced_verification(
@@ -452,6 +484,7 @@ async def upload_evidence(
         "verification_status": evidence.verification_status,
         "verification_confidence": evidence.verification_confidence,
         "verification_flags": evidence.verification_flags,
+        "signature_outcome": getattr(evidence, "signature_outcome", None),
         "file_url": evidence.file_url,
         "thumbnail_url": evidence.thumbnail_url,
         "message": "Evidence uploaded successfully",

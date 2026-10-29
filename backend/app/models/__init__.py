@@ -24,6 +24,7 @@ from app.models.task_queue import TaskQueue, TaskStatus
 from app.models.evidence import Evidence, GpsTrack, Case, EvidenceType, EvidenceStatus
 from app.models.vendor_track import VendorTrack
 from app.models.api_key import APIKey
+from app.models.device_key import DeviceKey
 
 # Export all models and enums
 __all__ = [
@@ -45,6 +46,7 @@ __all__ = [
     "AdminUser",
     "TaskQueue",
     "TaskStatus",
+    "DeviceKey",
     # Enums
     "SubscriptionTier",
     "SubscriptionStatus",

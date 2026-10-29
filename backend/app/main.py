@@ -254,6 +254,34 @@ async def startup_event():
             await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_api_keys_prefix ON api_keys (key_prefix);"))
             await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_api_keys_tenant ON api_keys (tenant_id);"))
             print("✅ API keys table ready")
+            # Device key history (append-only key versioning — fixes key-rotation
+            # orphaning of signed evidence; see KEY_VERSIONING_DESIGN.md)
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS device_keys (
+                    key_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    vendor_id VARCHAR(6) NOT NULL,
+                    tenant_id UUID NOT NULL,
+                    device_id VARCHAR(255),
+                    public_key TEXT NOT NULL,
+                    algorithm VARCHAR(50) NOT NULL DEFAULT 'ECDSA-P256',
+                    key_fingerprint VARCHAR(64) NOT NULL,
+                    active_from TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    active_to TIMESTAMPTZ,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                );
+            """))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_device_keys_vendor ON device_keys (vendor_id);"))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_device_keys_fingerprint ON device_keys (key_fingerprint);"))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_device_keys_vendor_window ON device_keys (vendor_id, active_from, active_to);"))
+            # Stamp evidence with the key that verified it (for deterministic re-verify)
+            await conn.execute(text(
+                "DO $$ BEGIN "
+                "ALTER TABLE evidence ADD COLUMN IF NOT EXISTS signing_key_id UUID; "
+                "ALTER TABLE evidence ADD COLUMN IF NOT EXISTS signing_key_fingerprint VARCHAR(64); "
+                "ALTER TABLE evidence ADD COLUMN IF NOT EXISTS signature_outcome VARCHAR(30); "
+                "EXCEPTION WHEN others THEN NULL; END $$;"
+            ))
+            print("✅ Device keys table + evidence key-stamp columns ready")
             await conn.execute(text("ALTER TABLE clients ADD COLUMN IF NOT EXISTS report_settings JSONB;"))
             print("✅ Report settings column ready")
             # Geofence columns for polygon/bbox/corridor verification

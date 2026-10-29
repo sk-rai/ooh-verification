@@ -348,12 +348,30 @@ async def register_vendor_device(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vendor not found for this device"
         )
-    
-    # Store public key
+
+    # Append a new key VERSION to the device_keys history (never destroy old keys),
+    # so evidence signed under a prior key stays verifiable after re-registration.
+    # vendor.public_key is kept as a denormalised pointer to the current key.
+    # Backward compatible: request/response unchanged. Non-fatal if history write
+    # fails (we still set the current key).
+    try:
+        from app.services.device_key_service import register_key_version
+        await register_key_version(
+            db,
+            vendor_id=vendor.vendor_id,
+            tenant_id=vendor.tenant_id,
+            device_id=data.device_id,
+            public_key_pem=data.public_key,
+            algorithm="ECDSA-P256",
+        )
+    except Exception as e:
+        logger.warning(f"device_keys history write skipped for {vendor.vendor_id}: {e}")
+
+    # Keep the denormalised current-key pointer up to date.
     vendor.public_key = data.public_key
     await db.commit()
     await db.refresh(vendor)
-    
+
     return vendor
 
 

@@ -80,6 +80,13 @@ class Evidence(Base):
     device_signature = Column(Text, nullable=True)
     file_hash = Column(String(128), nullable=True)  # SHA-256 of uploaded file
 
+    # Key versioning (device-key-history verification). signing_key_id/fingerprint
+    # record WHICH registered key verified this evidence; signature_outcome is the
+    # warn-mode result: verified | invalid | unverifiable_rotated | no_keys.
+    signing_key_id = Column(UUID(as_uuid=True), nullable=True)
+    signing_key_fingerprint = Column(String(64), nullable=True)
+    signature_outcome = Column(String(30), nullable=True)
+
     # Sensor Data (embedded for simplicity — full sensor data in separate table if needed)
     sensor_data = Column(JSONB, nullable=True)  # GPS, WiFi, cell, pressure, magnetic, etc.
 

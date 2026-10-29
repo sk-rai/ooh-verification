@@ -88,6 +88,33 @@ class SignatureVerificationService:
         return False
 
     @staticmethod
+    def public_key_fingerprint(public_key_pem: str) -> str:
+        """
+        Compute the device-key fingerprint. CROSS-COMPONENT CONTRACT with Android:
+
+            fingerprint = sha256( DER SubjectPublicKeyInfo bytes ) -> lowercase hex
+
+        Android computes SHA-256 over publicKey.encoded (X.509 SPKI DER). We receive
+        the key as PEM, so we load it and re-serialize to DER SPKI to recover the
+        SAME bytes Android hashed — NOT a hash of the PEM text. Must match exactly.
+
+        Returns lowercase hex string, or "" if the key cannot be parsed.
+        """
+        try:
+            key_obj = serialization.load_pem_public_key(
+                public_key_pem.encode() if isinstance(public_key_pem, str) else public_key_pem,
+                backend=default_backend(),
+            )
+            der = key_obj.public_bytes(
+                encoding=serialization.Encoding.DER,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
+            return hashlib.sha256(der).hexdigest()
+        except Exception as e:
+            logger.warning(f"Could not compute public key fingerprint: {e}")
+            return ""
+
+    @staticmethod
     def build_signed_payload(photo_hash_hex: str, location_hash: str, timestamp: str) -> bytes:
         """Reconstruct the composite payload that the Android app signs."""
         payload = f"{photo_hash_hex}|{location_hash}|{timestamp}"
