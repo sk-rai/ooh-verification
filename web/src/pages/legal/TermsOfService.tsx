@@ -1,8 +1,17 @@
 import { Link } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 
 export default function TermsOfService() {
   return (
     <div className="min-h-screen bg-white">
+      <Helmet>
+        <title>Terms of Service — TrustCapture</title>
+        <meta name="description" content="Terms and conditions for using TrustCapture. Covers acceptable use, subscription plans, data ownership, verification accuracy, liability and governing law." />
+        <link rel="canonical" href="https://app.trustcaptures.com/terms" />
+        <meta property="og:title" content="Terms of Service — TrustCapture" />
+        <meta property="og:description" content="Terms and conditions for using TrustCapture by LynkSavvy Technologies." />
+        <meta property="og:url" content="https://app.trustcaptures.com/terms" />
+      </Helmet>
       <nav className="border-b border-gray-200 bg-white">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="text-xl font-bold text-gray-900">TrustCapture</Link>

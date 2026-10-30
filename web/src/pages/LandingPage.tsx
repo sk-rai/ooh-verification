@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import LandingNav from './landing/LandingNav'
 import Hero from './landing/Hero'
 import Problem from './landing/Problem'
@@ -34,6 +35,15 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white" style={{ scrollBehavior: 'smooth' }}>
+      <Helmet>
+        <title>TrustCapture — Tamper-Proof Photo Verification for Field Operations</title>
+        <meta name="description" content="TrustCapture verifies field photos with GPS, barometric pressure, magnetic field, tremor analysis and hardware-backed cryptographic signatures. Built for OOH advertising, delivery, construction and field survey teams." />
+        <link rel="canonical" href="https://app.trustcaptures.com/" />
+        <meta property="og:title" content="TrustCapture — Tamper-Proof Photo Verification for Field Operations" />
+        <meta property="og:description" content="Prevent field photo fraud at the point of capture. GPS-stamped, sensor-validated and cryptographically signed photos your field teams can't fake." />
+        <meta property="og:url" content="https://app.trustcaptures.com/" />
+        <meta property="og:image" content="https://app.trustcaptures.com/og-image.png" />
+      </Helmet>
       <LandingNav />
       <main>
         <Hero />

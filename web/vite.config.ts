@@ -19,4 +19,9 @@ export default defineConfig({
       },
     },
   },
+  // SSR config — used only during `vite build --ssr`
+  ssr: {
+    // Keep react-router-dom as external so StaticRouter resolves correctly
+    noExternal: ['react-helmet-async'],
+  },
 })

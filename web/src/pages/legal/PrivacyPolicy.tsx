@@ -1,8 +1,17 @@
 import { Link } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-white">
+      <Helmet>
+        <title>Privacy Policy — TrustCapture</title>
+        <meta name="description" content="How LynkSavvy Technologies collects, uses and protects your data on the TrustCapture platform. Covers photo/sensor data, vendor information, storage and your rights." />
+        <link rel="canonical" href="https://app.trustcaptures.com/privacy" />
+        <meta property="og:title" content="Privacy Policy — TrustCapture" />
+        <meta property="og:description" content="How LynkSavvy Technologies collects, uses and protects your data on the TrustCapture platform." />
+        <meta property="og:url" content="https://app.trustcaptures.com/privacy" />
+      </Helmet>
       <nav className="border-b border-gray-200 bg-white">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="text-xl font-bold text-gray-900">TrustCapture</Link>

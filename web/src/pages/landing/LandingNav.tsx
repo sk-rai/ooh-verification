@@ -11,6 +11,7 @@ export default function LandingNav() {
           <a href="/" className="text-xl font-bold text-gray-900">TrustCapture</a>
 
           <div className="hidden md:flex items-center space-x-4">
+            <Link to="/use-cases" className="text-sm font-medium text-gray-600 hover:text-gray-900">Use Cases</Link>
             <Link to="/login" className="text-sm font-medium text-primary-600 hover:text-primary-700">Login</Link>
             <Link to="/register" className="text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 px-4 py-2 rounded-md transition-colors">
               Start Free Trial
