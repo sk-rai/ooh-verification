@@ -6,7 +6,9 @@
 - **Current production release:** versionCode 14 / versionName 1.4.1 — LIVE on Google Play since 21 Oct 2026, 16 countries/regions, ~33 installs, 100% rollout. See `RELEASE_NOTES_1.4.1.md`.
   - Background-location + foreground-service (location) declarations approved; walkthrough video linked.
   - targetSdk/compileSdk 36 (API 36) via AGP 8.10.0; native debug symbols included.
-- **Version-code history:** vc11 (1.3.0) was the prior live release. vc12 (API 35) and vc13 were consumed by earlier upload attempts and can never be reused. vc14 is live. Always confirm the next free code in Play Console before building the next release.
+- **Next release IN REVIEW:** versionCode 15 / versionName 1.5.0 — submitted to Production 31 Oct 2026 (submission #14). See `RELEASE_NOTES_1.5.0.md`. Auto-publishes on approval (managed publishing off).
+  - Device key-lifecycle fix: key regeneration detection + OTP re-registration gate + server-side key versioning (commit f097adb on server, commit c2bba54 on Android).
+  - Version-code history: vc11 live→14 live→15 in review. vc12/13 consumed by earlier upload attempts. Always confirm next free code in Play Console before building.
 - **App signing:** Google Play App Signing in use; local keystore is the upload key.
 
 ---
