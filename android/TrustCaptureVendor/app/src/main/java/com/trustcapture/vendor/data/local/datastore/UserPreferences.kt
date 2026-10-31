@@ -24,6 +24,11 @@ class UserPreferences @Inject constructor(
         private val KEY_LOCATION_CONSENT = booleanPreferencesKey("location_consent")
         private val KEY_PRIVACY_MODE = booleanPreferencesKey("privacy_mode")
         private val KEY_DEVICE_REGISTERED = booleanPreferencesKey("device_registered")
+        // Fingerprint (SHA-256 of DER public key) of the key last registered with the
+        // backend. Used to detect device key regeneration (reinstall/clear-data/restore):
+        // if the current Keystore key's fingerprint differs from this, the device must
+        // re-register before capture, else signatures will fail server-side.
+        private val KEY_REGISTERED_KEY_FINGERPRINT = stringPreferencesKey("registered_key_fingerprint")
         private val KEY_BACKGROUND_LOCATION_PROMPTED = booleanPreferencesKey("background_location_prompted")
         private val KEY_TRACKING_ENABLED = booleanPreferencesKey("tracking_enabled")
     }
@@ -40,6 +45,8 @@ class UserPreferences @Inject constructor(
     val hasLocationConsent: Flow<Boolean> = dataStore.data.map { it[KEY_LOCATION_CONSENT] == true }
     val privacyModeEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_PRIVACY_MODE] == true }
     val isDeviceRegistered: Flow<Boolean> = dataStore.data.map { it[KEY_DEVICE_REGISTERED] == true }
+    /** Fingerprint of the public key last registered with the backend, or null if none. */
+    val registeredKeyFingerprint: Flow<String?> = dataStore.data.map { it[KEY_REGISTERED_KEY_FINGERPRINT] }
     val hasBeenPromptedForBackgroundLocation: Flow<Boolean> = dataStore.data.map { it[KEY_BACKGROUND_LOCATION_PROMPTED] == true }
     /** User preference for tracking — defaults to true (follows backend config) */
     val trackingEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_TRACKING_ENABLED] != false }
@@ -76,6 +83,14 @@ class UserPreferences @Inject constructor(
     suspend fun setDeviceRegistered(registered: Boolean) {
         dataStore.edit { prefs ->
             prefs[KEY_DEVICE_REGISTERED] = registered
+        }
+    }
+
+    /** Record the fingerprint of the public key registered with the backend. */
+    suspend fun setRegisteredKeyFingerprint(fingerprint: String?) {
+        dataStore.edit { prefs ->
+            if (fingerprint == null) prefs.remove(KEY_REGISTERED_KEY_FINGERPRINT)
+            else prefs[KEY_REGISTERED_KEY_FINGERPRINT] = fingerprint
         }
     }
 
