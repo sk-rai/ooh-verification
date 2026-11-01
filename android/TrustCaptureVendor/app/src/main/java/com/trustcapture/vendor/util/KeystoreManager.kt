@@ -46,15 +46,39 @@ class KeystoreManager @Inject constructor() {
      * Generates an ECDSA P-256 key pair in the Android Keystore.
      * Uses StrongBox (hardware security module) on supported devices.
      * No-op if key already exists.
+     *
+     * @return true if a NEW key pair was generated (i.e. none existed), false if
+     *   an existing key was found. Callers use this to detect key regeneration
+     *   (reinstall / clear-data / device restore / Keystore eviction) and trigger
+     *   re-registration of the new public key with the backend. Without this,
+     *   the device would silently sign captures with a key the server does not
+     *   hold, causing signature verification to fail server-side.
      */
-    fun generateKeyPairIfNeeded() {
-        if (hasKeyPair()) return
+    fun generateKeyPairIfNeeded(): Boolean {
+        if (hasKeyPair()) return false
 
         try {
             generateKeyPair(useStrongBox = true)
         } catch (e: Exception) {
             // StrongBox not available — fall back to TEE-backed key
             generateKeyPair(useStrongBox = false)
+        }
+        return true
+    }
+
+    /**
+     * SHA-256 fingerprint (lowercase hex) of the current public key's DER
+     * (X.509 SubjectPublicKeyInfo) encoding. Used to detect divergence between
+     * the device's current key and the key registered with the backend.
+     * Must match the server's fingerprint derivation (SHA-256 of the same bytes).
+     */
+    fun getPublicKeyFingerprint(): String? {
+        val publicKey = getPublicKey() ?: return null
+        return try {
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            digest.digest(publicKey.encoded).joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
+            null
         }
     }
 
