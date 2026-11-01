@@ -100,11 +100,11 @@ DEFAULT_BRANDING = {
 
 # Version config — update when releasing new app versions
 VERSION_CONFIG = {
-    "latest_version_code": 14,
-    "latest_version_name": "1.4.1",
+    "latest_version_code": 15,
+    "latest_version_name": "1.5.0",
     "min_supported_version": 8,  # unchanged — no forced upgrade for existing vendors
     "update_url": "https://play.google.com/store/apps/details?id=com.lynksavvy.trustcapture",
-    "message": "New: My Route Today, tracking on/off in Settings, smarter per-campaign capture, and more reliable multi-location matching.",
+    "message": "Key-lifecycle fix: device re-registration now preserves evidence verifiability across app reinstalls and device migrations.",
 }
 
 
