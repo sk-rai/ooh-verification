@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, func, cast, Date
 from uuid import UUID
 
 from app.core.database import get_db
@@ -21,12 +21,101 @@ from app.core.deps import get_current_active_vendor, get_current_client
 from app.models.vendor import Vendor
 from app.models.client import Client
 from app.models.vendor_track import VendorTrack
+from app.models.campaign import Campaign
+from app.models.campaign_vendor_assignment import CampaignVendorAssignment
 from app.middleware.tenant_context import get_current_tenant
 
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/tracks", tags=["tracking"])
+
+
+# --------------------------------------------------------------------------- #
+# Client-entitlement predicates for vendor tracks (read endpoints only)
+#
+# Rule (owner-confirmed, date-bounded campaign scope with orphan fallback).
+# A track (vendor V, date D) is visible to client C iff:
+#   1. IN-WINDOW: C owns a campaign assigned to V whose [start_date, end_date]
+#      covers D (inclusive both ends); OR
+#   2. ORPHAN FALLBACK: NO client has such a covering campaign for (V, D) AND
+#      C created V (vendors.created_by_client_id == C).
+# If two clients both have covering campaigns, both are entitled (accepted
+# overlap behavior; no assignment constraint is introduced). An in-window
+# assignment suppresses the home-client orphan fallback for that day.
+#
+# Safety properties:
+#   * Every predicate is correlated to the CANDIDATE VendorTrack row (vendor_id,
+#     track_date, tenant_id) so entitlement is evaluated per row.
+#   * Strict tenant correlation: campaigns and vendors consulted must carry the
+#     same tenant_id as the candidate VendorTrack. campaign_vendor_assignments has
+#     no tenant_id, so the tenant is enforced via the joined Campaign and Vendor.
+#   * Campaign bounds are timestamptz; they are converted to a DATE explicitly in
+#     UTC (timezone('UTC', ts)::date) so the result never depends on the
+#     PostgreSQL session TimeZone setting.
+# --------------------------------------------------------------------------- #
+def _utc_date(column):
+    """timestamptz -> DATE in UTC, independent of the session timezone."""
+    return cast(func.timezone("UTC", column), Date)
+
+
+def _covering_campaign_exists(client_id=None):
+    """EXISTS(a campaign assignment covering the candidate VendorTrack's day).
+
+    Correlated to the enclosing VendorTrack row. When client_id is given, only
+    that client's campaigns count; otherwise any client's campaign counts.
+    """
+    conditions = [
+        CampaignVendorAssignment.vendor_id == VendorTrack.vendor_id,
+        # strict tenant correlation: campaign + vendor must match the track's tenant
+        Campaign.tenant_id == VendorTrack.tenant_id,
+        Vendor.tenant_id == VendorTrack.tenant_id,
+        # inclusive UTC date window
+        VendorTrack.track_date >= _utc_date(Campaign.start_date),
+        VendorTrack.track_date <= _utc_date(Campaign.end_date),
+    ]
+    if client_id is not None:
+        conditions.append(Campaign.client_id == client_id)
+    return (
+        select(1)
+        .select_from(CampaignVendorAssignment)
+        .join(Campaign, Campaign.campaign_id == CampaignVendorAssignment.campaign_id)
+        .join(Vendor, Vendor.vendor_id == CampaignVendorAssignment.vendor_id)
+        .where(*conditions)
+        .exists()
+    )
+
+
+def _in_window_for_client(client_id):
+    """C owns a campaign assigned to V that covers D (same tenant)."""
+    return _covering_campaign_exists(client_id)
+
+
+def _covered_by_any_client():
+    """SOME client has a campaign assigned to V that covers D (same tenant)."""
+    return _covering_campaign_exists(None)
+
+
+def _created_by_client(client_id):
+    """C created the candidate track's vendor, resolved within the same tenant."""
+    return (
+        select(1)
+        .select_from(Vendor)
+        .where(
+            Vendor.vendor_id == VendorTrack.vendor_id,
+            Vendor.tenant_id == VendorTrack.tenant_id,
+            Vendor.created_by_client_id == client_id,
+        )
+        .exists()
+    )
+
+
+def _visible_to(client_id):
+    """Entitlement predicate over the candidate VendorTrack row for client C."""
+    return _in_window_for_client(client_id) | and_(
+        ~_covered_by_any_client(),
+        _created_by_client(client_id),
+    )
 
 
 def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -152,11 +241,15 @@ async def get_vendor_track(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
 
+    # Tenant match is defense-in-depth; _visible_to enforces client entitlement for
+    # this exact (vendor, date). Not entitled -> same empty shape as "no track"
+    # (never a 404), so a client cannot probe another client's vendor.
     result = await db.execute(
         select(VendorTrack).where(
             VendorTrack.tenant_id == tenant_id,
             VendorTrack.vendor_id == vendor_id,
             VendorTrack.track_date == query_date,
+            _visible_to(client.client_id),
         )
     )
     track = result.scalar_one_or_none()
@@ -201,6 +294,7 @@ async def get_tracking_summary(
             VendorTrack.tenant_id == tenant_id,
             VendorTrack.track_date >= start_dt,
             VendorTrack.track_date <= end_dt,
+            _visible_to(client.client_id),
         ).order_by(VendorTrack.track_date.desc())
     )
     tracks = result.scalars().all()

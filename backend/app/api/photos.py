@@ -1,6 +1,7 @@
 """Photo Upload and Management API endpoints."""
 import hashlib
 import json
+import math
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -159,7 +160,10 @@ async def get_photo_locations(
 ):
     """Get photo locations for map view."""
     from app.models import SensorData as SD, Campaign as Cam, Vendor as Ven
+    from app.models.evidence import Evidence
     client_campaign_ids = select(Campaign.campaign_id).where(Campaign.client_id == client.client_id)
+    # Deterministic bounded result: newest first (NULL capture time last) with a
+    # stable id tie-break, applied BEFORE the per-source limit.
     query = (
         select(Photo, SD.gps_latitude, SD.gps_longitude, SD.gps_accuracy,
                Cam.name.label("campaign_name"), Cam.campaign_code,
@@ -172,6 +176,7 @@ async def get_photo_locations(
             SD.gps_latitude.isnot(None),
             SD.gps_longitude.isnot(None)
         )
+        .order_by(Photo.capture_timestamp.desc().nulls_last(), Photo.photo_id.desc())
         .limit(500)
     )
     result = await db.execute(query)
@@ -197,6 +202,56 @@ async def get_photo_locations(
                 "photo_url": storage.get_photo_url(p.s3_key) if p.s3_key else None,
                 "thumbnail_url": storage.get_thumbnail_url(p.s3_key) if p.s3_key else None,
                 "captured_at": p.capture_timestamp.isoformat() if p.capture_timestamp else (p.created_at.isoformat() if p.created_at else None),
+            }
+        })
+
+    # --- Unified evidence table (same client-campaign scoping as the legacy path) ---
+    # Clients whose captures live only in `evidence` (e.g. Corrxperts) were invisible
+    # on the map. Scope is identical to the legacy query: the caller's campaigns only.
+    evidence_query = (
+        select(Evidence,
+               Cam.name.label("campaign_name"), Cam.campaign_code,
+               Ven.name.label("vendor_name"))
+        .join(Cam, Cam.campaign_id == Evidence.campaign_id, isouter=True)
+        .join(Ven, Ven.vendor_id == Evidence.vendor_id, isouter=True)
+        .where(
+            Evidence.campaign_id.in_(client_campaign_ids),
+            Evidence.latitude.isnot(None),
+            Evidence.longitude.isnot(None),
+        )
+        .order_by(Evidence.capture_timestamp.desc().nulls_last(), Evidence.evidence_id.desc())
+        .limit(500)
+    )
+    evidence_rows = (await db.execute(evidence_query)).all()
+    for row in evidence_rows:
+        e = row[0]
+        # Safely exclude invalid / non-finite / out-of-range coordinates so a bad
+        # row can never crash the endpoint or place a marker off the globe.
+        try:
+            lat = float(e.latitude)
+            lon = float(e.longitude)
+        except (TypeError, ValueError):
+            continue
+        if not (math.isfinite(lat) and math.isfinite(lon)):
+            continue
+        if not (-90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0):
+            continue
+        ev_status = e.verification_status
+        features.append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [lon, lat]},
+            "properties": {
+                "photo_id": str(e.evidence_id),
+                "status": ev_status.value if hasattr(ev_status, 'value') else str(ev_status),
+                "confidence": e.verification_confidence or 0,
+                "flags": e.verification_flags or [],
+                "campaign_name": row.campaign_name or "",
+                "campaign_code": row.campaign_code or "",
+                "vendor_name": row.vendor_name or "",
+                # Evidence stores full delivery URLs directly (not storage keys).
+                "photo_url": e.file_url,
+                "thumbnail_url": e.thumbnail_url,
+                "captured_at": e.capture_timestamp.isoformat() if e.capture_timestamp else (e.created_at.isoformat() if e.created_at else None),
             }
         })
     return {"type": "FeatureCollection", "features": features}
