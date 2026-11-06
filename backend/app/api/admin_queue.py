@@ -5,9 +5,14 @@ from typing import Optional
 from uuid import UUID
 
 from app.core.database import get_db
+from app.core.admin_deps import get_current_admin
 from app.services.queue import get_queue_backend
 
-router = APIRouter(prefix="/api/admin/queue", tags=["admin-queue"])
+router = APIRouter(
+    prefix="/api/admin/queue",
+    tags=["admin-queue"],
+    dependencies=[Depends(get_current_admin)],  # P0: all queue routes require an active platform admin
+)
 
 
 @router.get("/depth")

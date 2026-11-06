@@ -16,11 +16,16 @@ from app.schemas.tenant import (
     TenantCreate, TenantUpdate, TenantResponse, TenantListResponse, BrandingResponse
 )
 from app.middleware.tenant_context import get_current_tenant
+from app.core.admin_deps import get_current_admin
 
 router = APIRouter(prefix="/api", tags=["tenants"])
 
+# P0: admin-only dependency applied PER-ROUTE to the /admin/tenants CRUD routes.
+# NOT router-level, so the public GET /api/branding on this router stays public.
+ADMIN_DEP = Depends(get_current_admin)
 
-@router.post("/admin/tenants", response_model=TenantResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post("/admin/tenants", response_model=TenantResponse, status_code=status.HTTP_201_CREATED, dependencies=[ADMIN_DEP])
 async def create_tenant(
     data: TenantCreate,
     db: AsyncSession = Depends(get_db)
@@ -83,7 +88,7 @@ async def create_tenant(
     return tenant
 
 
-@router.get("/admin/tenants", response_model=TenantListResponse)
+@router.get("/admin/tenants", response_model=TenantListResponse, dependencies=[ADMIN_DEP])
 async def list_tenants(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
@@ -121,7 +126,7 @@ async def list_tenants(
     return TenantListResponse(tenants=tenants, total=total)
 
 
-@router.get("/admin/tenants/{tenant_id}", response_model=TenantResponse)
+@router.get("/admin/tenants/{tenant_id}", response_model=TenantResponse, dependencies=[ADMIN_DEP])
 async def get_tenant(
     tenant_id: UUID,
     db: AsyncSession = Depends(get_db)
@@ -147,7 +152,7 @@ async def get_tenant(
     return tenant
 
 
-@router.put("/admin/tenants/{tenant_id}", response_model=TenantResponse)
+@router.put("/admin/tenants/{tenant_id}", response_model=TenantResponse, dependencies=[ADMIN_DEP])
 async def update_tenant(
     tenant_id: UUID,
     data: TenantUpdate,
@@ -220,7 +225,7 @@ async def update_tenant(
     return tenant
 
 
-@router.delete("/admin/tenants/{tenant_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin/tenants/{tenant_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[ADMIN_DEP])
 async def delete_tenant(
     tenant_id: UUID,
     db: AsyncSession = Depends(get_db)
