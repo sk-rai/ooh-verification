@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# Synthetic admin credential for checkpoint testing.
+# Override with ADMIN_TEST_PASSWORD env var when running against a real instance.
+import os as _os
+_ADMIN_TEST_PASSWORD = _os.environ.get("ADMIN_TEST_PASSWORD", "AdminCkpt@TestOnly1!")
 """
 Full Pre-Deployment Checkpoint Test Suite
 
@@ -406,7 +410,7 @@ async def test_admin():
             # Login
             r = await c.post("/api/admin/login", json={
                 "email": "admin@trustcapture.com",
-                "password": "TrustAdmin@2026",
+                "password": _ADMIN_TEST_PASSWORD,
             })
             log_test("Admin login", r.status_code == 200)
             if r.status_code == 200:

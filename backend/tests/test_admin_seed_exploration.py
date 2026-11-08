@@ -55,188 +55,62 @@ from tests import admin_seed_support
 _BACKEND_DIR = Path(__file__).resolve().parent.parent
 _START_SH = _BACKEND_DIR / "start.sh"
 
-_SEED_HEREDOC_MARKER = "SEEDEOF"
-
-
-def _extract_admin_seed_block() -> str:
-    """Return the admin seed python block sliced from start.sh between SEEDEOF markers.
-
-    Finds the line that opens the heredoc (``python3 << 'SEEDEOF'``) and the line
-    that closes it (a line equal to ``SEEDEOF``), returning everything strictly
-    between them. Raises AssertionError (a HARNESS error, not bug evidence) if the
-    markers cannot be located, so a structural change in start.sh is loud.
-    """
-    assert _START_SH.is_file(), f"harness: start.sh not found at {_START_SH}"
-    lines = _START_SH.read_text().splitlines()
-
-    open_idx = None
-    close_idx = None
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-        if open_idx is None:
-            # e.g. python3 << 'SEEDEOF'
-            if stripped.startswith("python3 <<") and _SEED_HEREDOC_MARKER in stripped:
-                open_idx = i
-            continue
-        if stripped == _SEED_HEREDOC_MARKER:
-            close_idx = i
-            break
-
-    assert open_idx is not None, (
-        f"harness: could not find opening '{_SEED_HEREDOC_MARKER}' heredoc in start.sh"
-    )
-    assert close_idx is not None and close_idx > open_idx, (
-        f"harness: could not find closing '{_SEED_HEREDOC_MARKER}' marker in start.sh"
-    )
-
-    block = "\n".join(lines[open_idx + 1:close_idx])
-    assert "AdminUser" in block and "AsyncSessionLocal" in block, (
-        "harness: extracted block does not look like the admin seed step"
-    )
-    return block
-
-
-def _subprocess_env() -> dict:
-    """Build the subprocess env: test DB as DATABASE_URL, production vars unset.
-
-    ``app.core.database`` binds its engine/``AsyncSessionLocal`` from ``DATABASE_URL``
-    at import, so overriding it points the extracted seed block at the isolated
-    ``*_test`` database. The validated ``TEST_DATABASE_URL`` already uses the asyncpg
-    driver, so it is suitable as-is. Production-looking vars are removed.
-    """
-    env = dict(os.environ)
-    # Point the real seed block at the isolated test database only.
-    env["DATABASE_URL"] = admin_seed_support.TEST_DATABASE_URL
-    env["TESTING"] = "true"
-    env["USE_MOCK_STORAGE"] = "true"
-    for key in ("RENDER", "ENVIRONMENT", "APP_ENV"):
-        env.pop(key, None)
-    return env
-
-
-async def _delete_all_admins(session) -> None:
-    await session.execute(text("DELETE FROM admin_users"))
-    await session.commit()
-
-
-async def _count_admins(session) -> int:
-    result = await session.execute(text("SELECT COUNT(*) FROM admin_users"))
-    return int(result.scalar_one())
-
-
-async def _seeded_admin_fingerprint(session):
-    """Return a secret-free fingerprint of seeded rows for the counterexample.
-
-    Returns a list of (email, password_hash_length) tuples. The password hash VALUE
-    is never read into the message - only its length - and the email is the already
-    public, non-secret platform admin address.
-    """
-    result = await session.execute(
-        text("SELECT email, LENGTH(password_hash) AS hlen FROM admin_users ORDER BY email")
-    )
-    return [(row.email, int(row.hlen)) for row in result]
-
+# (SEEDEOF heredoc removed in Phase B -- start.sh now calls python -m app.core.admin_bootstrap)
 
 @pytest.mark.asyncio
 async def test_empty_table_seed_creates_no_known_password_admin(setup_test_database):
-    """Property 1 RED: current start.sh seed on an EMPTY table must create ZERO admins.
+    """Property 1 (Phase B): the new start.sh admin step on an EMPTY table with no
+    bootstrap env creates ZERO admins and emits NO_ADMIN_NO_BOOTSTRAP.
 
-    EXPECTED to FAIL on the unfixed base (the inline heredoc seeds exactly one
-    admin from the legacy seed credential). The failure IS the confirmation of the
-    bug condition. ``setup_test_database`` (session fixture, conftest) guarantees the
-    ``admin_users`` table exists.
+    This test previously ran the SEEDEOF heredoc (which seeded one known-password admin).
+    Phase B removes that heredoc; the new step calls python -m app.core.admin_bootstrap,
+    which on an empty table with no env creates nothing and logs a warning.
+
+    EXPECTED: PASS (the fix is in place).
     """
     sessions, engine = admin_seed_support.make_test_sessionmaker()
     try:
-        # Isolation guard + arrange: start from a provably isolated, EMPTY table.
         async with sessions() as session:
             await admin_seed_support.assert_isolated_db(session)
-            await _delete_all_admins(session)
-            assert await _count_admins(session) == 0, (
-                "harness: admin_users was not empty after cleanup before the seed run"
-            )
+            await session.execute(text("DELETE FROM admin_users"))
+            await session.commit()
+            count_before = (await session.execute(text("SELECT COUNT(*) FROM admin_users"))).scalar()
+            assert count_before == 0, "harness: admin_users not empty before test"
 
-        # Act: run the REAL extracted start.sh admin seed block against the test DB.
-        seed_block = _extract_admin_seed_block()
+        env = dict(os.environ)
+        env["DATABASE_URL"] = admin_seed_support.TEST_DATABASE_URL
+        env["TESTING"] = "true"
+        env["USE_MOCK_STORAGE"] = "true"
+        for k in ("RENDER", "ENVIRONMENT", "APP_ENV",
+                  "ADMIN_BOOTSTRAP_EMAIL", "ADMIN_BOOTSTRAP_PASSWORD_HASH"):
+            env.pop(k, None)
+
         completed = subprocess.run(
-            [sys.executable, "-"],
-            input=seed_block,
-            env=_subprocess_env(),
+            [sys.executable, "-m", "app.core.admin_bootstrap"],
+            env=env,
             cwd=str(_BACKEND_DIR),
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=60,
         )
-
-        # A non-zero exit here most likely means the block could not import/connect:
-        # that is a HARNESS failure, not genuine bug evidence. Surface it loudly.
+        combined = completed.stdout + completed.stderr
         assert completed.returncode == 0, (
-            "harness: seed subprocess exited non-zero (import/connection problem, "
-            "not bug evidence).\n"
-            f"returncode={completed.returncode}\n"
-            f"stdout={completed.stdout}\n"
-            f"stderr={completed.stderr}"
+            f"bootstrap module exited non-zero: {completed.returncode}\n"
+            f"stdout: {completed.stdout[:300]}\nstderr: {completed.stderr[:300]}"
+        )
+        assert "NO_ADMIN_NO_BOOTSTRAP" in combined, (
+            f"expected NO_ADMIN_NO_BOOTSTRAP in output; got:\n{combined[:500]}"
         )
 
-        # Assert (expectation under the FIX): the empty table stays empty.
         async with sessions() as session:
-            count = await _count_admins(session)
-            if count != 0:
-                fingerprint = await _seeded_admin_fingerprint(session)
-                # Secret-free counterexample: count, public email, hash LENGTH only.
-                pytest.fail(
-                    "Property 1 bug condition CONFIRMED (expected RED on unfixed base): "
-                    "running the current start.sh admin seed against an EMPTY admin_users "
-                    f"created {count} admin row(s); expected 0 under the fix. "
-                    f"counterexample (no secret values) = {fingerprint} "
-                    "(tuples are (email, password_hash_length); the hash VALUE is never "
-                    "recorded)."
-                )
-            assert count == 0
+            count_after = (await session.execute(text("SELECT COUNT(*) FROM admin_users"))).scalar()
+        assert count_after == 0, (
+            f"FAIL: {count_after} admin(s) created on empty table with no bootstrap env; "
+            f"expected 0. Combined output:\n{combined[:400]}"
+        )
     finally:
-        # Clean up so no seeded row leaks into other tests, then dispose the engine.
-        try:
-            async with sessions() as session:
-                await _delete_all_admins(session)
-        finally:
-            await engine.dispose()
+        await engine.dispose()
 
-
-# =====================================================================================
-# Task 5.2.2 - Property 1 (Bug Condition): structural repo guard for a hardcoded
-# admin password. Appended alongside 5.2.1 (section 5.2 = this module). The existing
-# 5.2.1 test above is unchanged.
-#
-# EXPECTED TO FAIL ON THE UNFIXED BASE; the failure lists the files still carrying a
-# hardcoded admin password. No secret value is read from a committed source into this
-# file, and no secret value is ever written to this file or emitted in any message:
-# the guard reports ONLY file paths and line numbers.
-#
-# Validates: Requirements 1.1, 1.3, 2.1, 2.5
-#
-# What it checks (purely STRUCTURAL)
-# ----------------------------------
-#   * Enumerate TRACKED files via ``git ls-files`` from the repo root, filtered to
-#     ``*.py`` plus ``backend/start.sh``.
-#   * Python files are parsed with ``ast``. A file+line is FLAGGED when:
-#       - a ``hash_password(...)`` call (callee is ``ast.Name`` ``hash_password`` or
-#         ``ast.Attribute`` with ``.attr == "hash_password"``) receives a NON-EMPTY
-#         ``str`` ``ast.Constant`` as its first positional password argument; OR
-#       - an ``AdminUser(...)`` call has a keyword ``password_hash`` whose value is a
-#         NON-EMPTY ``str`` ``ast.Constant``; OR
-#       - a bare ``str`` ``ast.Constant`` equals the legacy seed credential. That
-#         credential value is derived at RUNTIME, in memory only, from the
-#         ``hash_password`` call already present in the committed ``conftest.py`` and
-#         is NEVER written to this file and NEVER emitted. This broad check catches
-#         the literal where it is used outside a ``hash_password``/``AdminUser`` call.
-#   * ``start.sh`` is not importable, so it is scanned as text with a regex that
-#     matches ``hash_password("...")`` / ``hash_password('...')`` with a non-empty
-#     literal and records ONLY the file name and 1-based line number. The captured
-#     literal is discarded; it never appears in any message.
-#
-# Expectation under the FIX: the flagged list is EMPTY. On the unfixed base it lists
-# ``start.sh`` and the four test files, so this test FAILS -> bug confirmed.
-# =====================================================================================
 import ast as _ast
 import re as _re
 

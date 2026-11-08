@@ -3,6 +3,8 @@ Integration tests for vendor management endpoints.
 
 **Validates: Requirements 1.1, 1.2, 1.3**
 """
+import secrets
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +12,12 @@ from sqlalchemy import select
 
 from app.models import Vendor, Client
 from app.models.vendor import VendorStatus
+
+# Generated per-process secret for the secondary "other client" fixture. This client
+# is only stored (never used in a login assertion), so a generated value preserves
+# behaviour and keeps the admin-seed-credential-fix repo guard from flagging a
+# hardcoded ``hash_password(<literal>)`` call.
+_OTHER_CLIENT_PASSWORD = secrets.token_urlsafe(12)
 
 
 class TestVendorCreation:
@@ -402,7 +410,7 @@ class TestVendorAuthorization:
         other_client = Client(
             client_id=uuid.uuid4(),
             email='other@example.com',
-            password_hash=hash_password('OtherPass123'),
+            password_hash=hash_password(_OTHER_CLIENT_PASSWORD),
             company_name='Other Company',
             phone_number='+1111111111',
             subscription_tier=SubscriptionTier.FREE,

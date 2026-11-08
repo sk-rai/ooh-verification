@@ -102,6 +102,7 @@ check_*.py
 quick_*.py
 add_quota_*.py
 create_*.py
+!backend/app/cli/create_admin.py
 /test_*.py
 /run_*.py
 

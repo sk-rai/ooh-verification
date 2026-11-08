@@ -12,32 +12,7 @@ echo "Running database migrations..."
 python3 -m alembic upgrade head || echo "Migration warning (may be OK if already applied)"
 
 echo "Checking admin user..."
-python3 << 'SEEDEOF'
-import asyncio
-from app.core.database import AsyncSessionLocal
-from app.models.admin_user import AdminUser
-from app.core.security import hash_password
-from sqlalchemy import select
-
-async def seed():
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(select(AdminUser).limit(1))
-        if not result.scalar_one_or_none():
-            admin = AdminUser(
-                email="admin@trustcapture.com",
-                password_hash=hash_password("TrustAdmin@2026"),
-                name="System Admin",
-                is_active=True
-            )
-            session.add(admin)
-            await session.commit()
-            print("Admin user seeded")
-        else:
-            print("Admin user exists")
-
-asyncio.run(seed())
-SEEDEOF
-echo "Admin seed done" || echo "Admin seed skipped"
+python3 -m app.core.admin_bootstrap || echo "WARNING: admin bootstrap step failed (non-fatal)"
 
 echo "Checking default tenant..."
 python3 << 'TENANTEOF'

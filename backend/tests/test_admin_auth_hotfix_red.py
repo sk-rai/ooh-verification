@@ -18,6 +18,7 @@ Harness mirrors tests/hotfix_support.py: own NullPool engine, committed seeding,
 fail-closed TEST_DATABASE_URL. conftest.py is NOT modified.
 """
 import os
+import secrets
 import uuid
 from datetime import datetime, timezone
 
@@ -45,6 +46,12 @@ from tests.hotfix_support import TEST_DATABASE_URL, DEFAULT_TENANT_ID, hotfix_ru
 _engine = create_async_engine(TEST_DATABASE_URL, echo=False, future=True, poolclass=NullPool)
 TestSessionLocal = async_sessionmaker(_engine, class_=AsyncSession, expire_on_commit=False)
 
+# Per-process generated password for seeded admin fixtures. The admin's token is
+# minted directly (never a login flow), so the password value is irrelevant to the
+# assertions; using a generated value removes the hardcoded literal flagged by the
+# admin-seed-credential-fix repo guard without changing the auth matrix or outcomes.
+_ADMIN_FIXTURE_PASSWORD = secrets.token_urlsafe(16)
+
 
 @pytest_asyncio.fixture
 async def api_client() -> AsyncClient:
@@ -69,7 +76,7 @@ class _Seeder:
     async def admin(self, s, active=True):
         a = AdminUser(
             admin_id=uuid.uuid4(), email=f"admin_{uuid.uuid4().hex[:8]}@x.com",
-            password_hash=hash_password("x"), name="Admin", is_active=active,
+            password_hash=hash_password(_ADMIN_FIXTURE_PASSWORD), name="Admin", is_active=active,
             created_at=datetime.now(tz=timezone.utc), updated_at=datetime.now(tz=timezone.utc),
         )
         s.add(a); await s.flush(); self.admin_ids.append(a.admin_id); return a

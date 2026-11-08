@@ -6,6 +6,11 @@ Tests all major API endpoints against a running backend (localhost:8000).
 import requests, json, io, random, sys
 
 BASE = "http://localhost:8000"
+# Synthetic admin credential for e2e testing against a fresh/seeded environment.
+# Must match whatever password was set when the admin account was bootstrapped.
+# Override with the ADMIN_TEST_PASSWORD env var when running against a real instance.
+import os as _os
+_ADMIN_TEST_PASSWORD = _os.environ.get("ADMIN_TEST_PASSWORD", "AdminE2E@TestOnly1!")
 UNIQUE = str(random.randint(100000, 999999))
 passed = 0
 failed = 0
@@ -298,7 +303,7 @@ print("\n" + "=" * 60)
 print("6. Admin Dashboard Tests")
 print("=" * 60)
 
-r = api_post("/api/admin/login", {"email": "admin@trustcapture.com", "password": "TrustAdmin@2026"})
+r = api_post("/api/admin/login", {"email": "admin@trustcapture.com", "password": _ADMIN_TEST_PASSWORD})
 test("6.1 Admin login", r.status_code == 200 and safe_get(r, "access_token"),
      str(r.status_code))
 admin_token = safe_get(r, "access_token", "")

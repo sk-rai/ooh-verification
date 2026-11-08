@@ -376,36 +376,55 @@ async def test_existing_admin_is_untouched_and_idempotent(seeded_admin_session, 
     assert await _count_admins(seeded_admin_session) == 1
 
 
-async def test_racing_duplicate_email_maps_to_already_exists(empty_admin_session):
+async def test_racing_duplicate_email_maps_to_already_exists():
     """A racing duplicate-email insert -> ALREADY_EXISTS (non-fatal), never DB_ERROR.
 
-    Arrange the race by inserting the same (normalised) email out-of-band first, then
-    call bootstrap with the same email so the UNIQUE-constraint path is exercised. The
-    contract maps this to the non-fatal ALREADY_EXISTS, not BOOTSTRAP_DB_ERROR.
+    Uses two independent sessions and asyncio.gather with insert_admin_forced (which
+    bypasses the empty-table shortcircuit) so both inserts attempt to write the same
+    email concurrently. The UNIQUE constraint on admin_users.email maps the loser to
+    ALREADY_EXISTS, not BOOTSTRAP_DB_ERROR.
     """
     import logging
 
+    import asyncio as _asyncio
     admin_bootstrap = admin_seed_support.require_admin_bootstrap_module()
     logger = logging.getLogger("admin_bootstrap_test")
 
-    race_email = "race@trustcapture.com"
-    await _insert_admin(
-        empty_admin_session,
-        email=race_email,
-        password_hash=admin_seed_support.shared_bootstrap_password_hash(),
-    )
+    sessions, engine = admin_seed_support.make_test_sessionmaker()
+    try:
+        # Clean slate
+        async with sessions() as s:
+            await admin_seed_support.assert_isolated_db(s)
+            await s.execute(text("DELETE FROM admin_users"))
+            await s.commit()
 
-    outcome = await admin_bootstrap.bootstrap_admin(
-        empty_admin_session,
-        email=race_email,
-        password_hash=admin_seed_support.shared_bootstrap_password_hash(),
-        logger=logger,
-    )
+        race_email = "race_concurrent@trustcapture.com"
+        pw_hash = admin_seed_support.shared_bootstrap_password_hash()
 
-    status = _status_text(outcome)
-    assert "ALREADY_EXISTS" in status
-    assert "BOOTSTRAP_DB_ERROR" not in status
-    assert await _count_admins(empty_admin_session) == 1
+        async def _forced_insert(_n):
+            async with sessions() as s:
+                return await admin_bootstrap.insert_admin_forced(
+                    s, email=race_email, password_hash=pw_hash, logger=logger
+                )
+
+        outcomes = await _asyncio.gather(*[_forced_insert(i) for i in range(2)],
+                                        return_exceptions=True)
+        statuses = [_status_text(o) for o in outcomes if not isinstance(o, Exception)]
+
+        assert any("ADMIN_CREATED" in s for s in statuses), (
+            f"expected at least one ADMIN_CREATED; got {statuses}"
+        )
+        assert any("ALREADY_EXISTS" in s for s in statuses), (
+            f"expected at least one ALREADY_EXISTS; got {statuses}"
+        )
+        assert not any("BOOTSTRAP_DB_ERROR" in s for s in statuses), (
+            f"unexpected DB error in race: {statuses}"
+        )
+        async with sessions() as s:
+            count = await _count_admins(s)
+        assert count == 1, f"expected 1 admin after concurrent inserts, got {count}"
+    finally:
+        await engine.dispose()
 
 
 async def test_env_still_set_warns_when_admin_exists(seeded_admin_session, caplog):
@@ -635,13 +654,15 @@ def _run_cli(args, stdin_text=""):
     subprocess that would fail with a different error.
     """
     _require_cli_module()  # RED-by-absence until Phase B
+    env = _cli_env()
+    env["ADMIN_CLI_STDIN_PASSWORD"] = "1"  # use stdin not /dev/tty in test harness
     return subprocess.run(  # pragma: no cover - unreachable until the CLI exists
         [sys.executable, "-m", _CLI_MODULE, *args],
         input=stdin_text,
-        env=_cli_env(),
+        env=env,
         capture_output=True,
         text=True,
-        timeout=120,
+        timeout=30,
     )
 
 
@@ -707,6 +728,7 @@ def test_cli_db_error_exit_nonzero():
     _require_cli_module()  # RED-by-absence until Phase B
     env = _cli_env()  # pragma: no cover
     env["DATABASE_URL"] = admin_seed_support.TEST_DATABASE_URL.rsplit("/", 1)[0] + "/does_not_exist_test"  # pragma: no cover
+    env["ADMIN_CLI_STDIN_PASSWORD"] = "1"  # pragma: no cover
     completed = subprocess.run(  # pragma: no cover
         [sys.executable, "-m", _CLI_MODULE, "--email", _PUBLIC_ADMIN_EMAIL],
         input="whatever\nwhatever\n",

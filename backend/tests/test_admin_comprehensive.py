@@ -2,6 +2,14 @@
 import pytest
 from httpx import AsyncClient
 
+# Imported so the login test sends a password that matches the conftest test_admin
+# fixture hash (which uses ADMIN_TEST_PASSWORD). Never the legacy credential.
+try:
+    from conftest import ADMIN_TEST_PASSWORD
+except ImportError:
+    import secrets
+    ADMIN_TEST_PASSWORD = secrets.token_urlsafe(18)  # fallback if conftest absent
+
 
 class TestAdminLogin:
     """Test POST /api/admin/login"""
@@ -9,7 +17,7 @@ class TestAdminLogin:
     async def test_admin_login_success(self, client: AsyncClient, test_admin):
         resp = await client.post("/api/admin/login", json={
             "email": "admin@trustcapture.com",
-            "password": "TrustAdmin@2026",
+            "password": ADMIN_TEST_PASSWORD,  # matches test_admin fixture in conftest
         })
         assert resp.status_code == 200
         data = resp.json()
