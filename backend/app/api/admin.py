@@ -14,6 +14,7 @@ from app.core.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
 from app.core.admin_deps import get_current_admin
+from app.core.admin_token_fingerprint import compute_pwf, PWF_CLAIM
 from app.models.admin_user import AdminUser
 from app.models.client import Client, SubscriptionTier, SubscriptionStatus
 from app.models.vendor import Vendor
@@ -62,11 +63,25 @@ async def admin_login(
     admin.last_login_at = datetime.now(tz=timezone.utc)
     await db.commit()
 
+    # Compute fingerprint AFTER db.commit() so it reflects the authoritative
+    # stored hash.  verify_password() uses pwd_context.verify() (bool only) so
+    # the hash is never silently mutated; admin.password_hash is stable here.
+    try:
+        pwf_value = compute_pwf(admin.password_hash)
+    except RuntimeError:
+        # JWT_SECRET_KEY is absent or insecure — misconfiguration on the
+        # operator side.  Return 503 rather than letting FastAPI produce an
+        # unhandled 500.  The message is non-secret.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Administrator authentication is not available (configuration error).",
+        )
     access_token = create_access_token(
         data={
             "sub": str(admin.admin_id),
             "type": "admin",
-            "email": admin.email
+            "email": admin.email,
+            PWF_CLAIM: pwf_value,
         }
     )
 

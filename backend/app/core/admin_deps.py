@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from app.core.database import get_db
 from app.core.security import decode_access_token
+from app.core.admin_token_fingerprint import verify_pwf, PWF_CLAIM
 from app.models.admin_user import AdminUser
 
 admin_security = HTTPBearer()
@@ -41,6 +42,17 @@ async def get_current_admin(
     admin = result.scalar_one_or_none()
 
     if admin is None or not admin.is_active:
+        raise credentials_exception
+
+    # Verify password-state fingerprint.  Constant-time comparison; missing,
+    # malformed or mismatched claim yields the same 401 as any other failure.
+    # RuntimeError means JWT_SECRET_KEY is absent/insecure — treat as 401
+    # (fail closed: the token cannot be validated, same outcome as mismatch).
+    try:
+        pwf_valid = verify_pwf(payload.get(PWF_CLAIM), admin.password_hash)
+    except RuntimeError:
+        raise credentials_exception  # 401 — fail closed, no secret in message
+    if not pwf_valid:
         raise credentials_exception
 
     return admin

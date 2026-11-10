@@ -34,6 +34,7 @@ from sqlalchemy.pool import NullPool
 
 from app.core.database import get_db
 from app.core.security import create_access_token, hash_password
+from app.core.admin_token_fingerprint import compute_pwf, PWF_CLAIM
 from app.main import app
 from app.models.admin_user import AdminUser
 from app.models.client import Client, SubscriptionTier, SubscriptionStatus
@@ -156,8 +157,12 @@ def _bad_token():
 
 
 def _admin_token(a):
-    return {"Authorization": "Bearer " + create_access_token(
-        {"sub": str(a.admin_id), "type": "admin", "email": a.email})}
+    return {"Authorization": "Bearer " + create_access_token({
+        "sub": str(a.admin_id),
+        "type": "admin",
+        "email": a.email,
+        PWF_CLAIM: compute_pwf(a.password_hash),
+    })}
 
 
 def _nonadmin_variants(principals):
