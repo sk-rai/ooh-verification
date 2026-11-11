@@ -4,7 +4,7 @@ Visitor analytics API.
 - GET /admin/analytics: dashboard data (admin only)
 - GET /cron/summarize-analytics: daily summarize + purge
 """
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, delete, and_, cast, Date
 from datetime import datetime, timedelta, timezone, date
@@ -114,7 +114,19 @@ async def track_page_view(
 async def summarize_and_purge(db: AsyncSession = Depends(get_db)):
     """
     Daily cron: enqueue analytics summarization as a background task.
+
+    DISABLED: this endpoint has no configured scheduler and is not currently
+    invoked by any external caller. It is disabled to prevent unauthenticated
+    data mutation. Contact the platform administrator to configure a scheduler
+    and authenticated service credentials before re-enabling.
     """
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Analytics summarization endpoint is not configured. "
+               "Contact the platform administrator.",
+    )
+    # The summarization logic below is preserved for the queue handler.
+    # It is unreachable via this route until properly authenticated access is added.
     try:
         from datetime import date as date_type
         target = (datetime.now(tz=timezone.utc) - timedelta(days=1)).date()

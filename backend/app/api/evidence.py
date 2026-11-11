@@ -14,6 +14,8 @@ import json
 import logging
 
 from app.core.database import get_db
+from app.core.admin_deps import get_current_admin
+from app.models.admin_user import AdminUser
 from app.core.deps import get_current_active_vendor
 from app.models.vendor import Vendor
 from app.models.campaign import Campaign
@@ -724,6 +726,7 @@ async def get_route_analysis(
 async def fix_video_thumbnails(
     request: Request,
     db: AsyncSession = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin),
 ):
     """Fix video thumbnail URLs: change .mp4 extension to .jpg for Cloudinary frame extraction."""
     from sqlalchemy import text

@@ -16,6 +16,8 @@ from sqlalchemy import select
 
 from app.core.database import get_db
 from app.models.api_key import APIKey
+from app.models.client import Client
+from app.core.deps import get_current_active_client
 
 import logging
 
@@ -188,32 +190,23 @@ async def verify_photo(
 async def create_api_key(
     name: str = Form("Production Key"),
     request: Request = None,
+    client: Client = Depends(get_current_active_client),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a new API key. Returns the raw key ONCE."""
-    from app.middleware.tenant_context import get_current_tenant
-    from app.core.deps import get_current_client
-    # This needs client auth, not API key auth
-    # For now, require tenant context (client logged in)
-    tenant_id = get_current_tenant(request)
+    """Create a new API key for the authenticated client. Returns the raw key ONCE."""
+    # Reject explicit X-Tenant-ID that conflicts with the authenticated client's tenant
+    header_tenant = request.headers.get("X-Tenant-ID") if request else None
+    if header_tenant and header_tenant != str(client.tenant_id):
+        raise HTTPException(status_code=403, detail="Tenant mismatch")
 
     # Generate key
     raw_key = "tc_live_" + secrets.token_hex(16)
     key_prefix = raw_key[:12]
     key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
 
-    # Find client_id from tenant
-    from app.models.client import Client
-    client_result = await db.execute(
-        select(Client).where(Client.tenant_id == tenant_id)
-    )
-    client = client_result.scalar_one_or_none()
-    if not client:
-        raise HTTPException(status_code=400, detail="Client not found")
-
     api_key = APIKey(
         client_id=client.client_id,
-        tenant_id=tenant_id,
+        tenant_id=client.tenant_id,
         key_hash=key_hash,
         key_prefix=key_prefix,
         name=name,
@@ -227,7 +220,7 @@ async def create_api_key(
     return {
         "key_id": str(api_key.key_id),
         "name": api_key.name,
-        "key": raw_key,  # SHOWN ONCE ONLY
+        "key": raw_key,  # SHOWN ONCE ONLY — not logged
         "prefix": key_prefix,
         "created_at": api_key.created_at.isoformat(),
         "message": "Save this key now. It cannot be shown again.",
@@ -237,14 +230,20 @@ async def create_api_key(
 @router.get("/keys", tags=["api-keys"])
 async def list_api_keys(
     request: Request = None,
+    client: Client = Depends(get_current_active_client),
     db: AsyncSession = Depends(get_db),
 ):
-    """List all API keys for the current client (shows prefix only, not full key)."""
-    from app.middleware.tenant_context import get_current_tenant
-    tenant_id = get_current_tenant(request)
+    """List API keys owned by the authenticated client (prefix only, no raw key)."""
+    # Reject explicit X-Tenant-ID that conflicts with the authenticated client's tenant
+    header_tenant = request.headers.get("X-Tenant-ID") if request else None
+    if header_tenant and header_tenant != str(client.tenant_id):
+        raise HTTPException(status_code=403, detail="Tenant mismatch")
 
     result = await db.execute(
-        select(APIKey).where(APIKey.tenant_id == tenant_id).order_by(APIKey.created_at.desc())
+        select(APIKey).where(
+            APIKey.client_id == client.client_id,
+            APIKey.tenant_id == client.tenant_id,
+        ).order_by(APIKey.created_at.desc())
     )
     keys = result.scalars().all()
 
@@ -266,14 +265,21 @@ async def list_api_keys(
 async def revoke_api_key(
     key_id: str,
     request: Request = None,
+    client: Client = Depends(get_current_active_client),
     db: AsyncSession = Depends(get_db),
 ):
-    """Revoke an API key (set inactive)."""
-    from app.middleware.tenant_context import get_current_tenant
-    tenant_id = get_current_tenant(request)
+    """Revoke an API key owned by the authenticated client."""
+    # Reject explicit X-Tenant-ID that conflicts with the authenticated client's tenant
+    header_tenant = request.headers.get("X-Tenant-ID") if request else None
+    if header_tenant and header_tenant != str(client.tenant_id):
+        raise HTTPException(status_code=403, detail="Tenant mismatch")
 
     result = await db.execute(
-        select(APIKey).where(APIKey.key_id == key_id, APIKey.tenant_id == tenant_id)
+        select(APIKey).where(
+            APIKey.key_id == key_id,
+            APIKey.client_id == client.client_id,
+            APIKey.tenant_id == client.tenant_id,
+        )
     )
     api_key = result.scalar_one_or_none()
     if not api_key:
