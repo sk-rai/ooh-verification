@@ -86,6 +86,10 @@ async def send_report_email(
 ):
     """Send site visit report to specified email addresses."""
     from app.api.site_visits import get_site_visits
+    # Reject explicit X-Tenant-ID mismatch
+    header_tenant = request.headers.get("X-Tenant-ID") if request else None
+    if header_tenant and header_tenant != str(client.tenant_id):
+        raise HTTPException(status_code=403, detail="Tenant mismatch")
 
     if not data.recipients:
         raise HTTPException(status_code=400, detail="At least one recipient required")

@@ -16,8 +16,9 @@ import logging
 from app.core.database import get_db
 from app.core.admin_deps import get_current_admin
 from app.models.admin_user import AdminUser
-from app.core.deps import get_current_active_vendor
+from app.core.deps import get_current_active_vendor, get_current_client
 from app.models.vendor import Vendor
+from app.models.client import Client
 from app.models.campaign import Campaign
 from app.models.evidence import Evidence, GpsTrack, EvidenceType, EvidenceStatus
 from app.middleware.tenant_context import get_current_tenant
@@ -58,7 +59,14 @@ async def upload_evidence(
     - gps_track: JSON array for video [{lat, lon, accuracy, timestamp_ms}, ...]
     - capture_timestamp: ISO 8601 string.
     """
-    tenant_id = get_current_tenant(request)
+    # Tenant must come from the authenticated vendor — never from an untrusted header.
+    tenant_id = str(current_vendor.tenant_id)
+    header_tenant = request.headers.get("X-Tenant-ID") if request else None
+    if header_tenant and header_tenant != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tenant mismatch: X-Tenant-ID does not match your account",
+        )
 
     # Validate evidence type
     valid_types = ["photo", "video", "voice_note", "text_note"]
@@ -493,60 +501,20 @@ async def upload_evidence(
     }
 
 
-@router.get("/{evidence_id}")
-async def get_evidence(
-    evidence_id: UUID,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
-    """Get evidence details by ID."""
-    tenant_id = get_current_tenant(request)
-
-    result = await db.execute(
-        select(Evidence).where(
-            Evidence.evidence_id == evidence_id,
-            Evidence.tenant_id == tenant_id,
-        )
-    )
-    evidence = result.scalar_one_or_none()
-
-    if not evidence:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evidence not found")
-
-    return {
-        "evidence_id": str(evidence.evidence_id),
-        "evidence_type": evidence.evidence_type,
-        "campaign_id": str(evidence.campaign_id) if evidence.campaign_id else None,
-        "vendor_id": evidence.vendor_id,
-        "category": evidence.category,
-        "text_content": evidence.text_content,
-        "file_url": evidence.file_url,
-        "thumbnail_url": evidence.thumbnail_url,
-        "file_size_bytes": evidence.file_size_bytes,
-        "duration_seconds": evidence.duration_seconds,
-        "capture_timestamp": evidence.capture_timestamp.isoformat() if evidence.capture_timestamp else None,
-        "latitude": evidence.latitude,
-        "longitude": evidence.longitude,
-        "accuracy": evidence.accuracy,
-        "verification_status": evidence.verification_status,
-        "verification_confidence": evidence.verification_confidence,
-        "verification_flags": evidence.verification_flags,
-        "created_at": evidence.created_at.isoformat(),
-    }
-
-
-
-
 @router.get("/distance")
 async def get_evidence_distance(
     id1: str,
     id2: str,
     request: Request,
     db: AsyncSession = Depends(get_db),
+    client: Client = Depends(get_current_client),
 ):
-    """Calculate haversine distance between two evidence items."""
+    """Calculate haversine distance between two evidence items. Requires authenticated client."""
     import math
-    tenant_id = get_current_tenant(request)
+    tenant_id = str(client.tenant_id)
+    header_tenant = request.headers.get("X-Tenant-ID") if request else None
+    if header_tenant and header_tenant != tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant mismatch")
 
     result1 = await db.execute(
         select(Evidence).where(Evidence.evidence_id == id1, Evidence.tenant_id == tenant_id)
@@ -600,14 +568,18 @@ async def get_route_analysis(
     date: Optional[str] = None,
     request: Request = None,
     db: AsyncSession = Depends(get_db),
+    client: Client = Depends(get_current_client),
 ):
     """
-    Analyze route for a vendor on a given day — sequential distances, gaps, speed.
+    Analyze route for a vendor on a given day. Requires authenticated client.
     Returns ordered captures with distance from previous.
     """
     import math
     from datetime import datetime as dt, timedelta
-    tenant_id = get_current_tenant(request)
+    tenant_id = str(client.tenant_id)
+    header_tenant = request.headers.get("X-Tenant-ID") if request else None
+    if header_tenant and header_tenant != tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant mismatch")
 
     query = select(Evidence).where(Evidence.tenant_id == tenant_id)
     if campaign_id:
@@ -720,6 +692,58 @@ async def get_route_analysis(
         "flags": flags,
         "points": points,
     }
+
+
+@router.get("/{evidence_id}")
+async def get_evidence(
+    evidence_id: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    client: "Client" = Depends(get_current_client),
+):
+    """Get evidence details by ID. Requires authenticated client."""
+    # Tenant from authenticated principal — never from header alone.
+    tenant_id = str(client.tenant_id)
+    header_tenant = request.headers.get("X-Tenant-ID") if request else None
+    if header_tenant and header_tenant != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tenant mismatch",
+        )
+
+    result = await db.execute(
+        select(Evidence).where(
+            Evidence.evidence_id == evidence_id,
+            Evidence.tenant_id == tenant_id,
+        )
+    )
+    evidence = result.scalar_one_or_none()
+
+    if not evidence:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evidence not found")
+
+    return {
+        "evidence_id": str(evidence.evidence_id),
+        "evidence_type": evidence.evidence_type,
+        "campaign_id": str(evidence.campaign_id) if evidence.campaign_id else None,
+        "vendor_id": evidence.vendor_id,
+        "category": evidence.category,
+        "text_content": evidence.text_content,
+        "file_url": evidence.file_url,
+        "thumbnail_url": evidence.thumbnail_url,
+        "file_size_bytes": evidence.file_size_bytes,
+        "duration_seconds": evidence.duration_seconds,
+        "capture_timestamp": evidence.capture_timestamp.isoformat() if evidence.capture_timestamp else None,
+        "latitude": evidence.latitude,
+        "longitude": evidence.longitude,
+        "accuracy": evidence.accuracy,
+        "verification_status": evidence.verification_status,
+        "verification_confidence": evidence.verification_confidence,
+        "verification_flags": evidence.verification_flags,
+        "created_at": evidence.created_at.isoformat(),
+    }
+
+
 
 
 @router.post("/fix-video-thumbnails")

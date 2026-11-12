@@ -367,12 +367,13 @@ OTHER_TENANT_ID = uuid.UUID("11111111-2222-4333-8444-555555555555")
 async def test_spoofed_tenant_header_cannot_read_foreign_tenant_tracks(api_client, seeder):
     """A client of tenant T2 presenting T1's X-Tenant-ID must not read T1 tracks.
 
-    Records the OBSERVED status codes explicitly (not an either/or): see the
-    printed OBSERVED line and the exact assertions below. Context for the separate
-    security follow-up: TenantContextMiddleware trusts a client-supplied
-    X-Tenant-ID if that tenant is active, and get_current_client resolves identity
-    from the JWT only. The hotfix does not change this; this test pins that the
-    entitlement predicate still yields no foreign data.
+    HOTFIX 2 (evidence-tenant-isolation) STRENGTHENS this contract. Previously the
+    endpoint trusted a client-supplied X-Tenant-ID (if that tenant was active) and
+    relied solely on the entitlement predicate to yield no foreign rows, returning
+    200 with an empty result. Hotfix 2 now derives the authoritative tenant from the
+    authenticated principal (the JWT) and REJECTS an explicitly conflicting
+    X-Tenant-ID header with 403 before any query runs. This test now pins that
+    stronger fail-closed behavior: the spoofed request is denied outright.
     """
     from app.models.tenant_config import TenantConfig
 
@@ -412,10 +413,9 @@ async def test_spoofed_tenant_header_cannot_read_foreign_tenant_tracks(api_clien
         )
         print(f"OBSERVED spoofed-header status: summary={summary.status_code} vendor={vendor.status_code}")
 
-        assert summary.status_code == 200, summary.text
-        assert [r for r in summary.json()["rows"] if r["vendor_id"] == v.vendor_id] == []
-        assert vendor.status_code == 200, vendor.text
-        assert vendor.json()["points"] == [] and vendor.json()["stats"] is None
+        # Hotfix 2: a conflicting spoofed X-Tenant-ID is rejected fail-closed.
+        assert summary.status_code == 403, summary.text
+        assert vendor.status_code == 403, vendor.text
     finally:
         async with TestSessionLocal() as s:
             await s.execute(delete(Client).where(Client.client_id == z.client_id))

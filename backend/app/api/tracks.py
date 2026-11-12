@@ -172,7 +172,14 @@ async def sync_track(
     Android sends batch of GPS points periodically.
     Points are appended to today's track record (upsert).
     """
-    tenant_id = get_current_tenant(request)
+    # Tenant must come from the authenticated vendor — never from an untrusted header.
+    tenant_id = str(vendor.tenant_id)
+    header_tenant = request.headers.get("X-Tenant-ID") if request else None
+    if header_tenant and header_tenant != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tenant mismatch: X-Tenant-ID does not match your account",
+        )
 
     if not data.points:
         return {"status": "no_points", "points_received": 0}
@@ -234,7 +241,14 @@ async def get_vendor_track(
     client: Client = Depends(get_current_client),
 ):
     """Get a vendor's GPS track for a specific day."""
-    tenant_id = get_current_tenant(request)
+    # Tenant from authenticated principal — header must match or be absent.
+    tenant_id = str(client.tenant_id)
+    header_tenant = request.headers.get("X-Tenant-ID") if request else None
+    if header_tenant and header_tenant != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tenant mismatch: X-Tenant-ID does not match your account",
+        )
 
     try:
         query_date = datetime.fromisoformat(track_date).date()
@@ -281,7 +295,14 @@ async def get_tracking_summary(
     client: Client = Depends(get_current_client),
 ):
     """Get attendance summary for all vendors in date range."""
-    tenant_id = get_current_tenant(request)
+    # Tenant from authenticated principal — header must match or be absent.
+    tenant_id = str(client.tenant_id)
+    header_tenant = request.headers.get("X-Tenant-ID") if request else None
+    if header_tenant and header_tenant != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tenant mismatch: X-Tenant-ID does not match your account",
+        )
 
     try:
         start_dt = datetime.fromisoformat(start_date).date()
@@ -353,6 +374,7 @@ async def get_my_track(
         select(VendorTrack).where(
             VendorTrack.vendor_id == vendor.vendor_id,
             VendorTrack.track_date == query_date,
+            VendorTrack.tenant_id == vendor.tenant_id,  # enforce principal tenant
         )
     )
     track = result.scalar_one_or_none()
