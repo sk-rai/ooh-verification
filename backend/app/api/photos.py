@@ -52,6 +52,9 @@ async def list_photos(
     # --- Query old photos table ---
     # Filter by client's campaigns (client_id isolation, not just tenant_id)
     client_campaign_ids = select(Campaign.campaign_id).where(Campaign.client_id == client.client_id)
+    # Photos: campaign owned by this client; campaign and photo both in this client's tenant.
+    from app.core.photo_visibility import photo_visibility_clause
+    photo_vis = photo_visibility_clause(client)
 
     detail_query = (
         select(Photo, SD.gps_latitude, SD.gps_longitude, SD.gps_accuracy,
@@ -60,7 +63,7 @@ async def list_photos(
         .join(SD, SD.photo_id == Photo.photo_id, isouter=True)
         .join(Cam, Cam.campaign_id == Photo.campaign_id, isouter=True)
         .join(Ven, Ven.vendor_id == Photo.vendor_id, isouter=True)
-        .where(Photo.campaign_id.in_(client_campaign_ids))
+        .where(photo_vis)
     )
     detail_query = detail_query.order_by(Photo.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(detail_query)
@@ -162,6 +165,9 @@ async def get_photo_locations(
     from app.models import SensorData as SD, Campaign as Cam, Vendor as Ven
     from app.models.evidence import Evidence
     client_campaign_ids = select(Campaign.campaign_id).where(Campaign.client_id == client.client_id)
+    # Photos: campaign owned by this client; campaign and photo both in this client's tenant.
+    from app.core.photo_visibility import photo_visibility_clause
+    photo_vis = photo_visibility_clause(client)
     # Deterministic bounded result: newest first (NULL capture time last) with a
     # stable id tie-break, applied BEFORE the per-source limit.
     query = (
@@ -172,7 +178,7 @@ async def get_photo_locations(
         .join(Cam, Cam.campaign_id == Photo.campaign_id, isouter=True)
         .join(Ven, Ven.vendor_id == Photo.vendor_id, isouter=True)
         .where(
-            Photo.campaign_id.in_(client_campaign_ids),
+            photo_vis,
             SD.gps_latitude.isnot(None),
             SD.gps_longitude.isnot(None)
         )
