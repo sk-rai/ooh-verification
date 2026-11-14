@@ -58,6 +58,9 @@ class ReportGenerator:
         scope, a nonexistent code, another tenant's campaign and another client's campaign
         all raise the identical ValueError, which the routes map to the same 404, so
         callers cannot tell them apart.
+
+        Callers must also scope every Photo query to ``campaign.tenant_id`` (not just the
+        campaign id) so a photo carrying another tenant's id never joins a report.
         """
         tenant_id = self._coerce_uuid(self.tenant_id)
         client_id = self._coerce_uuid(self.client_id)
@@ -85,7 +88,7 @@ class ReportGenerator:
             select(Photo, SensorData, AuditLog)
             .join(SensorData, Photo.photo_id == SensorData.photo_id)
             .outerjoin(AuditLog, Photo.photo_id == AuditLog.photo_id)
-            .where(Photo.campaign_id == campaign.campaign_id)
+            .where(Photo.campaign_id == campaign.campaign_id, Photo.tenant_id == campaign.tenant_id)
             .order_by(Photo.capture_timestamp.desc())
         )
         
@@ -147,7 +150,7 @@ class ReportGenerator:
             select(Photo, SensorData, AuditLog)
             .join(SensorData, Photo.photo_id == SensorData.photo_id)
             .outerjoin(AuditLog, Photo.photo_id == AuditLog.photo_id)
-            .where(Photo.campaign_id == campaign.campaign_id)
+            .where(Photo.campaign_id == campaign.campaign_id, Photo.tenant_id == campaign.tenant_id)
         )
         
         result = await self.db.execute(query)
@@ -177,7 +180,7 @@ class ReportGenerator:
         photos_query = (
             select(Photo, AuditLog)
             .outerjoin(AuditLog, Photo.photo_id == AuditLog.photo_id)
-            .where(Photo.campaign_id == campaign.campaign_id)
+            .where(Photo.campaign_id == campaign.campaign_id, Photo.tenant_id == campaign.tenant_id)
         )
         photos_result = await self.db.execute(photos_query)
         photos_rows = photos_result.all()

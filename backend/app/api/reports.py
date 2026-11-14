@@ -114,10 +114,11 @@ async def download_pdf_report(
     Requirements: 3.1, 3.2, 3.3, 3.4
     """
     try:
-        from app.services.pdf_generator import PDFGenerator
-        
-        # Get campaign statistics
+        # Authorize first: the ownership lookup must run before anything that can fail for
+        # every caller (e.g. the PDF renderer being unavailable), so unauthorized or
+        # nonexistent campaigns always get the same 404 as the other report endpoints.
         stats = await report_gen.get_campaign_statistics(campaign_code)
+        from app.services.pdf_generator import PDFGenerator
         campaign_data = stats['campaign']
         
         # Generate charts as PNG images
