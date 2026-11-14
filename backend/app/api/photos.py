@@ -97,21 +97,17 @@ async def list_photos(
     ]
 
     # --- Query new evidence table ---
-    # Filter evidence by client's campaigns + quick capture by client's vendors
-    from app.models.vendor_client_association import VendorClientAssociation
-    client_vendor_ids_q = select(VendorClientAssociation.vendor_id).where(
-        VendorClientAssociation.client_id == client.client_id
-    )
+    # Shared authorization predicate (Option A): campaign-bound rows for the
+    # client's campaigns, plus campaign-free Quick Capture gated by an ACTIVE
+    # vendor-client association with four-way tenant agreement.
+    from app.core.evidence_visibility import evidence_visibility_clause
 
     evidence_query = (
         select(Evidence, Cam.name.label("campaign_name"), Cam.campaign_code,
                Ven.name.label("vendor_name"))
         .join(Cam, Cam.campaign_id == Evidence.campaign_id, isouter=True)
         .join(Ven, Ven.vendor_id == Evidence.vendor_id, isouter=True)
-        .where(
-            (Evidence.campaign_id.in_(client_campaign_ids)) |
-            (Evidence.campaign_id.is_(None) & Evidence.vendor_id.in_(client_vendor_ids_q))
-        )
+        .where(evidence_visibility_clause(client))
     )
     if campaign_code:
         campaign_result2 = await db.execute(
@@ -214,6 +210,7 @@ async def get_photo_locations(
     # --- Unified evidence table (same client-campaign scoping as the legacy path) ---
     # Clients whose captures live only in `evidence` (e.g. Corrxperts) were invisible
     # on the map. Scope is identical to the legacy query: the caller's campaigns only.
+    from app.core.evidence_visibility import evidence_visibility_clause
     evidence_query = (
         select(Evidence,
                Cam.name.label("campaign_name"), Cam.campaign_code,
@@ -221,7 +218,7 @@ async def get_photo_locations(
         .join(Cam, Cam.campaign_id == Evidence.campaign_id, isouter=True)
         .join(Ven, Ven.vendor_id == Evidence.vendor_id, isouter=True)
         .where(
-            Evidence.campaign_id.in_(client_campaign_ids),
+            evidence_visibility_clause(client),
             Evidence.latitude.isnot(None),
             Evidence.longitude.isnot(None),
         )

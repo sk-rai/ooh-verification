@@ -331,19 +331,23 @@ async def get_aggregate_statistics(
         )
     )).scalar() or 0
 
-    # Also count evidence table records
+    # Also count evidence table records (campaign-bound + authorized Quick Capture).
+    # Uses the shared visibility predicate so counts match the Gallery/Map surfaces
+    # exactly; each evidence row is counted at most once.
     from app.models.evidence import Evidence
+    from app.core.evidence_visibility import evidence_visibility_clause
+    _vis = evidence_visibility_clause(client)
     evidence_total = (await db.execute(
-        select(func.count()).select_from(Evidence).where(Evidence.campaign_id.in_(client_campaign_ids))
+        select(func.count()).select_from(Evidence).where(_vis)
     )).scalar() or 0
     evidence_verified = (await db.execute(
         select(func.count()).select_from(Evidence).where(
-            Evidence.campaign_id.in_(client_campaign_ids), Evidence.verification_status == "verified"
+            _vis, Evidence.verification_status == "verified"
         )
     )).scalar() or 0
     evidence_rejected = (await db.execute(
         select(func.count()).select_from(Evidence).where(
-            Evidence.campaign_id.in_(client_campaign_ids), Evidence.verification_status == "rejected"
+            _vis, Evidence.verification_status == "rejected"
         )
     )).scalar() or 0
     evidence_pending = evidence_total - evidence_verified - evidence_rejected
@@ -585,19 +589,16 @@ async def get_table_data(
         for row in rows
     ]
 
-    # Also include evidence table records
+    # Also include evidence table records using the shared visibility predicate
+    # (campaign-bound + authorized Quick Capture; ACTIVE association + tenant guard).
     from app.models.evidence import Evidence
-    from app.models.vendor_client_association import VendorClientAssociation
-    client_vendor_ids = select(VendorClientAssociation.vendor_id).where(VendorClientAssociation.client_id == client.client_id)
+    from app.core.evidence_visibility import evidence_visibility_clause
     evidence_query = (
         select(Evidence, Campaign.name.label("campaign_name"), Campaign.campaign_code,
                Vendor.name.label("vendor_name"), Vendor.vendor_id.label("vid"))
         .join(Campaign, Campaign.campaign_id == Evidence.campaign_id, isouter=True)
         .join(Vendor, Vendor.vendor_id == Evidence.vendor_id, isouter=True)
-        .where(
-            (Evidence.campaign_id.in_(client_campaign_ids)) |
-            (Evidence.campaign_id.is_(None) & Evidence.vendor_id.in_(client_vendor_ids))
-        )
+        .where(evidence_visibility_clause(client))
     )
     if start_date:
         evidence_query = evidence_query.where(Evidence.created_at >= datetime.fromisoformat(start_date))
