@@ -330,6 +330,7 @@ async def get_campaign_photos(
     result = await db.execute(
         select(Campaign).where(
             Campaign.campaign_id == campaign_id,
+            Campaign.client_id == client.client_id,
             Campaign.tenant_id == client.tenant_id
         )
     )

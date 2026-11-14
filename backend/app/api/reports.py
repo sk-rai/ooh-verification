@@ -23,10 +23,13 @@ def get_report_generator(
     db: AsyncSession = Depends(get_db),
     client: Client = Depends(get_current_client)
 ) -> ReportGenerator:
-    """Dependency for report generator with tenant scoping."""
+    """Dependency for report generator scoped to the authenticated client's tenant AND ownership."""
     chart_gen = ChartGenerator()
     map_gen = MapGenerator()
-    return ReportGenerator(db, chart_gen, map_gen, tenant_id=client.tenant_id)
+    return ReportGenerator(
+        db, chart_gen, map_gen,
+        tenant_id=client.tenant_id, client_id=client.client_id,
+    )
 
 
 @router.get("/campaigns/{campaign_code}/csv")

@@ -26,22 +26,59 @@ class ReportGenerator:
         db: AsyncSession,
         chart_generator: ChartGenerator,
         map_generator: MapGenerator,
-        tenant_id=None
+        tenant_id=None,
+        client_id=None
     ):
         self.db = db
         self.chart_generator = chart_generator
         self.map_generator = map_generator
+        # Ownership scope. BOTH are required to resolve any campaign: a generator built
+        # without them fails closed (see _get_owned_campaign).
         self.tenant_id = tenant_id
+        self.client_id = client_id
+
+    @staticmethod
+    def _coerce_uuid(value):
+        """Return a uuid.UUID for ``value`` or None when absent/invalid (fail closed)."""
+        import uuid as _uuid
+        if value is None:
+            return None
+        if isinstance(value, _uuid.UUID):
+            return value
+        try:
+            return _uuid.UUID(str(value))
+        except (ValueError, AttributeError, TypeError):
+            return None
+
+    async def _get_owned_campaign(self, campaign_code: str) -> Campaign:
+        """
+        Single authorization choke point for every report entry point.
+
+        Returns the campaign only if it belongs to this client AND this tenant. A missing
+        scope, a nonexistent code, another tenant's campaign and another client's campaign
+        all raise the identical ValueError, which the routes map to the same 404, so
+        callers cannot tell them apart.
+        """
+        tenant_id = self._coerce_uuid(self.tenant_id)
+        client_id = self._coerce_uuid(self.client_id)
+        if tenant_id is None or client_id is None:
+            raise ValueError(f"Campaign {campaign_code} not found")
+        result = await self.db.execute(
+            select(Campaign).where(
+                Campaign.campaign_code == campaign_code,
+                Campaign.client_id == client_id,
+                Campaign.tenant_id == tenant_id,
+            )
+        )
+        campaign = result.scalar_one_or_none()
+        if campaign is None:
+            raise ValueError(f"Campaign {campaign_code} not found")
+        return campaign
 
     async def generate_csv_report(self, campaign_code: str) -> str:
         """Generate CSV report for a campaign."""
         # First verify campaign exists
-        campaign_query = select(Campaign).where(Campaign.campaign_code == campaign_code)
-        campaign_result = await self.db.execute(campaign_query)
-        campaign = campaign_result.scalar_one_or_none()
-        
-        if not campaign:
-            raise ValueError(f"Campaign {campaign_code} not found")
+        campaign = await self._get_owned_campaign(campaign_code)
         
         # Query photos with sensor data and audit logs
         query = (
@@ -104,12 +141,7 @@ class ReportGenerator:
     async def generate_geojson_report(self, campaign_code: str) -> Dict[str, Any]:
         """Generate GeoJSON report for a campaign."""
         # First verify campaign exists
-        campaign_query = select(Campaign).where(Campaign.campaign_code == campaign_code)
-        campaign_result = await self.db.execute(campaign_query)
-        campaign = campaign_result.scalar_one_or_none()
-        
-        if not campaign:
-            raise ValueError(f"Campaign {campaign_code} not found")
+        campaign = await self._get_owned_campaign(campaign_code)
         
         query = (
             select(Photo, SensorData, AuditLog)
@@ -140,12 +172,7 @@ class ReportGenerator:
 
     async def get_campaign_statistics(self, campaign_code: str) -> Dict[str, Any]:
         """Get statistics for a campaign."""
-        campaign_query = select(Campaign).where(Campaign.campaign_code == campaign_code)
-        campaign_result = await self.db.execute(campaign_query)
-        campaign = campaign_result.scalar_one_or_none()
-        
-        if not campaign:
-            raise ValueError(f"Campaign {campaign_code} not found")
+        campaign = await self._get_owned_campaign(campaign_code)
         
         photos_query = (
             select(Photo, AuditLog)

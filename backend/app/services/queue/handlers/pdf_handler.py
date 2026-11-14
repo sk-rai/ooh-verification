@@ -16,10 +16,13 @@ async def handle_generate_pdf(db: AsyncSession, payload: dict):
 
     campaign_code = payload["campaign_code"]
     tenant_id = payload.get("tenant_id")
+    # The task must carry the requesting client's id; without it (or with a client that
+    # does not own the campaign) the generator fails closed with "not found".
+    client_id = payload.get("client_id")
 
     chart_gen = ChartGenerator()
     map_gen = MapGenerator()
-    report_gen = ReportGenerator(db, chart_gen, map_gen, tenant_id=tenant_id)
+    report_gen = ReportGenerator(db, chart_gen, map_gen, tenant_id=tenant_id, client_id=client_id)
 
     stats = await report_gen.get_campaign_statistics(campaign_code)
     campaign_data = stats["campaign"]
