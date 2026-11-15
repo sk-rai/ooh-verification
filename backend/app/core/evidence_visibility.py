@@ -10,14 +10,21 @@ visible to an authenticated client iff:
 
 No ``created_by_client_id`` union; no implicit ownership inference. Campaign-bound
 evidence is keyed on the client's own campaigns AND requires the evidence tenant to
-equal the client's tenant.
+equal the client's tenant. "The client's own campaigns" uses the same rule as the
+Hotfix 3 legacy-photo predicate (``app.core.photo_visibility.owned_campaigns_subquery``):
+``Campaign.client_id == client.client_id`` AND ``Campaign.tenant_id == client.tenant_id``.
+
+A missing scope (no client, or a client without client_id / tenant_id) FAILS CLOSED:
+every clause is FALSE, rather than relying on ``== None`` rendering as ``IS NULL``.
 
 This module centralizes the predicate so Gallery, Map, Statistics and report
 detail apply IDENTICAL authorization logic (cross-surface parity).
 """
 from __future__ import annotations
 
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_, or_, false
+
+from app.core.photo_visibility import owned_campaigns_subquery
 
 from app.models.evidence import Evidence
 from app.models.campaign import Campaign
@@ -29,9 +36,20 @@ from app.models.vendor_client_association import (
 )
 
 
+def _has_scope(client) -> bool:
+    return (
+        client is not None
+        and getattr(client, "client_id", None) is not None
+        and getattr(client, "tenant_id", None) is not None
+    )
+
+
 def client_campaign_ids_subquery(client: Client):
-    """Scalar subquery of campaign_ids owned by this client."""
-    return select(Campaign.campaign_id).where(Campaign.client_id == client.client_id)
+    """Campaign ids owned by this client within its own tenant (empty without scope).
+
+    Delegates to the Hotfix 3 rule so legacy photos and Evidence share one definition.
+    """
+    return owned_campaigns_subquery(client)
 
 
 def quick_capture_visibility_clause(client: Client):
@@ -42,6 +60,8 @@ def quick_capture_visibility_clause(client: Client):
     enforcing four-way tenant agreement against the authenticated principal's
     tenant (``client.tenant_id``) and the evidence row's tenant.
     """
+    if not _has_scope(client):
+        return false()
     client_tenant = client.tenant_id
     assoc_exists = (
         select(VendorClientAssociation.association_id)
@@ -69,6 +89,8 @@ def campaign_bound_visibility_clause(client: Client):
     guard against evidence that references this client's campaign but was written
     under a different tenant (e.g. via an unvalidated upload campaign reference).
     """
+    if not _has_scope(client):
+        return false()
     return and_(
         Evidence.campaign_id.in_(client_campaign_ids_subquery(client)),
         Evidence.tenant_id == client.tenant_id,
@@ -82,6 +104,8 @@ def evidence_visibility_clause(client: Client):
         equals the client's tenant; OR
       * campaign-free rows: the Quick Capture ACTIVE-association + tenant rule.
     """
+    if not _has_scope(client):
+        return false()
     return or_(
         campaign_bound_visibility_clause(client),
         quick_capture_visibility_clause(client),
