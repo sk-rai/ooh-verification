@@ -501,6 +501,19 @@ async def upload_evidence(
     }
 
 
+def _has_client_scope(client) -> bool:
+    """A client principal without client_id or tenant_id must never match any row."""
+    return (
+        client is not None
+        and getattr(client, "client_id", None) is not None
+        and getattr(client, "tenant_id", None) is not None
+    )
+
+
+def _empty_route_response() -> dict:
+    return {"total_points": 0, "total_distance_km": 0.0, "max_gap_km": 0.0, "flags": [], "points": []}
+
+
 @router.get("/distance")
 async def get_evidence_distance(
     id1: str,
@@ -509,18 +522,27 @@ async def get_evidence_distance(
     db: AsyncSession = Depends(get_db),
     client: Client = Depends(get_current_client),
 ):
-    """Calculate haversine distance between two evidence items. Requires authenticated client."""
+    """Calculate haversine distance between two evidence items. Requires authenticated client.
+
+    Both items must be visible to the client under the shared Evidence visibility rule
+    (campaign ownership in the client's tenant, or ACTIVE-association Quick Capture);
+    otherwise the same 404 as for a nonexistent id is returned.
+    """
     import math
+    from app.core.evidence_visibility import evidence_visibility_clause
+    if not _has_client_scope(client):
+        raise HTTPException(status_code=404, detail="Evidence not found")
     tenant_id = str(client.tenant_id)
     header_tenant = request.headers.get("X-Tenant-ID") if request else None
     if header_tenant and header_tenant != tenant_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant mismatch")
 
+    visible = evidence_visibility_clause(client)
     result1 = await db.execute(
-        select(Evidence).where(Evidence.evidence_id == id1, Evidence.tenant_id == tenant_id)
+        select(Evidence).where(Evidence.evidence_id == id1, Evidence.tenant_id == tenant_id, visible)
     )
     result2 = await db.execute(
-        select(Evidence).where(Evidence.evidence_id == id2, Evidence.tenant_id == tenant_id)
+        select(Evidence).where(Evidence.evidence_id == id2, Evidence.tenant_id == tenant_id, visible)
     )
     ev1 = result1.scalar_one_or_none()
     ev2 = result2.scalar_one_or_none()
@@ -573,15 +595,24 @@ async def get_route_analysis(
     """
     Analyze route for a vendor on a given day. Requires authenticated client.
     Returns ordered captures with distance from previous.
+
+    Only points the client may see are included: Evidence under the shared Evidence
+    visibility rule and legacy photos under the Hotfix 3 photo rule. A vendor shared with
+    other clients therefore contributes only this client's campaign captures plus its
+    ACTIVE-association Quick Captures.
     """
     import math
     from datetime import datetime as dt, timedelta
+    from app.core.evidence_visibility import evidence_visibility_clause
+    from app.core.photo_visibility import photo_visibility_clause
+    if not _has_client_scope(client):
+        return _empty_route_response()
     tenant_id = str(client.tenant_id)
     header_tenant = request.headers.get("X-Tenant-ID") if request else None
     if header_tenant and header_tenant != tenant_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant mismatch")
 
-    query = select(Evidence).where(Evidence.tenant_id == tenant_id)
+    query = select(Evidence).where(Evidence.tenant_id == tenant_id, evidence_visibility_clause(client))
     if campaign_id:
         query = query.where(Evidence.campaign_id == campaign_id)
     if vendor_id:
@@ -603,7 +634,7 @@ async def get_route_analysis(
     photo_query = (
         select(Photo, SensorData.gps_latitude, SensorData.gps_longitude)
         .join(SensorData, SensorData.photo_id == Photo.photo_id, isouter=True)
-        .where(Photo.tenant_id == tenant_id)
+        .where(Photo.tenant_id == tenant_id, photo_visibility_clause(client))
     )
     if campaign_id:
         photo_query = photo_query.where(Photo.campaign_id == campaign_id)
@@ -701,7 +732,14 @@ async def get_evidence(
     db: AsyncSession = Depends(get_db),
     client: "Client" = Depends(get_current_client),
 ):
-    """Get evidence details by ID. Requires authenticated client."""
+    """Get evidence details by ID. Requires authenticated client.
+
+    The row must be visible to the client under the shared Evidence visibility rule;
+    an unauthorized id returns the same 404 as a nonexistent one.
+    """
+    from app.core.evidence_visibility import evidence_visibility_clause
+    if not _has_client_scope(client):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evidence not found")
     # Tenant from authenticated principal — never from header alone.
     tenant_id = str(client.tenant_id)
     header_tenant = request.headers.get("X-Tenant-ID") if request else None
@@ -715,6 +753,7 @@ async def get_evidence(
         select(Evidence).where(
             Evidence.evidence_id == evidence_id,
             Evidence.tenant_id == tenant_id,
+            evidence_visibility_clause(client),
         )
     )
     evidence = result.scalar_one_or_none()

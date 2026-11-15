@@ -311,7 +311,18 @@ async def test_analytics_track_still_public(api_client):
 @pytest_asyncio.fixture
 async def attacker_evidence(attacker_client, attacker_vendor):
     """Evidence owned by the attacker's OWN tenant (DEFAULT_TENANT_ID), with GPS,
-    so positive same-tenant distance/route-analysis can be exercised."""
+    so positive same-tenant distance/route-analysis can be exercised.
+
+    The items are campaign-free (Quick Capture). Under the shared Evidence visibility rule a
+    client owns Quick Capture only through an ACTIVE vendor-client association, so the
+    fixture creates that association (the normal state for a client's own vendor).
+    """
+    from app.models.vendor_client_association import VendorClientAssociation, AssociationStatus
+    assoc = VendorClientAssociation(
+        association_id=uuid.uuid4(), vendor_id=attacker_vendor.vendor_id,
+        client_id=attacker_client.client_id, tenant_id=DEFAULT_TENANT_ID,
+        status=AssociationStatus.ACTIVE, enrolled_at=datetime.now(tz=timezone.utc),
+    )
     ev = Evidence(
         tenant_id=DEFAULT_TENANT_ID,
         vendor_id=attacker_vendor.vendor_id,
@@ -333,11 +344,13 @@ async def attacker_evidence(attacker_client, attacker_vendor):
         updated_at=datetime.now(tz=timezone.utc),
     )
     async with _Sessions() as s:
-        s.add(ev); s.add(ev2); await s.commit()
+        s.add(assoc); s.add(ev); s.add(ev2); await s.commit()
         await s.refresh(ev); await s.refresh(ev2)
     yield (ev, ev2)
     async with _Sessions() as s:
         await s.execute(delete(Evidence).where(Evidence.evidence_id.in_([ev.evidence_id, ev2.evidence_id])))
+        await s.execute(delete(VendorClientAssociation).where(
+            VendorClientAssociation.association_id == assoc.association_id))
         await s.commit()
 
 
