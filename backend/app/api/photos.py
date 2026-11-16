@@ -283,23 +283,15 @@ def calculate_photo_hash(photo_bytes: bytes) -> bytes:
 
 
 async def verify_campaign_and_vendor(campaign_code: str, vendor: Vendor, db: AsyncSession) -> Campaign:
-    """Verify campaign exists and vendor is assigned to it."""
-    result = await db.execute(select(Campaign).where(Campaign.campaign_code == campaign_code))
-    campaign = result.scalar_one_or_none()
-    if not campaign:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Campaign not found: {campaign_code}")
-    from app.models.campaign import CampaignStatus
-    if campaign.status != CampaignStatus.ACTIVE:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Campaign is not active: {campaign.status.value}")
-    result = await db.execute(
-        select(CampaignVendorAssignment).where(
-            CampaignVendorAssignment.campaign_id == campaign.campaign_id,
-            CampaignVendorAssignment.vendor_id == vendor.vendor_id
-        )
-    )
-    assignment = result.scalar_one_or_none()
-    if not assignment:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Vendor not assigned to this campaign")
+    """Verify the campaign exists in the vendor's tenant, the vendor is assigned and the campaign is ACTIVE.
+
+    Delegates to the shared helper used by POST /api/evidence/upload so both endpoints apply the same rules.
+    The legacy endpoint has no Quick Capture mode, so a blank campaign_code is rejected.
+    """
+    from app.core.campaign_authz import authorize_campaign_reference
+    campaign = await authorize_campaign_reference(db, vendor, campaign_code=campaign_code)
+    if campaign is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="campaign_code is required")
     return campaign
 
 
@@ -316,6 +308,10 @@ async def upload_photo(
     """Upload photo with sensor data and signature for verification.
     Task C: Enhanced verification with pressure/magnetic comparison, tremor flagging, confidence score.
     """
+    # Authorize the campaign FIRST: before the uploaded file is read or validated, before quota checks,
+    # storage writes, database writes and any geofence verification.
+    campaign = await verify_campaign_and_vendor(campaign_code, vendor, db)
+
     # Validate photo file
     photo_bytes = validate_photo_file(photo)
 
@@ -342,9 +338,6 @@ async def upload_photo(
         capture_dt = datetime.fromisoformat(capture_timestamp.replace('Z', '+00:00'))
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid capture_timestamp format. Use ISO 8601.")
-
-    # Verify campaign and vendor assignment
-    campaign = await verify_campaign_and_vendor(campaign_code, vendor, db)
 
     # Check quotas (must be after campaign lookup to access campaign.client_id)
     enforcer = get_quota_enforcer(db)

@@ -68,6 +68,14 @@ async def upload_evidence(
             detail="Tenant mismatch: X-Tenant-ID does not match your account",
         )
 
+    # Authorize the campaign reference FIRST: before request validation, file handling, object storage,
+    # database writes and geofence verification. Rejections are 400/403/404/409 and reveal nothing about
+    # verification. No reference at all means an explicit Quick Capture (campaign_authorized is None).
+    from app.core.campaign_authz import authorize_campaign_reference
+    campaign_authorized = await authorize_campaign_reference(
+        db, current_vendor, campaign_id=campaign_id, campaign_code=campaign_code
+    )
+
     # Validate evidence type
     valid_types = ["photo", "video", "voice_note", "text_note"]
     if evidence_type not in valid_types:
@@ -90,20 +98,8 @@ async def upload_evidence(
             detail="text_content is required for text_note type"
         )
 
-    # Resolve campaign (optional)
-    resolved_campaign_id = None
-    if campaign_id:
-        try:
-            resolved_campaign_id = UUID(campaign_id)
-        except ValueError:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid campaign_id UUID")
-    elif campaign_code:
-        result = await db.execute(
-            select(Campaign).where(Campaign.campaign_code == campaign_code)
-        )
-        campaign = result.scalar_one_or_none()
-        if campaign:
-            resolved_campaign_id = campaign.campaign_id
+    # Campaign already resolved and authorized above (None = explicit Quick Capture).
+    resolved_campaign_id = campaign_authorized.campaign_id if campaign_authorized else None
 
     # Parse sensor data
     parsed_sensor_data = None
