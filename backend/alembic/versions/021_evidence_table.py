@@ -2,6 +2,15 @@
 
 Unified evidence model supporting photo, video, voice note, and text note captures.
 Campaign-optional for quick capture / event-driven evidence.
+
+M1 repair (migration-drift): the startup DDL in app/main.py already creates these tables in production, so the plain
+CREATE TABLE failed with DuplicateTableError. Every statement is now idempotent and the definitions are unchanged from the
+original migration. Indexes the original migration defined but production never received (the startup DDL omits them) are
+created here: ix_cases_tenant_id, ix_cases_client_id, ix_evidence_evidence_id, ix_evidence_category,
+ix_evidence_tenant_type, ix_evidence_campaign_vendor.
+
+Not in scope here (tracked for M2): evidence.signing_key_id / signing_key_fingerprint / signature_outcome, the
+device_keys / api_keys / vendor_tracks tables and the geofence columns are still created only by the startup DDL.
 """
 from alembic import op
 import sqlalchemy as sa
@@ -15,83 +24,94 @@ depends_on = None
 
 
 def upgrade() -> None:
+    op.execute("SET LOCAL lock_timeout = '5s'")
+
     # Cases table (for grouping related evidence)
-    op.create_table(
-        'cases',
-        sa.Column('case_id', UUID(as_uuid=True), primary_key=True, server_default=sa.text('gen_random_uuid()')),
-        sa.Column('tenant_id', UUID(as_uuid=True), nullable=False, index=True),
-        sa.Column('client_id', UUID(as_uuid=True), sa.ForeignKey('clients.client_id', ondelete='CASCADE'), nullable=False, index=True),
-        sa.Column('title', sa.String(255), nullable=False),
-        sa.Column('description', sa.Text, nullable=True),
-        sa.Column('category', sa.String(50), nullable=True),
-        sa.Column('status', sa.String(20), nullable=False, server_default='open'),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-    )
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS cases (
+            case_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            tenant_id UUID NOT NULL,
+            client_id UUID NOT NULL REFERENCES clients(client_id) ON DELETE CASCADE,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            category VARCHAR(50),
+            status VARCHAR(20) NOT NULL DEFAULT 'open',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+    """)
+    op.execute("CREATE INDEX IF NOT EXISTS ix_cases_tenant_id ON cases (tenant_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_cases_client_id ON cases (client_id)")
 
     # Evidence table (unified captures)
-    op.create_table(
-        'evidence',
-        sa.Column('evidence_id', UUID(as_uuid=True), primary_key=True, server_default=sa.text('gen_random_uuid()')),
-        sa.Column('tenant_id', UUID(as_uuid=True), nullable=False),
-        sa.Column('campaign_id', UUID(as_uuid=True), sa.ForeignKey('campaigns.campaign_id', ondelete='SET NULL'), nullable=True),
-        sa.Column('vendor_id', sa.String(6), sa.ForeignKey('vendors.vendor_id', ondelete='CASCADE'), nullable=False),
-        sa.Column('case_id', UUID(as_uuid=True), sa.ForeignKey('cases.case_id', ondelete='SET NULL'), nullable=True),
-        sa.Column('evidence_type', sa.String(20), nullable=False),
-        sa.Column('category', sa.String(50), nullable=True),
-        sa.Column('file_key', sa.String(500), nullable=True),
-        sa.Column('file_url', sa.String(500), nullable=True),
-        sa.Column('thumbnail_key', sa.String(500), nullable=True),
-        sa.Column('thumbnail_url', sa.String(500), nullable=True),
-        sa.Column('file_size_bytes', sa.BigInteger, nullable=True),
-        sa.Column('mime_type', sa.String(50), nullable=True),
-        sa.Column('duration_seconds', sa.Float, nullable=True),
-        sa.Column('text_content', sa.Text, nullable=True),
-        sa.Column('capture_timestamp', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('latitude', sa.Float, nullable=True),
-        sa.Column('longitude', sa.Float, nullable=True),
-        sa.Column('accuracy', sa.Float, nullable=True),
-        sa.Column('verification_status', sa.String(20), nullable=False, server_default='pending'),
-        sa.Column('verification_confidence', sa.Float, nullable=True),
-        sa.Column('verification_flags', JSONB, nullable=True, server_default='[]'),
-        sa.Column('device_signature', sa.Text, nullable=True),
-        sa.Column('file_hash', sa.String(128), nullable=True),
-        sa.Column('sensor_data', JSONB, nullable=True),
-        sa.Column('tags', JSONB, nullable=True, server_default='[]'),
-        sa.Column('metadata', JSONB, nullable=True, server_default='{}'),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-    )
-    op.create_index('ix_evidence_evidence_id', 'evidence', ['evidence_id'])
-    op.create_index('ix_evidence_tenant_id', 'evidence', ['tenant_id'])
-    op.create_index('ix_evidence_campaign_id', 'evidence', ['campaign_id'])
-    op.create_index('ix_evidence_vendor_id', 'evidence', ['vendor_id'])
-    op.create_index('ix_evidence_type', 'evidence', ['evidence_type'])
-    op.create_index('ix_evidence_category', 'evidence', ['category'])
-    op.create_index('ix_evidence_status', 'evidence', ['verification_status'])
-    op.create_index('ix_evidence_tenant_type', 'evidence', ['tenant_id', 'evidence_type'])
-    op.create_index('ix_evidence_campaign_vendor', 'evidence', ['campaign_id', 'vendor_id'])
-    op.create_index('ix_evidence_created', 'evidence', ['created_at'])
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS evidence (
+            evidence_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            tenant_id UUID NOT NULL,
+            campaign_id UUID REFERENCES campaigns(campaign_id) ON DELETE SET NULL,
+            vendor_id VARCHAR(6) NOT NULL REFERENCES vendors(vendor_id) ON DELETE CASCADE,
+            case_id UUID REFERENCES cases(case_id) ON DELETE SET NULL,
+            evidence_type VARCHAR(20) NOT NULL,
+            category VARCHAR(50),
+            file_key VARCHAR(500),
+            file_url VARCHAR(500),
+            thumbnail_key VARCHAR(500),
+            thumbnail_url VARCHAR(500),
+            file_size_bytes BIGINT,
+            mime_type VARCHAR(50),
+            duration_seconds FLOAT,
+            text_content TEXT,
+            capture_timestamp TIMESTAMPTZ,
+            latitude FLOAT,
+            longitude FLOAT,
+            accuracy FLOAT,
+            verification_status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            verification_confidence FLOAT,
+            verification_flags JSONB DEFAULT '[]',
+            device_signature TEXT,
+            file_hash VARCHAR(128),
+            sensor_data JSONB,
+            tags JSONB DEFAULT '[]',
+            metadata JSONB DEFAULT '{}',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+    """)
+    for name, cols in (
+        ('ix_evidence_evidence_id', 'evidence_id'),
+        ('ix_evidence_tenant_id', 'tenant_id'),
+        ('ix_evidence_campaign_id', 'campaign_id'),
+        ('ix_evidence_vendor_id', 'vendor_id'),
+        ('ix_evidence_type', 'evidence_type'),
+        ('ix_evidence_category', 'category'),
+        ('ix_evidence_status', 'verification_status'),
+        ('ix_evidence_tenant_type', 'tenant_id, evidence_type'),
+        ('ix_evidence_campaign_vendor', 'campaign_id, vendor_id'),
+        ('ix_evidence_created', 'created_at'),
+    ):
+        op.execute(f"CREATE INDEX IF NOT EXISTS {name} ON evidence ({cols})")
 
     # GPS Tracks table (for video continuous location recording)
-    op.create_table(
-        'gps_tracks',
-        sa.Column('track_id', UUID(as_uuid=True), primary_key=True, server_default=sa.text('gen_random_uuid()')),
-        sa.Column('evidence_id', UUID(as_uuid=True), sa.ForeignKey('evidence.evidence_id', ondelete='CASCADE'), nullable=False, unique=True),
-        sa.Column('points', JSONB, nullable=False),
-        sa.Column('duration_seconds', sa.Float, nullable=True),
-        sa.Column('total_distance_meters', sa.Float, nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-    )
-    op.create_index('ix_gps_tracks_evidence_id', 'gps_tracks', ['evidence_id'])
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS gps_tracks (
+            track_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            evidence_id UUID NOT NULL REFERENCES evidence(evidence_id) ON DELETE CASCADE UNIQUE,
+            points JSONB NOT NULL,
+            duration_seconds FLOAT,
+            total_distance_meters FLOAT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+    """)
+    op.execute("CREATE INDEX IF NOT EXISTS ix_gps_tracks_evidence_id ON gps_tracks (evidence_id)")
 
     # Add asset_id and location_description to location_profiles (for coordinate-only locations)
-    op.add_column('location_profiles', sa.Column('asset_id', sa.String(100), nullable=True))
-    op.add_column('location_profiles', sa.Column('asset_type', sa.String(50), nullable=True))
-    op.add_column('location_profiles', sa.Column('location_description', sa.Text, nullable=True))
+    op.execute("ALTER TABLE location_profiles ADD COLUMN IF NOT EXISTS asset_id VARCHAR(100)")
+    op.execute("ALTER TABLE location_profiles ADD COLUMN IF NOT EXISTS asset_type VARCHAR(50)")
+    op.execute("ALTER TABLE location_profiles ADD COLUMN IF NOT EXISTS location_description TEXT")
 
 
 def downgrade() -> None:
+    # WARNING: destroys evidence data. Never run against production.
     op.drop_column('location_profiles', 'location_description')
     op.drop_column('location_profiles', 'asset_type')
     op.drop_column('location_profiles', 'asset_id')
