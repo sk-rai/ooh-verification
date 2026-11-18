@@ -134,6 +134,17 @@ async def get_current_vendor(
             detail="Not authorized as vendor"
         )
     
+    # Reject the reserved REVIEW vendor_id on all production endpoints.
+    # The REVIEW account exists only for Play Store review in isolated staging.
+    # Previously issued REVIEW JWTs cannot proceed past this check in production.
+    import os as _os
+    if (token_data.vendor_id == "REVIEW"
+            and _os.getenv("PLAY_STORE_REVIEW_ENABLED", "false").lower() != "true"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Reviewer account not permitted in this environment",
+        )
+    
     # Get vendor from database
     result = await db.execute(
         select(Vendor).where(Vendor.vendor_id == token_data.vendor_id)

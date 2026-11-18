@@ -1,3 +1,4 @@
+import os
 import logging
 """
 Authentication API endpoints.
@@ -200,8 +201,11 @@ async def vendor_request_otp(
     """
     tenant_id = get_current_tenant(request)
 
-    # Play Store review test account — bypass everything (no DB lookup needed)
-    if data.vendor_id == "REVIEW" and data.phone_number == "+911234567890":
+    # Play Store review test account — bypass is DISABLED BY DEFAULT.
+    # Set PLAY_STORE_REVIEW_ENABLED=true only in an isolated staging environment.
+    # This variable MUST NOT be set in production.
+    if (os.getenv("PLAY_STORE_REVIEW_ENABLED", "false").lower() == "true"
+            and data.vendor_id == "REVIEW" and data.phone_number == "+911234567890"):
         from app.core.database import AsyncSessionLocal
         from sqlalchemy import text
         from datetime import datetime, timedelta
@@ -274,8 +278,9 @@ async def vendor_verify_otp(
             detail="Invalid or expired OTP"
         )
     
-    # Play Store review test account — bypass vendor lookup
-    if data.vendor_id == "REVIEW" and data.phone_number == "+911234567890":
+    # Play Store review test account — bypass is DISABLED BY DEFAULT (see request-otp above).
+    if (os.getenv("PLAY_STORE_REVIEW_ENABLED", "false").lower() == "true"
+            and data.vendor_id == "REVIEW" and data.phone_number == "+911234567890"):
         access_token = create_access_token(
             data={"sub": "REVIEW", "type": "vendor", "vendor_id": "REVIEW"}
         )
