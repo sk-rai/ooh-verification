@@ -9,7 +9,7 @@ if [ -n "$DATABASE_URL" ]; then
 fi
 
 echo "Running database migrations..."
-python3 -m alembic upgrade head || echo "Migration warning (may be OK if already applied)"
+python3 -m alembic upgrade head
 
 echo "Checking admin user..."
 python3 -m app.core.admin_bootstrap || echo "WARNING: admin bootstrap step failed (non-fatal)"
