@@ -605,19 +605,3 @@ async def change_billing_cycle(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to change billing cycle: {str(e)}"
         )
-
-
-
-@router.post("/reset-monthly-quotas")
-async def reset_monthly_quotas(
-    client: Client = Depends(get_current_active_client),
-    db: AsyncSession = Depends(get_db)
-):
-    """Reset monthly photo quota at billing cycle start."""
-    enforcer = get_quota_enforcer(db)
-    try:
-        await enforcer.reset_monthly_quotas(str(client.client_id))
-        usage = await enforcer.get_usage_stats(str(client.client_id))
-        return {"message": "Monthly photo quota reset", "usage": usage}
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to reset quotas: {str(e)}")
