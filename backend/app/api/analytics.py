@@ -5,6 +5,7 @@ Visitor analytics API.
 - GET /cron/summarize-analytics: daily summarize + purge
 """
 from fastapi import APIRouter, Request, Depends, HTTPException, status
+from app.core.cron_auth import require_cron_secret
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, delete, and_, cast, Date
 from datetime import datetime, timedelta, timezone, date
@@ -111,7 +112,10 @@ async def track_page_view(
 
 
 @router.api_route("/cron/summarize", methods=["GET", "POST"])
-async def summarize_and_purge(db: AsyncSession = Depends(get_db)):
+async def summarize_and_purge(
+    _cron_auth: None = Depends(require_cron_secret),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Daily cron: enqueue analytics summarization as a background task.
 

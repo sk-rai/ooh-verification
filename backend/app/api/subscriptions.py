@@ -3,6 +3,7 @@ Subscription management API endpoints.
 Allows clients to view and manage their subscriptions and usage.
 """
 from fastapi import APIRouter, Depends, HTTPException, status
+from app.core.cron_auth import require_cron_secret
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, Any
 
@@ -204,15 +205,18 @@ async def get_subscription_tiers():
 # AUTOMATED CRON ENDPOINTS (called by external scheduler)
 # ============================================================================
 
+# Authentication: X-Cron-Secret header must match the CRON_SECRET environment variable.
+# Configure the same secret in your scheduler (UptimeRobot, Render cron, etc.).
 @router.api_route("/cron/check-expiring", methods=["GET", "POST"])
 async def check_expiring_subscriptions(
-    db: AsyncSession = Depends(get_db)
+    _cron_auth: None = Depends(require_cron_secret),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Check for subscriptions expiring in 7 days and send notification emails.
     Designed to be called daily by an external cron (UptimeRobot, Render cron, etc.)
     
-    No auth required — uses a simple shared secret via X-Cron-Secret header.
+    Requires the scheduler's X-Cron-Secret header.
     """
     from fastapi import Request
     
@@ -267,7 +271,8 @@ async def check_expiring_subscriptions(
 
 @router.api_route("/cron/auto-reset-quotas", methods=["GET", "POST"])
 async def auto_reset_monthly_quotas(
-    db: AsyncSession = Depends(get_db)
+    _cron_auth: None = Depends(require_cron_secret),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Auto-reset monthly photo quotas for subscriptions that have passed their period end.

@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.core.deps import get_current_vendor
+from app.core.deps import get_current_vendor, get_current_active_vendor
 from app.core.config import settings
 from app.models import Photo, SensorData, PhotoSignature, Campaign, Vendor, LocationProfile
 from app.models.photo import VerificationStatus
@@ -302,7 +302,7 @@ async def upload_photo(
     signature: str = Form(..., description="JSON string of photo signature"),
     campaign_code: str = Form(..., description="Campaign code"),
     capture_timestamp: str = Form(..., description="ISO format capture timestamp"),
-    vendor: Vendor = Depends(get_current_vendor),
+    vendor: Vendor = Depends(get_current_active_vendor),
     db: AsyncSession = Depends(get_db)
 ):
     """Upload photo with sensor data and signature for verification.
