@@ -1,7 +1,7 @@
 """
 Client model - represents companies/organizations using TrustCapture.
 """
-from sqlalchemy import Column, String, DateTime, Enum as SQLEnum
+from sqlalchemy import Column, String, DateTime, UniqueConstraint, Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -35,6 +35,7 @@ class Client(Base):
     - Req 1.2: Subscription tier management
     """
     __tablename__ = "clients"
+    __table_args__ = (UniqueConstraint("client_id", "tenant_id", name="uq_client_tenant"),)
 
     # Primary Key
     client_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)

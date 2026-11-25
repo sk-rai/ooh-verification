@@ -35,6 +35,8 @@ class DeviceKey(Base):
     active_from = Column(DateTime(timezone=True), nullable=False,
                          default=lambda: datetime.now(tz=__import__("datetime").timezone.utc))
     active_to = Column(DateTime(timezone=True), nullable=True)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
+    inspection_enrollment_id = Column(UUID(as_uuid=True), unique=True, nullable=True)
 
     created_at = Column(DateTime(timezone=True), nullable=False,
                         default=lambda: datetime.now(tz=__import__("datetime").timezone.utc))

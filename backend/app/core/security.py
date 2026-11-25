@@ -187,7 +187,7 @@ class OTPManager:
         
         async with AsyncSessionLocal() as db:
             result = await db.execute(text(
-                "SELECT otp, expires_at, attempts FROM otp_codes WHERE phone_number = :phone"
+                "SELECT otp, expires_at, attempts FROM otp_codes WHERE phone_number = :phone FOR UPDATE"
             ), {"phone": phone_number})
             stored = result.fetchone()
             

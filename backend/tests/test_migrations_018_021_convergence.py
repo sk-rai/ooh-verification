@@ -171,10 +171,12 @@ def test_graph_is_a_single_linear_chain_018_to_021():
     cfg = Config(str(BACKEND / "alembic.ini"))
     cfg.set_main_option("script_location", str(BACKEND / "alembic"))
     script = ScriptDirectory.from_config(cfg)
-    # M2 extends the chain; 021 is no longer the head but must still be in it
-    head = script.get_heads()[0]
-    assert head in ("021_evidence", "024_schema_additions"), f"unexpected head {head}"
-    expected = [("024_schema_additions", "023_api_keys_device_keys"),
+    assert script.get_heads() == ["028_inspection_storage_fence"]
+    expected = [("028_inspection_storage_fence", "027_inspection_submission"),
+                ("027_inspection_submission", "026_inspection_capture"),
+                ("026_inspection_capture", "025_gate1_visit_auth"),
+                ("025_gate1_visit_auth", "024_schema_additions"),
+                ("024_schema_additions", "023_api_keys_device_keys"),
                 ("023_api_keys_device_keys", "022_vendor_tracks"),
                 ("022_vendor_tracks", "021_evidence"),
                 ("021_evidence", "020_multi_location"),

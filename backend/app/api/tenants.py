@@ -169,6 +169,7 @@ async def update_tenant(
     # Get tenant
     result = await db.execute(
         select(TenantConfig).where(TenantConfig.tenant_id == tenant_id)
+        .with_for_update().execution_options(populate_existing=True)
     )
     tenant = result.scalar_one_or_none()
     
@@ -242,6 +243,7 @@ async def delete_tenant(
     # Get tenant
     result = await db.execute(
         select(TenantConfig).where(TenantConfig.tenant_id == tenant_id)
+        .with_for_update().execution_options(populate_existing=True)
     )
     tenant = result.scalar_one_or_none()
     

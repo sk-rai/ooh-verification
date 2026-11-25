@@ -1,7 +1,7 @@
 """
 Vendor model - represents field workers who capture photos.
 """
-from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, Enum as SQLEnum
+from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, UniqueConstraint, Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -27,6 +27,7 @@ class Vendor(Base):
     - Req 12.6: Public key storage for signature verification
     """
     __tablename__ = "vendors"
+    __table_args__ = (UniqueConstraint("vendor_id", "tenant_id", name="uq_vendor_tenant"),)
 
     # Primary Key - 6-character alphanumeric ID (e.g., "A3X9K2")
     vendor_id = Column(String(6), primary_key=True, index=True)
@@ -60,6 +61,7 @@ class Vendor(Base):
     )
 
     # Device Registration (set after first Android app login)
+    inspection_enrollment_nonce = Column(UUID(as_uuid=True), nullable=True)
     device_id = Column(String(255), nullable=True, unique=True)
     public_key = Column(String, nullable=True)  # RSA/ECDSA public key from Android Keystore
     device_verified = Column(Boolean, default=False, server_default="false")  # True after first OTP login

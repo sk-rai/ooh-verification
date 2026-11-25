@@ -79,6 +79,7 @@ class VendorVerifyOTP(BaseModel):
     vendor_id: str = Field(..., min_length=6, max_length=6, pattern=r'^[A-Z0-9]{6}$')
     otp: str = Field(..., min_length=6, max_length=6, pattern=r'^\d{6}$')
     device_id: Optional[str] = Field(None, description="Android device ID for registration")
+    request_inspection_enrollment: bool = False
 
     class Config:
         schema_extra = {
@@ -110,6 +111,10 @@ class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int = Field(..., description="Token expiration time in seconds")
+
+
+class VendorOTPToken(Token):
+    inspection_enrollment_proof: Optional[str] = None
 
     class Config:
         schema_extra = {
@@ -252,3 +257,14 @@ class DeviceLoginRequest(BaseModel):
                 "signature": "MEUCIQD..."
             }
         }
+
+class InspectionDeviceEnrollment(BaseModel):
+    device_id: str = Field(min_length=1, max_length=255)
+    enrollment_proof: str = Field(min_length=1, max_length=4096)
+    public_key: str = Field(min_length=1, max_length=2048)
+    proof_signature: str = Field(min_length=1, max_length=256)
+
+
+class InspectionDeviceEnrollmentResult(BaseModel):
+    key_id: UUID
+    key_fingerprint: str

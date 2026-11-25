@@ -138,8 +138,12 @@ def test_graph_is_chain_021_to_024():
     cfg = Config(str(BACKEND / "alembic.ini"))
     cfg.set_main_option("script_location", str(BACKEND / "alembic"))
     script = ScriptDirectory.from_config(cfg)
-    assert script.get_heads() == ["024_schema_additions"]
-    expected = [("024_schema_additions", "023_api_keys_device_keys"),
+    assert script.get_heads() == ["028_inspection_storage_fence"]
+    expected = [("028_inspection_storage_fence", "027_inspection_submission"),
+                ("027_inspection_submission", "026_inspection_capture"),
+                ("026_inspection_capture", "025_gate1_visit_auth"),
+                ("025_gate1_visit_auth", "024_schema_additions"),
+                ("024_schema_additions", "023_api_keys_device_keys"),
                 ("023_api_keys_device_keys", "022_vendor_tracks"),
                 ("022_vendor_tracks", "021_evidence")]
     for rev, down in expected:

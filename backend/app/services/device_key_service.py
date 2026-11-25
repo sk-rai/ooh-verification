@@ -71,7 +71,8 @@ async def register_key_version(
     # current active key (active_to IS NULL), newest first
     res = await db.execute(
         select(DeviceKey)
-        .where(DeviceKey.vendor_id == vendor_id, DeviceKey.active_to.is_(None))
+        .where(DeviceKey.vendor_id == vendor_id, DeviceKey.active_to.is_(None),
+               DeviceKey.inspection_enrollment_id.is_(None))
         .order_by(DeviceKey.active_from.desc())
     )
     active_keys = res.scalars().all()
@@ -104,7 +105,7 @@ async def register_key_version(
 async def get_keys_for_vendor(db: AsyncSession, vendor_id: str) -> List[DeviceKey]:
     """All known key versions for a vendor, newest active_from first."""
     res = await db.execute(
-        select(DeviceKey).where(DeviceKey.vendor_id == vendor_id)
+        select(DeviceKey).where(DeviceKey.vendor_id == vendor_id, DeviceKey.inspection_enrollment_id.is_(None))
         .order_by(DeviceKey.active_from.desc())
     )
     return list(res.scalars().all())

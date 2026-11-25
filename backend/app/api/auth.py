@@ -17,18 +17,21 @@ from app.core.security import (
     otp_manager, challenge_manager, verify_ecdsa_signature,
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
-from app.core.deps import get_current_active_client, get_current_active_vendor
+from app.core.deps import get_current_active_client, get_current_active_vendor, get_current_vendor
+from app.core.inspection_authz import lock_active_tenant
 from app.models import Client, Vendor, Subscription
 from app.models.client import SubscriptionTier, SubscriptionStatus
 from app.models.vendor import VendorStatus
 from app.schemas.auth import (
     ClientRegister, ClientLogin, VendorLogin, VendorVerifyOTP,
     VendorRegisterDevice, Token, ClientResponse, VendorResponse, OTPResponse,
-    ChallengeRequest, ChallengeResponse, DeviceLoginRequest
+    ChallengeRequest, ChallengeResponse, DeviceLoginRequest, VendorOTPToken,
+    InspectionDeviceEnrollment, InspectionDeviceEnrollmentResult
 )
 from app.middleware.tenant_context import get_current_tenant
 from app.core.sms import sms_service
 from app.services.email_service import get_email_service
+from app.services.inspection_enrollment import enroll_inspection_device, issue_enrollment_proof
 
 logger = logging.getLogger(__name__)
 
@@ -256,7 +259,7 @@ async def vendor_request_otp(
     }
 
 
-@router.post("/vendor/verify-otp", response_model=Token)
+@router.post("/vendor/verify-otp", response_model=VendorOTPToken, response_model_exclude_none=True)
 async def vendor_verify_otp(
     data: VendorVerifyOTP,
     request: Request,
@@ -286,13 +289,18 @@ async def vendor_verify_otp(
         )
         return {"access_token": access_token, "token_type": "bearer", "expires_in": 604800}
 
+    if data.request_inspection_enrollment:
+        if not data.device_id or len(data.device_id) > 255 or data.vendor_id == "REVIEW":
+            raise HTTPException(422, "INSPECTION_DEVICE_INVALID")
+        await lock_active_tenant(db, tenant_id)
+
     # Get vendor
     result = await db.execute(
         select(Vendor).where(
             Vendor.vendor_id == data.vendor_id,
             Vendor.tenant_id == tenant_id,
             Vendor.phone_number == data.phone_number
-        )
+        ).with_for_update().execution_options(populate_existing=True)
     )
     vendor = result.scalar_one_or_none()
     
@@ -302,14 +310,20 @@ async def vendor_verify_otp(
             detail="Vendor not found"
         )
     
+    if data.request_inspection_enrollment and vendor.status != VendorStatus.ACTIVE:
+        raise HTTPException(403, "VENDOR_INACTIVE")
+
     # Update device ID if provided (always update to latest device)
     if data.device_id:
+        if vendor.device_id != data.device_id:
+            vendor.inspection_enrollment_nonce = None
         vendor.device_id = data.device_id
     
     # Mark device as verified (first OTP login completes registration)
     if not vendor.device_verified:
         vendor.device_verified = True
     vendor.last_login_at = datetime.utcnow()
+    proof = issue_enrollment_proof(vendor) if data.request_inspection_enrollment else None
     await db.commit()
     
     # Create access token
@@ -324,8 +338,21 @@ async def vendor_verify_otp(
     return {
         "access_token": access_token,
         "token_type": "bearer",
+        "inspection_enrollment_proof": proof,
         "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
     }
+
+
+@router.post("/vendor/inspection-device", response_model=InspectionDeviceEnrollmentResult, status_code=201)
+async def register_inspection_device(
+    data: InspectionDeviceEnrollment,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    key = await enroll_inspection_device(db, actor=vendor, data=data)
+    response = InspectionDeviceEnrollmentResult(key_id=key.key_id, key_fingerprint=key.key_fingerprint)
+    await db.commit()
+    return response
 
 
 @router.post("/vendor/register-device", response_model=VendorResponse)
@@ -345,6 +372,7 @@ async def register_vendor_device(
     # Get vendor by device ID
     result = await db.execute(
         select(Vendor).where(Vendor.device_id == data.device_id, Vendor.tenant_id == tenant_id)
+        .with_for_update().execution_options(populate_existing=True)
     )
     vendor = result.scalar_one_or_none()
     
