@@ -3,7 +3,7 @@ Security utilities for authentication and authorization.
 
 Provides password hashing, JWT token generation/validation, and OTP management.
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 from passlib.context import CryptContext
 from jose import JWTError, jwt
@@ -197,7 +197,9 @@ class OTPManager:
             stored_otp, expires_at, attempts = stored
             
             # Check expired
-            if datetime.utcnow() > expires_at.replace(tzinfo=None) if expires_at.tzinfo else expires_at:
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) > expires_at:
                 await db.execute(text("DELETE FROM otp_codes WHERE phone_number = :phone"), {"phone": phone_number})
                 await db.commit()
                 return False
