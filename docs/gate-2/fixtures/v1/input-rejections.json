@@ -1,0 +1,15 @@
+{
+  "fixture_version": 1,
+  "profile": "trustcapture-gate2-v1",
+  "cases": [
+    {"id":"nested_duplicate","check":"json","input":"{\"answers\":{\"a\":false,\"a\":null}}","expected_code":"DUPLICATE_KEY"},
+    {"id":"trailing_comma","check":"json","input":"{\"a\":1,}","expected_code":"INVALID_JSON"},
+    {"id":"nonfinite","check":"json","input":"{\"a\":NaN}","expected_code":"INVALID_JSON"},
+    {"id":"unpaired_surrogate","check":"json","input":"{\"a\":\"\\ud800\"}","expected_code":"INVALID_JSON"},
+    {"id":"unknown_fixture_member","check":"fixture_header","input":"{\"fixture_version\":1,\"profile\":\"trustcapture-gate2-v1\",\"extra\":true}","expected_code":"UNKNOWN_PROPERTY"},
+    {"id":"unknown_version","check":"fixture_header","input":"{\"fixture_version\":2,\"profile\":\"trustcapture-gate2-v1\"}","expected_code":"UNSUPPORTED_VERSION"},
+    {"id":"non_integer_version","check":"fixture_header","input":"{\"fixture_version\":1.0,\"profile\":\"trustcapture-gate2-v1\"}","expected_code":"INVALID_INTEGER"},
+    {"id":"uppercase_uuid","check":"uuid","input":"\"00000000-0000-4000-8000-00000000000A\"","expected_code":"INVALID_ID"},
+    {"id":"duplicate_capability","check":"capabilities","input":"[\"repeat_same_item\",\"repeat_same_item\"]","expected_code":"DUPLICATE_CAPABILITY"}
+  ]
+}

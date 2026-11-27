@@ -1,0 +1,1539 @@
+{
+  "fixture_version": 1,
+  "profile": "trustcapture-gate2-v1",
+  "fixture_id": "pipeline_measurements",
+  "client_capabilities": [
+    "repeat_same_item",
+    "conditional_photo",
+    "fixed_scale_measurement"
+  ],
+  "package": {
+    "visit_id": "00000000-0000-4000-8000-00000000001f",
+    "assignment_id": "00000000-0000-4000-8000-000000000020",
+    "generation": 1,
+    "document_instance_id": "00000000-0000-4000-8000-000000000021",
+    "form_version_id": "00000000-0000-4000-8000-000000000022",
+    "required_capabilities": [
+      "repeat_same_item",
+      "conditional_photo",
+      "fixed_scale_measurement"
+    ],
+    "repeat_items": [
+      "00000000-0000-4000-8000-000000000023",
+      "00000000-0000-4000-8000-000000000024"
+    ],
+    "fields": [
+      {
+        "id": "result",
+        "type": "select",
+        "options": [
+          "PASS",
+          "FAIL",
+          "NA"
+        ],
+        "required": true
+      },
+      {
+        "id": "measurement",
+        "type": "decimal",
+        "scale": 2,
+        "unit": "mm",
+        "visible_if": {
+          "not": {
+            "eq": [
+              {
+                "scope": "item",
+                "field": "result"
+              },
+              "NA"
+            ]
+          }
+        },
+        "required_if": {
+          "not": {
+            "eq": [
+              {
+                "scope": "item",
+                "field": "result"
+              },
+              "NA"
+            ]
+          }
+        }
+      },
+      {
+        "id": "severity",
+        "type": "select",
+        "options": [
+          "minor",
+          "major"
+        ],
+        "visible_if": {
+          "all": [
+            {
+              "eq": [
+                {
+                  "scope": "item",
+                  "field": "result"
+                },
+                "FAIL"
+              ]
+            },
+            {
+              "not": {
+                "eq": [
+                  {
+                    "scope": "item",
+                    "field": "result"
+                  },
+                  "NA"
+                ]
+              }
+            }
+          ]
+        },
+        "required_if": {
+          "all": [
+            {
+              "eq": [
+                {
+                  "scope": "item",
+                  "field": "result"
+                },
+                "FAIL"
+              ]
+            },
+            {
+              "not": {
+                "eq": [
+                  {
+                    "scope": "item",
+                    "field": "result"
+                  },
+                  "NA"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "explanation",
+        "type": "text",
+        "visible_if": {
+          "eq": [
+            {
+              "scope": "item",
+              "field": "result"
+            },
+            "NA"
+          ]
+        },
+        "required_if": {
+          "eq": [
+            {
+              "scope": "item",
+              "field": "result"
+            },
+            "NA"
+          ]
+        }
+      }
+    ],
+    "document_fields": [],
+    "slots": [
+      {
+        "id": "photo",
+        "field_id": "result",
+        "required_if": {
+          "all": [
+            {
+              "eq": [
+                {
+                  "scope": "item",
+                  "field": "result"
+                },
+                "FAIL"
+              ]
+            },
+            {
+              "not": {
+                "eq": [
+                  {
+                    "scope": "item",
+                    "field": "result"
+                  },
+                  "NA"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "pass_fail_exact_photo",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000024",
+        "00000000-0000-4000-8000-000000000023"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000023": {
+          "result": "PASS",
+          "measurement": {
+            "value": "2.50",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "minor"
+        },
+        "00000000-0000-4000-8000-000000000024": {
+          "result": "FAIL",
+          "measurement": {
+            "value": "3.75",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "major"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000024",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000032",
+          "evidence_id": "00000000-0000-4000-8000-000000000033",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-00000000001f",
+          "assignment_id": "00000000-0000-4000-8000-000000000020",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000021",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "inactive",
+            "explanation": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "required",
+            "explanation": "inactive",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "PASS",
+            "measurement": {
+              "value": "2.50",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "minor"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "FAIL",
+            "measurement": {
+              "value": "3.75",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "major"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "answers": {
+              "result": "PASS",
+              "measurement": {
+                "value": "2.50",
+                "scale": 2,
+                "unit": "mm"
+              }
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "answers": {
+              "result": "FAIL",
+              "measurement": {
+                "value": "3.75",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "major"
+            }
+          }
+        ],
+        "evidence_bindings": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "field_id": "result",
+            "slot_id": "photo",
+            "evidence_id": "00000000-0000-4000-8000-000000000033"
+          }
+        ],
+        "errors": [],
+        "can_submit": true
+      }
+    },
+    {
+      "id": "fail_to_pass_hides_but_retains",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000023",
+        "00000000-0000-4000-8000-000000000024"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000023": {
+          "result": "PASS",
+          "measurement": {
+            "value": "2.50",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "minor"
+        },
+        "00000000-0000-4000-8000-000000000024": {
+          "result": "PASS",
+          "measurement": {
+            "value": "3.75",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "major"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000024",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000032",
+          "evidence_id": "00000000-0000-4000-8000-000000000033",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-00000000001f",
+          "assignment_id": "00000000-0000-4000-8000-000000000020",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000021",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "inactive",
+            "explanation": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "inactive",
+            "explanation": "inactive",
+            "photo": "inactive"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "PASS",
+            "measurement": {
+              "value": "2.50",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "minor"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "PASS",
+            "measurement": {
+              "value": "3.75",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "major"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "answers": {
+              "result": "PASS",
+              "measurement": {
+                "value": "2.50",
+                "scale": 2,
+                "unit": "mm"
+              }
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "answers": {
+              "result": "PASS",
+              "measurement": {
+                "value": "3.75",
+                "scale": 2,
+                "unit": "mm"
+              }
+            }
+          }
+        ],
+        "evidence_bindings": [],
+        "errors": [],
+        "can_submit": true
+      }
+    },
+    {
+      "id": "not_applicable_with_explanation",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000023",
+        "00000000-0000-4000-8000-000000000024"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000023": {
+          "result": "PASS",
+          "measurement": {
+            "value": "2.50",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "minor"
+        },
+        "00000000-0000-4000-8000-000000000024": {
+          "result": "NA",
+          "measurement": {
+            "value": "3.75",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "major",
+          "explanation": "synthetic item unavailable"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000024",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000032",
+          "evidence_id": "00000000-0000-4000-8000-000000000033",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-00000000001f",
+          "assignment_id": "00000000-0000-4000-8000-000000000020",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000021",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "inactive",
+            "explanation": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "required",
+            "measurement": "inactive",
+            "severity": "inactive",
+            "explanation": "required",
+            "photo": "inactive"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "PASS",
+            "measurement": {
+              "value": "2.50",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "minor"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "NA",
+            "measurement": {
+              "value": "3.75",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "major",
+            "explanation": "synthetic item unavailable"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "answers": {
+              "result": "PASS",
+              "measurement": {
+                "value": "2.50",
+                "scale": 2,
+                "unit": "mm"
+              }
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "answers": {
+              "result": "NA",
+              "explanation": "synthetic item unavailable"
+            }
+          }
+        ],
+        "evidence_bindings": [],
+        "errors": [],
+        "can_submit": true
+      }
+    },
+    {
+      "id": "not_applicable_missing_explanation",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000023",
+        "00000000-0000-4000-8000-000000000024"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000023": {
+          "result": "PASS",
+          "measurement": {
+            "value": "2.50",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "minor"
+        },
+        "00000000-0000-4000-8000-000000000024": {
+          "result": "NA",
+          "measurement": {
+            "value": "3.75",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "major"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000024",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000032",
+          "evidence_id": "00000000-0000-4000-8000-000000000033",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-00000000001f",
+          "assignment_id": "00000000-0000-4000-8000-000000000020",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000021",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "inactive",
+            "explanation": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "required",
+            "measurement": "inactive",
+            "severity": "inactive",
+            "explanation": "required",
+            "photo": "inactive"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "PASS",
+            "measurement": {
+              "value": "2.50",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "minor"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "NA",
+            "measurement": {
+              "value": "3.75",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "major"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "answers": {
+              "result": "PASS",
+              "measurement": {
+                "value": "2.50",
+                "scale": 2,
+                "unit": "mm"
+              }
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "answers": {
+              "result": "NA"
+            }
+          }
+        ],
+        "evidence_bindings": [],
+        "errors": [
+          {
+            "code": "ANSWER_REQUIRED",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "target_id": "explanation"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "wrong_fraction",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000023",
+        "00000000-0000-4000-8000-000000000024"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000023": {
+          "result": "PASS",
+          "measurement": {
+            "value": "2.5",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "minor"
+        },
+        "00000000-0000-4000-8000-000000000024": {
+          "result": "FAIL",
+          "measurement": {
+            "value": "3.75",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "major"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000024",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000032",
+          "evidence_id": "00000000-0000-4000-8000-000000000033",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-00000000001f",
+          "assignment_id": "00000000-0000-4000-8000-000000000020",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000021",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "inactive",
+            "explanation": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "required",
+            "explanation": "inactive",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "PASS",
+            "measurement": {
+              "value": "2.5",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "minor"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "FAIL",
+            "measurement": {
+              "value": "3.75",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "major"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "answers": {
+              "result": "PASS"
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "answers": {
+              "result": "FAIL",
+              "measurement": {
+                "value": "3.75",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "major"
+            }
+          }
+        ],
+        "evidence_bindings": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "field_id": "result",
+            "slot_id": "photo",
+            "evidence_id": "00000000-0000-4000-8000-000000000033"
+          }
+        ],
+        "errors": [
+          {
+            "code": "DECIMAL_FORMAT",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "target_id": "measurement"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "exponent",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000023",
+        "00000000-0000-4000-8000-000000000024"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000023": {
+          "result": "PASS",
+          "measurement": {
+            "value": "2e0",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "minor"
+        },
+        "00000000-0000-4000-8000-000000000024": {
+          "result": "FAIL",
+          "measurement": {
+            "value": "3.75",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "major"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000024",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000032",
+          "evidence_id": "00000000-0000-4000-8000-000000000033",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-00000000001f",
+          "assignment_id": "00000000-0000-4000-8000-000000000020",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000021",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "inactive",
+            "explanation": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "required",
+            "explanation": "inactive",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "PASS",
+            "measurement": {
+              "value": "2e0",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "minor"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "FAIL",
+            "measurement": {
+              "value": "3.75",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "major"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "answers": {
+              "result": "PASS"
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "answers": {
+              "result": "FAIL",
+              "measurement": {
+                "value": "3.75",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "major"
+            }
+          }
+        ],
+        "evidence_bindings": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "field_id": "result",
+            "slot_id": "photo",
+            "evidence_id": "00000000-0000-4000-8000-000000000033"
+          }
+        ],
+        "errors": [
+          {
+            "code": "DECIMAL_FORMAT",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "target_id": "measurement"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "negative_zero",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000023",
+        "00000000-0000-4000-8000-000000000024"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000023": {
+          "result": "PASS",
+          "measurement": {
+            "value": "-0.00",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "minor"
+        },
+        "00000000-0000-4000-8000-000000000024": {
+          "result": "FAIL",
+          "measurement": {
+            "value": "3.75",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "major"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000024",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000032",
+          "evidence_id": "00000000-0000-4000-8000-000000000033",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-00000000001f",
+          "assignment_id": "00000000-0000-4000-8000-000000000020",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000021",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "inactive",
+            "explanation": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "required",
+            "explanation": "inactive",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "PASS",
+            "measurement": {
+              "value": "-0.00",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "minor"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "FAIL",
+            "measurement": {
+              "value": "3.75",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "major"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "answers": {
+              "result": "PASS"
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "answers": {
+              "result": "FAIL",
+              "measurement": {
+                "value": "3.75",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "major"
+            }
+          }
+        ],
+        "evidence_bindings": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "field_id": "result",
+            "slot_id": "photo",
+            "evidence_id": "00000000-0000-4000-8000-000000000033"
+          }
+        ],
+        "errors": [
+          {
+            "code": "DECIMAL_FORMAT",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "target_id": "measurement"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "leading_zero",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000023",
+        "00000000-0000-4000-8000-000000000024"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000023": {
+          "result": "PASS",
+          "measurement": {
+            "value": "02.50",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "minor"
+        },
+        "00000000-0000-4000-8000-000000000024": {
+          "result": "FAIL",
+          "measurement": {
+            "value": "3.75",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "major"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000024",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000032",
+          "evidence_id": "00000000-0000-4000-8000-000000000033",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-00000000001f",
+          "assignment_id": "00000000-0000-4000-8000-000000000020",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000021",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "inactive",
+            "explanation": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "required",
+            "explanation": "inactive",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "PASS",
+            "measurement": {
+              "value": "02.50",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "minor"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "FAIL",
+            "measurement": {
+              "value": "3.75",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "major"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "answers": {
+              "result": "PASS"
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "answers": {
+              "result": "FAIL",
+              "measurement": {
+                "value": "3.75",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "major"
+            }
+          }
+        ],
+        "evidence_bindings": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "field_id": "result",
+            "slot_id": "photo",
+            "evidence_id": "00000000-0000-4000-8000-000000000033"
+          }
+        ],
+        "errors": [
+          {
+            "code": "DECIMAL_FORMAT",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "target_id": "measurement"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "json_number",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000023",
+        "00000000-0000-4000-8000-000000000024"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000023": {
+          "result": "PASS",
+          "measurement": 2.5,
+          "severity": "minor"
+        },
+        "00000000-0000-4000-8000-000000000024": {
+          "result": "FAIL",
+          "measurement": {
+            "value": "3.75",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "major"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000024",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000032",
+          "evidence_id": "00000000-0000-4000-8000-000000000033",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-00000000001f",
+          "assignment_id": "00000000-0000-4000-8000-000000000020",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000021",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "inactive",
+            "explanation": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "required",
+            "explanation": "inactive",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "PASS",
+            "measurement": 2.5,
+            "severity": "minor"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "FAIL",
+            "measurement": {
+              "value": "3.75",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "major"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "answers": {
+              "result": "PASS"
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "answers": {
+              "result": "FAIL",
+              "measurement": {
+                "value": "3.75",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "major"
+            }
+          }
+        ],
+        "evidence_bindings": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "field_id": "result",
+            "slot_id": "photo",
+            "evidence_id": "00000000-0000-4000-8000-000000000033"
+          }
+        ],
+        "errors": [
+          {
+            "code": "ANSWER_TYPE",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "target_id": "measurement"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "wrong_scale",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000023",
+        "00000000-0000-4000-8000-000000000024"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000023": {
+          "result": "PASS",
+          "measurement": {
+            "value": "2.5",
+            "scale": 1,
+            "unit": "mm"
+          },
+          "severity": "minor"
+        },
+        "00000000-0000-4000-8000-000000000024": {
+          "result": "FAIL",
+          "measurement": {
+            "value": "3.75",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "major"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000024",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000032",
+          "evidence_id": "00000000-0000-4000-8000-000000000033",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-00000000001f",
+          "assignment_id": "00000000-0000-4000-8000-000000000020",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000021",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "inactive",
+            "explanation": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "required",
+            "explanation": "inactive",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "PASS",
+            "measurement": {
+              "value": "2.5",
+              "scale": 1,
+              "unit": "mm"
+            },
+            "severity": "minor"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "FAIL",
+            "measurement": {
+              "value": "3.75",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "major"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "answers": {
+              "result": "PASS"
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "answers": {
+              "result": "FAIL",
+              "measurement": {
+                "value": "3.75",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "major"
+            }
+          }
+        ],
+        "evidence_bindings": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "field_id": "result",
+            "slot_id": "photo",
+            "evidence_id": "00000000-0000-4000-8000-000000000033"
+          }
+        ],
+        "errors": [
+          {
+            "code": "DECIMAL_SHAPE_OR_SCALE",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "target_id": "measurement"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "wrong_unit",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000023",
+        "00000000-0000-4000-8000-000000000024"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000023": {
+          "result": "PASS",
+          "measurement": {
+            "value": "2.50",
+            "scale": 2,
+            "unit": "cm"
+          },
+          "severity": "minor"
+        },
+        "00000000-0000-4000-8000-000000000024": {
+          "result": "FAIL",
+          "measurement": {
+            "value": "3.75",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "major"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000024",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000032",
+          "evidence_id": "00000000-0000-4000-8000-000000000033",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-00000000001f",
+          "assignment_id": "00000000-0000-4000-8000-000000000020",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000021",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "inactive",
+            "explanation": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "required",
+            "explanation": "inactive",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "PASS",
+            "measurement": {
+              "value": "2.50",
+              "scale": 2,
+              "unit": "cm"
+            },
+            "severity": "minor"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "FAIL",
+            "measurement": {
+              "value": "3.75",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "major"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "answers": {
+              "result": "PASS"
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "answers": {
+              "result": "FAIL",
+              "measurement": {
+                "value": "3.75",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "major"
+            }
+          }
+        ],
+        "evidence_bindings": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "field_id": "result",
+            "slot_id": "photo",
+            "evidence_id": "00000000-0000-4000-8000-000000000033"
+          }
+        ],
+        "errors": [
+          {
+            "code": "UNIT_MISMATCH",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "target_id": "measurement"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "partial_draft_without_photo",
+      "mode": "draft",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000023",
+        "00000000-0000-4000-8000-000000000024"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000023": {
+          "result": "PASS",
+          "measurement": {
+            "value": "2.50",
+            "scale": 2,
+            "unit": "mm"
+          },
+          "severity": "minor"
+        },
+        "00000000-0000-4000-8000-000000000024": {
+          "result": "FAIL"
+        }
+      },
+      "receipts": [],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "inactive",
+            "explanation": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "required",
+            "measurement": "required",
+            "severity": "required",
+            "explanation": "inactive",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000023": {
+            "result": "PASS",
+            "measurement": {
+              "value": "2.50",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "minor"
+          },
+          "00000000-0000-4000-8000-000000000024": {
+            "result": "FAIL"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
+            "answers": {
+              "result": "PASS",
+              "measurement": {
+                "value": "2.50",
+                "scale": 2,
+                "unit": "mm"
+              }
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "answers": {
+              "result": "FAIL"
+            }
+          }
+        ],
+        "evidence_bindings": [],
+        "errors": [],
+        "can_submit": false
+      }
+    }
+  ]
+}

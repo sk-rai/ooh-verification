@@ -1,0 +1,1811 @@
+{
+  "fixture_version": 1,
+  "profile": "trustcapture-gate2-v1",
+  "fixture_id": "elevator_brakes",
+  "client_capabilities": [
+    "repeat_same_item",
+    "conditional_photo"
+  ],
+  "package": {
+    "visit_id": "00000000-0000-4000-8000-000000000001",
+    "assignment_id": "00000000-0000-4000-8000-000000000002",
+    "generation": 1,
+    "document_instance_id": "00000000-0000-4000-8000-000000000003",
+    "form_version_id": "00000000-0000-4000-8000-000000000004",
+    "required_capabilities": [
+      "repeat_same_item",
+      "conditional_photo"
+    ],
+    "repeat_items": [
+      "00000000-0000-4000-8000-000000000005",
+      "00000000-0000-4000-8000-000000000006"
+    ],
+    "fields": [
+      {
+        "id": "defect",
+        "type": "boolean",
+        "required": true
+      },
+      {
+        "id": "notes",
+        "type": "text",
+        "visible_if": {
+          "eq": [
+            {
+              "scope": "item",
+              "field": "defect"
+            },
+            true
+          ]
+        },
+        "required_if": {
+          "eq": [
+            {
+              "scope": "item",
+              "field": "defect"
+            },
+            true
+          ]
+        }
+      }
+    ],
+    "document_fields": [],
+    "slots": [
+      {
+        "id": "photo",
+        "field_id": "defect",
+        "required_if": {
+          "eq": [
+            {
+              "scope": "item",
+              "field": "defect"
+            },
+            true
+          ]
+        }
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "reordered_exact_photo",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000006",
+        "00000000-0000-4000-8000-000000000005"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {
+              "defect": false
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true,
+              "notes": "inspect again"
+            }
+          }
+        ],
+        "evidence_bindings": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "field_id": "defect",
+            "slot_id": "photo",
+            "evidence_id": "00000000-0000-4000-8000-000000000015"
+          }
+        ],
+        "errors": [],
+        "can_submit": true
+      }
+    },
+    {
+      "id": "missing_controlling_answer",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "notes": "keep offline"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "unresolved",
+            "photo": "unresolved"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "notes": "keep offline"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {}
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true,
+              "notes": "inspect again"
+            }
+          }
+        ],
+        "evidence_bindings": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "field_id": "defect",
+            "slot_id": "photo",
+            "evidence_id": "00000000-0000-4000-8000-000000000015"
+          }
+        ],
+        "errors": [
+          {
+            "code": "ANSWER_REQUIRED",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "target_id": "defect"
+          },
+          {
+            "code": "UNRESOLVED_CONDITION",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "target_id": "notes"
+          },
+          {
+            "code": "UNRESOLVED_CONDITION",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "target_id": "photo"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "null_controlling_answer",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": null,
+          "notes": "keep offline"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "unresolved",
+            "photo": "unresolved"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": null,
+            "notes": "keep offline"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {}
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true,
+              "notes": "inspect again"
+            }
+          }
+        ],
+        "evidence_bindings": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "field_id": "defect",
+            "slot_id": "photo",
+            "evidence_id": "00000000-0000-4000-8000-000000000015"
+          }
+        ],
+        "errors": [
+          {
+            "code": "ANSWER_NULL",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "target_id": "defect"
+          },
+          {
+            "code": "UNRESOLVED_CONDITION",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "target_id": "notes"
+          },
+          {
+            "code": "UNRESOLVED_CONDITION",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "target_id": "photo"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "draft_incomplete_and_hidden_answer_retained",
+      "mode": "draft",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "notes": "keep offline"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": ""
+        }
+      },
+      "receipts": [],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "unresolved",
+            "photo": "unresolved"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "notes": "keep offline"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": ""
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {}
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true
+            }
+          }
+        ],
+        "evidence_bindings": [],
+        "errors": [],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "empty_text",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": ""
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": ""
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {
+              "defect": false
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true
+            }
+          }
+        ],
+        "evidence_bindings": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "field_id": "defect",
+            "slot_id": "photo",
+            "evidence_id": "00000000-0000-4000-8000-000000000015"
+          }
+        ],
+        "errors": [
+          {
+            "code": "ANSWER_EMPTY",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "notes"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "empty_array",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": []
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": []
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {
+              "defect": false
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true
+            }
+          }
+        ],
+        "evidence_bindings": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "field_id": "defect",
+            "slot_id": "photo",
+            "evidence_id": "00000000-0000-4000-8000-000000000015"
+          }
+        ],
+        "errors": [
+          {
+            "code": "ANSWER_TYPE",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "notes"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "wrong_document",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-00000000005a",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {
+              "defect": false
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true,
+              "notes": "inspect again"
+            }
+          }
+        ],
+        "evidence_bindings": [],
+        "errors": [
+          {
+            "code": "EVIDENCE_TARGET_MISMATCH",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          },
+          {
+            "code": "REQUIRED_EVIDENCE_MISSING",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "wrong_slot",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "other_photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {
+              "defect": false
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true,
+              "notes": "inspect again"
+            }
+          }
+        ],
+        "evidence_bindings": [],
+        "errors": [
+          {
+            "code": "EVIDENCE_TARGET_MISMATCH",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          },
+          {
+            "code": "REQUIRED_EVIDENCE_MISSING",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "wrong_item",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000005"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {
+              "defect": false
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true,
+              "notes": "inspect again"
+            }
+          }
+        ],
+        "evidence_bindings": [],
+        "errors": [
+          {
+            "code": "EVIDENCE_TARGET_MISMATCH",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          },
+          {
+            "code": "REQUIRED_EVIDENCE_MISSING",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "wrong_generation",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 2,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {
+              "defect": false
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true,
+              "notes": "inspect again"
+            }
+          }
+        ],
+        "evidence_bindings": [],
+        "errors": [
+          {
+            "code": "EVIDENCE_TARGET_MISMATCH",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          },
+          {
+            "code": "REQUIRED_EVIDENCE_MISSING",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "wrong_field",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "notes",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {
+              "defect": false
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true,
+              "notes": "inspect again"
+            }
+          }
+        ],
+        "evidence_bindings": [],
+        "errors": [
+          {
+            "code": "EVIDENCE_TARGET_MISMATCH",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          },
+          {
+            "code": "REQUIRED_EVIDENCE_MISSING",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "wrong_assignment",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-00000000005b",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {
+              "defect": false
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true,
+              "notes": "inspect again"
+            }
+          }
+        ],
+        "evidence_bindings": [],
+        "errors": [
+          {
+            "code": "EVIDENCE_TARGET_MISMATCH",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          },
+          {
+            "code": "REQUIRED_EVIDENCE_MISSING",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "wrong_visit",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-00000000005c",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {
+              "defect": false
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true,
+              "notes": "inspect again"
+            }
+          }
+        ],
+        "evidence_bindings": [],
+        "errors": [
+          {
+            "code": "EVIDENCE_TARGET_MISMATCH",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          },
+          {
+            "code": "REQUIRED_EVIDENCE_MISSING",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "ineligible",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": false,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {
+              "defect": false
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true,
+              "notes": "inspect again"
+            }
+          }
+        ],
+        "evidence_bindings": [],
+        "errors": [
+          {
+            "code": "EVIDENCE_INELIGIBLE",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          },
+          {
+            "code": "REQUIRED_EVIDENCE_MISSING",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "duplicate_receipt",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        },
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {
+              "defect": false
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true,
+              "notes": "inspect again"
+            }
+          }
+        ],
+        "evidence_bindings": [],
+        "errors": [
+          {
+            "code": "EVIDENCE_DUPLICATE",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          },
+          {
+            "code": "REQUIRED_EVIDENCE_MISSING",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "duplicate_evidence_id",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        },
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000016",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {
+              "defect": false
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true,
+              "notes": "inspect again"
+            }
+          }
+        ],
+        "evidence_bindings": [],
+        "errors": [
+          {
+            "code": "EVIDENCE_DUPLICATE",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          },
+          {
+            "code": "REQUIRED_EVIDENCE_MISSING",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "multiple_photos",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000014",
+          "evidence_id": "00000000-0000-4000-8000-000000000015",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        },
+        {
+          "for_item": "00000000-0000-4000-8000-000000000006",
+          "for_slot": "photo",
+          "receipt_id": "00000000-0000-4000-8000-000000000016",
+          "evidence_id": "00000000-0000-4000-8000-000000000017",
+          "eligible": true,
+          "visit_id": "00000000-0000-4000-8000-000000000001",
+          "assignment_id": "00000000-0000-4000-8000-000000000002",
+          "generation": 1,
+          "document_instance_id": "00000000-0000-4000-8000-000000000003",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": "required",
+            "notes": "inactive",
+            "photo": "inactive"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": "required",
+            "notes": "required",
+            "photo": "required"
+          }
+        },
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000005",
+            "answers": {
+              "defect": false
+            }
+          },
+          {
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "answers": {
+              "defect": true,
+              "notes": "inspect again"
+            }
+          }
+        ],
+        "evidence_bindings": [],
+        "errors": [
+          {
+            "code": "EVIDENCE_DUPLICATE",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          },
+          {
+            "code": "REQUIRED_EVIDENCE_MISSING",
+            "repeat_item_id": "00000000-0000-4000-8000-000000000006",
+            "target_id": "photo"
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "unsupported_capability",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [],
+      "client_capabilities": [
+        "repeat_same_item"
+      ],
+      "expected": {
+        "configuration_errors": [
+          {
+            "code": "UNSUPPORTED_CAPABILITY",
+            "target_id": "conditional_photo"
+          }
+        ],
+        "applicability": {},
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [],
+        "evidence_bindings": [],
+        "errors": [],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "invalid_reference",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [],
+      "package_override": {
+        "fields": [
+          {
+            "id": "defect",
+            "type": "boolean",
+            "required": true
+          },
+          {
+            "id": "notes",
+            "type": "text",
+            "visible_if": {
+              "eq": [
+                {
+                  "scope": "item",
+                  "field": "unknown"
+                },
+                true
+              ]
+            },
+            "required_if": {
+              "eq": [
+                {
+                  "scope": "item",
+                  "field": "defect"
+                },
+                true
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "configuration_errors": [
+          {
+            "code": "INVALID_FIELD_REFERENCE",
+            "target_id": "notes"
+          }
+        ],
+        "applicability": {},
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [],
+        "evidence_bindings": [],
+        "errors": [],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "cyclic_dependency",
+      "mode": "submit",
+      "display_order": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "document_answers": {},
+      "answers": {
+        "00000000-0000-4000-8000-000000000005": {
+          "defect": false,
+          "notes": "retained"
+        },
+        "00000000-0000-4000-8000-000000000006": {
+          "defect": true,
+          "notes": "inspect again"
+        }
+      },
+      "receipts": [],
+      "package_override": {
+        "fields": [
+          {
+            "id": "defect",
+            "type": "boolean",
+            "required": true,
+            "visible_if": {
+              "present": {
+                "scope": "item",
+                "field": "notes"
+              }
+            }
+          },
+          {
+            "id": "notes",
+            "type": "text",
+            "visible_if": {
+              "eq": [
+                {
+                  "scope": "item",
+                  "field": "defect"
+                },
+                true
+              ]
+            },
+            "required_if": {
+              "eq": [
+                {
+                  "scope": "item",
+                  "field": "defect"
+                },
+                true
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "configuration_errors": [
+          {
+            "code": "RULE_CYCLE",
+            "target_id": "defect"
+          }
+        ],
+        "applicability": {},
+        "retained_answers": {
+          "00000000-0000-4000-8000-000000000005": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "00000000-0000-4000-8000-000000000006": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        },
+        "submission_projection": [],
+        "evidence_bindings": [],
+        "errors": [],
+        "can_submit": false
+      }
+    }
+  ]
+}
