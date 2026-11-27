@@ -1,0 +1,31 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21'
+        classpath 'com.google.code.gson:gson:2.11.0'
+    }
+}
+
+plugins {
+    id 'application'
+}
+apply plugin: 'org.jetbrains.kotlin.jvm'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.google.code.gson:gson:2.11.0'
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+
+application {
+    mainClass = 'trustcapture.gate2.MainKt'
+}
