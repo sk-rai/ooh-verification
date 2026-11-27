@@ -131,6 +131,50 @@ cmd /c "gradlew.bat bundleRelease 2>&1"
 > current uploadable build. Before any future build, check Play Console for the
 > next free version code.
 
+## Combined Android test window
+
+Defer phone testing until the configurable-forms candidate is ready. Test GPS in the same window. Track GPS, queued-media upgrade, and forms results separately in the release report. Record the candidate versionCode, artifact digest, test environment, and pass, fail, or pending status for each case.
+
+The owner can run the routine GPS smoke test on their own phone using their own production test account. Use test routes. Keep fault injection and destructive test setup on an isolated local backend or mock. Run configurable-forms and Gate 1 upgrade tests in an approved isolated environment once their implementation is authorized.
+
+## Gate 1 Android upgrade verification
+
+**Status:** Play v15 baseline verified. The signed staging upgrade test is deferred to the combined Gate 1 and Gate 2 Play Internal testing window. The customer device inventory remains open. Production rollout remains on hold.
+
+- Staging emulator checks passed for OTP sign-in, device enrollment, package decode and rendering, and synthetic capture on Observation 2. Server read-back confirmed one receipt and evidence record for the normal sync and one for the controlled lost-response capture.
+- The lost-response run force-stopped and reopened the app, then retried evidence alone after sign-in. The photo hash survived restart, and the replay acknowledgement was stored before local cleanup. The staging harness uses manual evidence sync.
+- The offline cold-reopen run used airplane mode and Wi-Fi off after force-stop. It restored both measurements and the required photo slot on Observation 2 from the local cache without OTP. The offline view is read-only until sign-in.
+- The side-by-side emulator APK has a separate application ID. Its checks do not prove a signed in-place upgrade of the Play v15 SQLCipher database. Test the complete migration chain to the combined candidate using the production application ID, a compatible Play signer, and a confirmed unused higher versionCode.
+
+- Use the verified Play-generated universal APK for 1.5.0 (versionCode 15), package `com.lynksavvy.trustcapture`, as the provisional baseline. Offline inspection verified its signature and Room v10 in its packaged bytecode. APK SHA-256 is `a031f24540ebb1bf5c77edd7387ea338f068bf26cd1d4f492fa6c0904c3e48a8`. Signing certificate SHA-256 is `cb588df74b741fa54f0f977b5f48b2b55d4277c543e4637c4be555a19d67301f`. Record the candidate versionCode, artifact digest, and signing compatibility before testing. Add each older shipped baseline approved for direct upgrade after the customer device check.
+- On an isolated staging device, install the signed baseline and use a synthetic account. Go offline and queue two distinct synthetic photos through the normal capture flow. Record each local queue ID, status, file path, and SHA-256. Confirm no staging evidence exists for the captures.
+- While still offline, install the signed candidate in place without clearing app data. Confirm that both original queue IDs, statuses, and media hashes survive. Reconnect to staging and run the normal retry flow. Read back exactly one evidence record per capture and confirm both local items settle. Save the before/after evidence with the release report.
+
+## Tracking sync acceptance for the next planned Android bundle
+
+The Play-generated v15 APK confirms the field renames seen in the local AAB: `points` becomes `a`, and `lat`, `lon`, and `accuracy` become `a`, `b`, and `c`. Individual production 422s remain unattributed.
+
+Verify the actual minified candidate's request JSON offline or against a local mock. It must have `points` containing objects with `lat`, `lon`, `accuracy`, and `timestamp_ms`, plus `battery_pct` when non-null. The debug regression tests cover the explicit wire names and null omission.
+
+For the owner phone smoke test, sign in with the owner's test account and collect two distinct tracking batches. Confirm that the route appears and grows after the second sync. For a simple offline retry check, collect a batch with connectivity disabled, restore connectivity, and verify that the points appear. Record the account scope, candidate version, timestamps, and route result. Use the cases below for full acceptance and mark any assertion that the phone smoke test cannot establish as pending.
+
+| Case | Procedure and expected evidence |
+| --- | --- |
+| Two successful batches | For one synthetic vendor and route day, send two distinct points in each batch, using unique timestamps and coordinates. After HTTP 200 for each batch, read the route back after the second response. Assert all four exact coordinates and timestamps persist and that the returned distance is nonzero and matches the fixture's independently calculated expectation within the backend's rounding tolerance. A successful response or count alone does not establish persistence. |
+| Failed sync and recovery | Reject a request before server commit. Confirm the exact original points remain pending. Allow the retry to succeed and confirm only those acknowledged rows are marked synced. |
+| Lost response after commit | In isolated staging, drop the response after verifying the server committed the first request. Confirm the client retains the pending rows, then allow a normal retry. Read the route back and record whether the same points or distance were counted twice. Escalate any duplication to release review. |
+| In-place upgrade | Queue synthetic points offline on the signed baseline. Upgrade without clearing app data and compare local IDs, values, and pending status. Reconnect to staging and verify persistence and local settlement. |
+| Midnight and delayed sync | Queue points with capture timestamps on either side of midnight and sync them together on a later receipt date. Record the capture timestamps, staging server timezone, receipt date, and route-history dates. Track capture-day grouping, timezone, and backfill as separate backend follow-up before promising historical recovery. |
+
+Record any second-batch persistence failure or duplicate risk in the combined release report. Keep the GPS fix in the planned bundle. Publishing requires release approval.
+
+## Configurable forms acceptance
+
+- Assign a synthetic visit with one pinned form version, two repeated observations, and a required photo slot. Open the package online and confirm the expected form version and field controls.
+- Go offline, enter both observations, and save a trusted photo against the second observation. Force-stop and reopen the app. Confirm that the pinned schema, answers, local capture ID, and photo binding survive.
+- Restore connectivity. Verify that evidence uploads first, the draft binds the returned evidence ID to the second observation, and submission succeeds only after the backend accepts it. Confirm the accepted visit revision and status appear in the app and the photo appears on the correct observation.
+- On the isolated backend, repeat with a lost evidence-upload response. Verify that retry resolves to one server evidence record and that the draft settles once. Exercise an unsupported required field or a stale edit revision and verify that the draft is preserved and submission is blocked or rejected with a usable message.
+
 ## Still Optional / Future
 - [ ] Replace placeholder certificate pins with real SHA-256 fingerprints
 - [ ] Play Integrity API (requires Google Cloud project + API key)
