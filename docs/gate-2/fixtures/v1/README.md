@@ -32,6 +32,17 @@
 - For deterministic errors, visit items in pinned order, then fields in declaration order, then slots in declaration order. Emit dependency errors at the affected target. For a slot, an evidence rejection precedes missing evidence. Configuration errors sort by code then target ID. After configuration rejection, return the input answer map unchanged, empty applicability and projections, zero ordinary errors, and `can_submit: false`.
 - The runner exits successfully only when structural JSON equality matches every expected result. It reports the fixture, case, and first differing JSON Pointer on mismatch. Compare object keys independent of order, array order exactly, and strings literally. `input-rejections.json` is a companion manifest of literal JSON inputs for parser and field checks, so malformed values survive the outer fixture parser. Run one named parser or validation check per entry before running the two workflow files.
 
+## Named rejection checks
+
+The `check` field selects the boundary being tested. Decode exactly one JSON value from `input` with the strict syntax and duplicate-key rules above. Keep the original number token available for integer checks. Apply the workflow envelope requirements only when reading a full workflow file.
+
+| Check | Validation order and scope |
+| --- | --- |
+| `json` | Run strict JSON decoding only. Check for duplicate names at every object depth and return `DUPLICATE_KEY` for a duplicate. Other invalid JSON, including non-finite literals or unpaired surrogates, returns `INVALID_JSON`. |
+| `fixture_header` | Require an object (`INVALID_TYPE` otherwise). First reject supplied keys outside the workflow fixture's top-level allowlist with `UNKNOWN_PROPERTY`. Next require `fixture_version` and `profile` (missing gives `MISSING_PROPERTY`). Check the version token for JSON integer syntax (`INVALID_INTEGER` otherwise), then require a string profile (`INVALID_TYPE` otherwise). Finally compare version and profile to the supported pair (`UNSUPPORTED_VERSION` for an unknown pair). Do not require the remaining workflow members or validate their contents in this check. |
+| `uuid` | Decode a standalone JSON value. Require a string in canonical lowercase hyphenated UUID form. Return `INVALID_ID` for any other type or spelling. |
+| `capabilities` | Decode a standalone JSON value. Require an array (`INVALID_TYPE` otherwise), then validate each element against the capability-ID grammar (`INVALID_ID` for a type or spelling violation). Then reject duplicate IDs with `DUPLICATE_CAPABILITY`. This check does not compare the list to package requirements. |
+
 ## Review
 
 Independently review the expected outputs by hand before accepting either file as golden. Pay particular attention to unresolved dependencies, draft-versus-submit differences, duplicate receipt rejection, and error ordering. There is no evaluator or runner in this directory.
