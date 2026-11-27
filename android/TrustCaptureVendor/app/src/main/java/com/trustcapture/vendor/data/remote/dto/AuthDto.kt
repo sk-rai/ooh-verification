@@ -16,13 +16,15 @@ data class OtpVerifyRequest(
     @SerializedName("phone_number") val phoneNumber: String,
     @SerializedName("vendor_id") val vendorId: String,
     @SerializedName("otp") val otp: String,
-    @SerializedName("device_id") val deviceId: String? = null
+    @SerializedName("device_id") val deviceId: String? = null,
+    @SerializedName("request_inspection_enrollment") val requestInspectionEnrollment: Boolean? = null
 )
 
 data class AuthTokenResponse(
     @SerializedName("access_token") val accessToken: String,
     @SerializedName("token_type") val tokenType: String,
-    @SerializedName("expires_in") val expiresIn: Int
+    @SerializedName("expires_in") val expiresIn: Int,
+    @SerializedName("inspection_enrollment_proof") val inspectionEnrollmentProof: String? = null
 )
 
 data class RegisterDeviceRequest(

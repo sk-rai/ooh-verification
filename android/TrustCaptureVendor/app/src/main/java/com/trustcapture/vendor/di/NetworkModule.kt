@@ -115,4 +115,9 @@ object NetworkModule {
     @Singleton
     fun provideTrackingApi(retrofit: Retrofit): com.trustcapture.vendor.data.remote.api.TrackingApi =
         retrofit.create(com.trustcapture.vendor.data.remote.api.TrackingApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideInspectionVisitApi(retrofit: Retrofit): com.trustcapture.vendor.data.remote.api.InspectionVisitApi =
+        retrofit.create(com.trustcapture.vendor.data.remote.api.InspectionVisitApi::class.java)
 }

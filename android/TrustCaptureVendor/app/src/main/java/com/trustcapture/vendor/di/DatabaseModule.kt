@@ -7,6 +7,11 @@ import com.trustcapture.vendor.data.local.dao.TrackingDao
 import com.trustcapture.vendor.data.local.db.AppDatabase
 import com.trustcapture.vendor.data.local.db.AuditDao
 import com.trustcapture.vendor.data.local.db.CampaignDao
+import com.trustcapture.vendor.data.local.db.INSPECTION_DRAFT_MIGRATION_10_11
+import com.trustcapture.vendor.data.local.db.INSPECTION_CAPTURE_MIGRATION_11_12
+import com.trustcapture.vendor.data.local.db.INSPECTION_CAPTURE_MIGRATION_12_13
+import com.trustcapture.vendor.data.local.db.InspectionDraftDao
+import com.trustcapture.vendor.data.local.db.InspectionEvidenceDao
 import com.trustcapture.vendor.data.local.db.PhotoDao
 import dagger.Module
 import dagger.Provides
@@ -43,7 +48,11 @@ object DatabaseModule {
             dbName
         )
             .openHelperFactory(factory)
-            .fallbackToDestructiveMigration()
+            .addMigrations(
+                INSPECTION_DRAFT_MIGRATION_10_11,
+                INSPECTION_CAPTURE_MIGRATION_11_12,
+                INSPECTION_CAPTURE_MIGRATION_12_13
+            )
             .build()
     }
 
@@ -61,4 +70,10 @@ object DatabaseModule {
 
     @Provides
     fun provideTrackingDao(db: AppDatabase): TrackingDao = db.trackingDao()
+
+    @Provides
+    fun provideInspectionDraftDao(db: AppDatabase): InspectionDraftDao = db.inspectionDraftDao()
+
+    @Provides
+    fun provideInspectionEvidenceDao(db: AppDatabase): InspectionEvidenceDao = db.inspectionEvidenceDao()
 }

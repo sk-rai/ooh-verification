@@ -12,8 +12,10 @@ import com.trustcapture.vendor.data.local.entity.PhotoEntity
 import com.trustcapture.vendor.data.local.entity.TrackingPointEntity
 
 @Database(
-    entities = [CampaignEntity::class, CampaignLocationEntity::class, PhotoEntity::class, AuditEntity::class, EvidenceEntity::class, TrackingPointEntity::class],
-    version = 10,
+    entities = [CampaignEntity::class, CampaignLocationEntity::class, PhotoEntity::class, AuditEntity::class,
+        EvidenceEntity::class, TrackingPointEntity::class, InspectionDraftAnswer::class, InspectionCachedPackage::class,
+        InspectionEvidenceFinalizationRow::class, InspectionPendingCapture::class],
+    version = 13,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -22,4 +24,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun auditDao(): AuditDao
     abstract fun evidenceDao(): EvidenceDao
     abstract fun trackingDao(): TrackingDao
+    abstract fun inspectionDraftDao(): InspectionDraftDao
+    abstract fun inspectionEvidenceDao(): InspectionEvidenceDao
 }

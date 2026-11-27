@@ -20,13 +20,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.trustcapture.vendor.data.local.datastore.UserPreferences
+import com.trustcapture.vendor.data.local.db.InspectionDraftDao
+import com.trustcapture.vendor.data.local.db.InspectionEvidenceDao
 import com.trustcapture.vendor.data.remote.dto.AppVersionResponse
 import com.trustcapture.vendor.domain.repository.AppConfigRepository
 import com.trustcapture.vendor.service.TrackingService
 import com.trustcapture.vendor.ui.navigation.Routes
+import com.trustcapture.vendor.ui.inspection.InspectionStagingSmokeScreen
 import com.trustcapture.vendor.ui.navigation.TrustCaptureNavGraph
 import com.trustcapture.vendor.ui.theme.TrustCaptureTheme
 import com.trustcapture.vendor.util.UpdateChecker
+import com.trustcapture.vendor.util.KeystoreManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -43,6 +47,15 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var appConfigRepository: AppConfigRepository
 
+    @Inject
+    lateinit var inspectionDraftDao: InspectionDraftDao
+
+    @Inject
+    lateinit var inspectionEvidenceDao: InspectionEvidenceDao
+
+    @Inject
+    lateinit var keystoreManager: KeystoreManager
+
     override fun onDestroy() {
         super.onDestroy()
         // Stop tracking service on app close if configured
@@ -55,6 +68,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (BuildConfig.GATE1_STAGING_SMOKE) {
+            setContent {
+                TrustCaptureTheme {
+                    Scaffold(modifier = Modifier.fillMaxSize()) { padding ->
+                        InspectionStagingSmokeScreen(
+                            inspectionDraftDao, inspectionEvidenceDao, keystoreManager, Modifier.padding(padding)
+                        )
+                    }
+                }
+            }
+            return
+        }
         setContent {
             TrustCaptureTheme {
                 var startDestination by remember { mutableStateOf<String?>(null) }

@@ -1,0 +1,54 @@
+{
+  "visit_id": "00000000-0000-4000-8000-000000000001",
+  "tenant_id": "00000000-0000-4000-8000-000000000002",
+  "owner_client_id": "00000000-0000-4000-8000-000000000003",
+  "vendor_id": "G00001",
+  "assignment_id": "00000000-0000-4000-8000-000000000004",
+  "generation": 1,
+  "expires_at": "2026-11-27T13:21:58.481082Z",
+  "server_time": "2026-11-27T04:22:06.352812Z",
+  "revision": 0,
+  "code": "PACKAGE_READY",
+  "workflow_version_id": "00000000-0000-4000-8000-000000000005",
+  "document_requirements": [
+    {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "position": 1,
+      "form_version_id": "00000000-0000-4000-8000-000000000007",
+      "min_instances": 1,
+      "max_instances": 1,
+      "activation_condition": null
+    }
+  ],
+  "documents": [
+    {
+      "id": "00000000-0000-4000-8000-000000000008",
+      "form_version_id": "00000000-0000-4000-8000-000000000007",
+      "ordinal": 1,
+      "requirement_id": "00000000-0000-4000-8000-000000000006",
+      "instance_number": 1,
+      "definition": {
+        "repeat_items": [
+          "00000000-0000-4000-8000-000000000009",
+          "00000000-0000-4000-8000-00000000000a"
+        ],
+        "repeat_fields": {
+          "measurement": {
+            "type": "number",
+            "unit": "mm",
+            "scale": 2,
+            "required": true
+          }
+        }
+      },
+      "capture_targets": [
+        {
+          "field_id": "observation",
+          "slot_id": "photo",
+          "repeat_item_id": "00000000-0000-4000-8000-00000000000a",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

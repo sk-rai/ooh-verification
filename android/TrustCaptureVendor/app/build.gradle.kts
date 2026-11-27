@@ -21,6 +21,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "BASE_URL", "\"https://ooh-verification.onrender.com/\"")
+        buildConfigField("boolean", "GATE1_STAGING_SMOKE", "false")
         manifestPlaceholders["cleartextTrafficPermitted"] = "false"
     }
 
@@ -41,6 +42,11 @@ android {
 
     buildTypes {
         debug {
+            if (providers.gradleProperty("gate1StagingSmoke").orNull == "true") {
+                applicationIdSuffix = ".gate1"
+                buildConfigField("boolean", "GATE1_STAGING_SMOKE", "true")
+                buildConfigField("String", "BASE_URL", "\"https://tc-staging-rolecheck-probe.onrender.com/\"")
+            }
             manifestPlaceholders["cleartextTrafficPermitted"] = "false"
         }
         release {
