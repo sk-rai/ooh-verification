@@ -12,13 +12,13 @@ interface TrackingApi {
 }
 
 data class TrackingSyncRequest(
-    val points: List<TrackingPointPayload>
+    @SerializedName("points") val points: List<TrackingPointPayload>
 )
 
 data class TrackingPointPayload(
-    val lat: Double,
-    val lon: Double,
-    val accuracy: Float,
+    @SerializedName("lat") val lat: Double,
+    @SerializedName("lon") val lon: Double,
+    @SerializedName("accuracy") val accuracy: Float,
     @SerializedName("timestamp_ms") val timestampMs: Long,
     @SerializedName("battery_pct") val batteryPct: Int?
 )
