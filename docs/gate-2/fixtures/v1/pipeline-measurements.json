@@ -1,37 +1,37 @@
 {
   "fixture_version": 1,
-  "profile": "trustcapture-gate2-v1",
-  "fixture_id": "pipeline_measurements",
-  "client_capabilities": [
-    "repeat_same_item",
-    "conditional_photo",
-    "fixed_scale_measurement"
-  ],
+  "profile": "tc-inspection-semantics-v1",
+  "fixture_id": "pipeline-measurements",
   "package": {
-    "visit_id": "00000000-0000-4000-8000-00000000001f",
-    "assignment_id": "00000000-0000-4000-8000-000000000020",
+    "tenant_id": "synthetic-tenant",
+    "owner_client_id": "synthetic-owner",
+    "vendor_id": "synthetic-vendor",
+    "visit_id": "pipeline-visit",
+    "assignment_id": "pipeline-assignment",
     "generation": 1,
-    "document_instance_id": "00000000-0000-4000-8000-000000000021",
-    "form_version_id": "00000000-0000-4000-8000-000000000022",
+    "document_instance_id": "pipeline-document",
+    "form_version_id": "pipeline-form-v1",
+    "rule_version": 1,
     "required_capabilities": [
-      "repeat_same_item",
-      "conditional_photo",
-      "fixed_scale_measurement"
+      "repeat-same-item",
+      "conditional-photo",
+      "fixed-scale-decimal"
     ],
     "repeat_items": [
-      "00000000-0000-4000-8000-000000000023",
-      "00000000-0000-4000-8000-000000000024"
+      "pipe-a",
+      "pipe-b"
     ],
     "fields": [
       {
         "id": "result",
-        "type": "select",
+        "type": "enum",
         "options": [
           "PASS",
           "FAIL",
           "NA"
         ],
-        "required": true
+        "required": true,
+        "scope": "item"
       },
       {
         "id": "measurement",
@@ -59,11 +59,12 @@
               "NA"
             ]
           }
-        }
+        },
+        "scope": "item"
       },
       {
         "id": "severity",
-        "type": "select",
+        "type": "enum",
         "options": [
           "minor",
           "major"
@@ -115,7 +116,8 @@
               }
             }
           ]
-        }
+        },
+        "scope": "item"
       },
       {
         "id": "explanation",
@@ -137,36 +139,30 @@
             },
             "NA"
           ]
-        }
+        },
+        "scope": "item"
       }
     ],
-    "document_fields": [],
     "slots": [
       {
         "id": "photo",
         "field_id": "result",
         "required_if": {
-          "all": [
+          "eq": [
             {
-              "eq": [
-                {
-                  "scope": "item",
-                  "field": "result"
-                },
-                "FAIL"
-              ]
+              "scope": "item",
+              "field": "result"
             },
+            "FAIL"
+          ]
+        },
+        "visible_if": {
+          "eq": [
             {
-              "not": {
-                "eq": [
-                  {
-                    "scope": "item",
-                    "field": "result"
-                  },
-                  "NA"
-                ]
-              }
-            }
+              "scope": "item",
+              "field": "result"
+            },
+            "FAIL"
           ]
         }
       }
@@ -174,69 +170,20 @@
   },
   "cases": [
     {
-      "id": "pass_fail_exact_photo",
-      "mode": "submit",
+      "id": "fail_pass_fail_snapshot_first_fail",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
+      ],
       "display_order": [
-        "00000000-0000-4000-8000-000000000024",
-        "00000000-0000-4000-8000-000000000023"
+        "pipe-b",
+        "pipe-a"
       ],
-      "document_answers": {},
       "answers": {
-        "00000000-0000-4000-8000-000000000023": {
-          "result": "PASS",
-          "measurement": {
-            "value": "2.50",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "minor"
-        },
-        "00000000-0000-4000-8000-000000000024": {
-          "result": "FAIL",
-          "measurement": {
-            "value": "3.75",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "major"
-        }
-      },
-      "receipts": [
-        {
-          "for_item": "00000000-0000-4000-8000-000000000024",
-          "for_slot": "photo",
-          "receipt_id": "00000000-0000-4000-8000-000000000032",
-          "evidence_id": "00000000-0000-4000-8000-000000000033",
-          "eligible": true,
-          "visit_id": "00000000-0000-4000-8000-00000000001f",
-          "assignment_id": "00000000-0000-4000-8000-000000000020",
-          "generation": 1,
-          "document_instance_id": "00000000-0000-4000-8000-000000000021",
-          "field_id": "result",
-          "slot_id": "photo",
-          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
-        }
-      ],
-      "expected": {
-        "configuration_errors": [],
-        "applicability": {
-          "00000000-0000-4000-8000-000000000023": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "inactive",
-            "explanation": "inactive",
-            "photo": "inactive"
-          },
-          "00000000-0000-4000-8000-000000000024": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "required",
-            "explanation": "inactive",
-            "photo": "required"
-          }
-        },
-        "retained_answers": {
-          "00000000-0000-4000-8000-000000000023": {
+        "document": {},
+        "items": {
+          "pipe-a": {
             "result": "PASS",
             "measurement": {
               "value": "2.50",
@@ -245,7 +192,7 @@
             },
             "severity": "minor"
           },
-          "00000000-0000-4000-8000-000000000024": {
+          "pipe-b": {
             "result": "FAIL",
             "measurement": {
               "value": "3.75",
@@ -254,22 +201,104 @@
             },
             "severity": "major"
           }
-        },
-        "submission_projection": [
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "pipe-b",
+          "for_slot_id": "photo",
+          "receipt_id": "receipt-0032",
+          "evidence_id": "evidence-0033",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "pipeline-visit",
+          "assignment_id": "pipeline-assignment",
+          "generation": 1,
+          "document_instance_id": "pipeline-document",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "pipe-b"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "answers": {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "required"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
               "result": "PASS",
               "measurement": {
                 "value": "2.50",
                 "scale": 2,
                 "unit": "mm"
-              }
-            }
-          },
-          {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
-            "answers": {
+              },
+              "severity": "minor"
+            },
+            "pipe-b": {
               "result": "FAIL",
               "measurement": {
                 "value": "3.75",
@@ -279,13 +308,68 @@
               "severity": "major"
             }
           }
-        ],
-        "evidence_bindings": [
+        },
+        "retained_receipts": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "for_repeat_item_id": "pipe-b",
+            "for_slot_id": "photo",
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
             "field_id": "result",
             "slot_id": "photo",
-            "evidence_id": "00000000-0000-4000-8000-000000000033"
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS",
+                "measurement": {
+                  "value": "2.50",
+                  "scale": 2,
+                  "unit": "mm"
+                }
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "FAIL",
+                "measurement": {
+                  "value": "3.75",
+                  "scale": 2,
+                  "unit": "mm"
+                },
+                "severity": "major"
+              }
+            }
+          ]
+        },
+        "evidence_bindings": [
+          {
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
           }
         ],
         "errors": [],
@@ -293,69 +377,20 @@
       }
     },
     {
-      "id": "fail_to_pass_hides_but_retains",
-      "mode": "submit",
+      "id": "fail_pass_fail_snapshot_pass",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
+      ],
       "display_order": [
-        "00000000-0000-4000-8000-000000000023",
-        "00000000-0000-4000-8000-000000000024"
+        "pipe-a",
+        "pipe-b"
       ],
-      "document_answers": {},
       "answers": {
-        "00000000-0000-4000-8000-000000000023": {
-          "result": "PASS",
-          "measurement": {
-            "value": "2.50",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "minor"
-        },
-        "00000000-0000-4000-8000-000000000024": {
-          "result": "PASS",
-          "measurement": {
-            "value": "3.75",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "major"
-        }
-      },
-      "receipts": [
-        {
-          "for_item": "00000000-0000-4000-8000-000000000024",
-          "for_slot": "photo",
-          "receipt_id": "00000000-0000-4000-8000-000000000032",
-          "evidence_id": "00000000-0000-4000-8000-000000000033",
-          "eligible": true,
-          "visit_id": "00000000-0000-4000-8000-00000000001f",
-          "assignment_id": "00000000-0000-4000-8000-000000000020",
-          "generation": 1,
-          "document_instance_id": "00000000-0000-4000-8000-000000000021",
-          "field_id": "result",
-          "slot_id": "photo",
-          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
-        }
-      ],
-      "expected": {
-        "configuration_errors": [],
-        "applicability": {
-          "00000000-0000-4000-8000-000000000023": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "inactive",
-            "explanation": "inactive",
-            "photo": "inactive"
-          },
-          "00000000-0000-4000-8000-000000000024": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "inactive",
-            "explanation": "inactive",
-            "photo": "inactive"
-          }
-        },
-        "retained_answers": {
-          "00000000-0000-4000-8000-000000000023": {
+        "document": {},
+        "items": {
+          "pipe-a": {
             "result": "PASS",
             "measurement": {
               "value": "2.50",
@@ -364,7 +399,7 @@
             },
             "severity": "minor"
           },
-          "00000000-0000-4000-8000-000000000024": {
+          "pipe-b": {
             "result": "PASS",
             "measurement": {
               "value": "3.75",
@@ -373,101 +408,180 @@
             },
             "severity": "major"
           }
-        },
-        "submission_projection": [
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "pipe-b",
+          "for_slot_id": "photo",
+          "receipt_id": "receipt-0032",
+          "evidence_id": "evidence-0033",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "pipeline-visit",
+          "assignment_id": "pipeline-assignment",
+          "generation": 1,
+          "document_instance_id": "pipeline-document",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "pipe-b"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "answers": {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "inactive"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
               "result": "PASS",
               "measurement": {
                 "value": "2.50",
                 "scale": 2,
                 "unit": "mm"
-              }
-            }
-          },
-          {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
-            "answers": {
+              },
+              "severity": "minor"
+            },
+            "pipe-b": {
               "result": "PASS",
               "measurement": {
                 "value": "3.75",
                 "scale": 2,
                 "unit": "mm"
-              }
+              },
+              "severity": "major"
             }
           }
+        },
+        "retained_receipts": [
+          {
+            "for_repeat_item_id": "pipe-b",
+            "for_slot_id": "photo",
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
+          }
         ],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS",
+                "measurement": {
+                  "value": "2.50",
+                  "scale": 2,
+                  "unit": "mm"
+                }
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "PASS",
+                "measurement": {
+                  "value": "3.75",
+                  "scale": 2,
+                  "unit": "mm"
+                }
+              }
+            }
+          ]
+        },
         "evidence_bindings": [],
         "errors": [],
         "can_submit": true
       }
     },
     {
-      "id": "not_applicable_with_explanation",
-      "mode": "submit",
+      "id": "fail_pass_fail_snapshot_restored_fail",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
+      ],
       "display_order": [
-        "00000000-0000-4000-8000-000000000023",
-        "00000000-0000-4000-8000-000000000024"
+        "pipe-b",
+        "pipe-a"
       ],
-      "document_answers": {},
       "answers": {
-        "00000000-0000-4000-8000-000000000023": {
-          "result": "PASS",
-          "measurement": {
-            "value": "2.50",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "minor"
-        },
-        "00000000-0000-4000-8000-000000000024": {
-          "result": "NA",
-          "measurement": {
-            "value": "3.75",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "major",
-          "explanation": "synthetic item unavailable"
-        }
-      },
-      "receipts": [
-        {
-          "for_item": "00000000-0000-4000-8000-000000000024",
-          "for_slot": "photo",
-          "receipt_id": "00000000-0000-4000-8000-000000000032",
-          "evidence_id": "00000000-0000-4000-8000-000000000033",
-          "eligible": true,
-          "visit_id": "00000000-0000-4000-8000-00000000001f",
-          "assignment_id": "00000000-0000-4000-8000-000000000020",
-          "generation": 1,
-          "document_instance_id": "00000000-0000-4000-8000-000000000021",
-          "field_id": "result",
-          "slot_id": "photo",
-          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
-        }
-      ],
-      "expected": {
-        "configuration_errors": [],
-        "applicability": {
-          "00000000-0000-4000-8000-000000000023": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "inactive",
-            "explanation": "inactive",
-            "photo": "inactive"
-          },
-          "00000000-0000-4000-8000-000000000024": {
-            "result": "required",
-            "measurement": "inactive",
-            "severity": "inactive",
-            "explanation": "required",
-            "photo": "inactive"
-          }
-        },
-        "retained_answers": {
-          "00000000-0000-4000-8000-000000000023": {
+        "document": {},
+        "items": {
+          "pipe-a": {
             "result": "PASS",
             "measurement": {
               "value": "2.50",
@@ -476,7 +590,214 @@
             },
             "severity": "minor"
           },
-          "00000000-0000-4000-8000-000000000024": {
+          "pipe-b": {
+            "result": "FAIL",
+            "measurement": {
+              "value": "3.75",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "major"
+          }
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "pipe-b",
+          "for_slot_id": "photo",
+          "receipt_id": "receipt-0032",
+          "evidence_id": "evidence-0033",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "pipeline-visit",
+          "assignment_id": "pipeline-assignment",
+          "generation": 1,
+          "document_instance_id": "pipeline-document",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "pipe-b"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "required"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
+              "result": "PASS",
+              "measurement": {
+                "value": "2.50",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "minor"
+            },
+            "pipe-b": {
+              "result": "FAIL",
+              "measurement": {
+                "value": "3.75",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "major"
+            }
+          }
+        },
+        "retained_receipts": [
+          {
+            "for_repeat_item_id": "pipe-b",
+            "for_slot_id": "photo",
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS",
+                "measurement": {
+                  "value": "2.50",
+                  "scale": 2,
+                  "unit": "mm"
+                }
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "FAIL",
+                "measurement": {
+                  "value": "3.75",
+                  "scale": 2,
+                  "unit": "mm"
+                },
+                "severity": "major"
+              }
+            }
+          ]
+        },
+        "evidence_bindings": [
+          {
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "errors": [],
+        "can_submit": true
+      }
+    },
+    {
+      "id": "not_applicable_with_explanation",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
+      ],
+      "display_order": [
+        "pipe-a",
+        "pipe-b"
+      ],
+      "answers": {
+        "document": {},
+        "items": {
+          "pipe-a": {
+            "result": "PASS",
+            "measurement": {
+              "value": "2.50",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "minor"
+          },
+          "pipe-b": {
             "result": "NA",
             "measurement": {
               "value": "3.75",
@@ -486,27 +807,157 @@
             "severity": "major",
             "explanation": "synthetic item unavailable"
           }
-        },
-        "submission_projection": [
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "pipe-b",
+          "for_slot_id": "photo",
+          "receipt_id": "receipt-0032",
+          "evidence_id": "evidence-0033",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "pipeline-visit",
+          "assignment_id": "pipeline-assignment",
+          "generation": 1,
+          "document_instance_id": "pipeline-document",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "pipe-b"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "answers": {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "required"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "inactive"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
               "result": "PASS",
               "measurement": {
                 "value": "2.50",
                 "scale": 2,
                 "unit": "mm"
-              }
-            }
-          },
-          {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
-            "answers": {
+              },
+              "severity": "minor"
+            },
+            "pipe-b": {
               "result": "NA",
+              "measurement": {
+                "value": "3.75",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "major",
               "explanation": "synthetic item unavailable"
             }
           }
+        },
+        "retained_receipts": [
+          {
+            "for_repeat_item_id": "pipe-b",
+            "for_slot_id": "photo",
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
+          }
         ],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS",
+                "measurement": {
+                  "value": "2.50",
+                  "scale": 2,
+                  "unit": "mm"
+                }
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "NA",
+                "explanation": "synthetic item unavailable"
+              }
+            }
+          ]
+        },
         "evidence_bindings": [],
         "errors": [],
         "can_submit": true
@@ -514,68 +965,19 @@
     },
     {
       "id": "not_applicable_missing_explanation",
-      "mode": "submit",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
+      ],
       "display_order": [
-        "00000000-0000-4000-8000-000000000023",
-        "00000000-0000-4000-8000-000000000024"
+        "pipe-a",
+        "pipe-b"
       ],
-      "document_answers": {},
       "answers": {
-        "00000000-0000-4000-8000-000000000023": {
-          "result": "PASS",
-          "measurement": {
-            "value": "2.50",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "minor"
-        },
-        "00000000-0000-4000-8000-000000000024": {
-          "result": "NA",
-          "measurement": {
-            "value": "3.75",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "major"
-        }
-      },
-      "receipts": [
-        {
-          "for_item": "00000000-0000-4000-8000-000000000024",
-          "for_slot": "photo",
-          "receipt_id": "00000000-0000-4000-8000-000000000032",
-          "evidence_id": "00000000-0000-4000-8000-000000000033",
-          "eligible": true,
-          "visit_id": "00000000-0000-4000-8000-00000000001f",
-          "assignment_id": "00000000-0000-4000-8000-000000000020",
-          "generation": 1,
-          "document_instance_id": "00000000-0000-4000-8000-000000000021",
-          "field_id": "result",
-          "slot_id": "photo",
-          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
-        }
-      ],
-      "expected": {
-        "configuration_errors": [],
-        "applicability": {
-          "00000000-0000-4000-8000-000000000023": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "inactive",
-            "explanation": "inactive",
-            "photo": "inactive"
-          },
-          "00000000-0000-4000-8000-000000000024": {
-            "result": "required",
-            "measurement": "inactive",
-            "severity": "inactive",
-            "explanation": "required",
-            "photo": "inactive"
-          }
-        },
-        "retained_answers": {
-          "00000000-0000-4000-8000-000000000023": {
+        "document": {},
+        "items": {
+          "pipe-a": {
             "result": "PASS",
             "measurement": {
               "value": "2.50",
@@ -584,7 +986,7 @@
             },
             "severity": "minor"
           },
-          "00000000-0000-4000-8000-000000000024": {
+          "pipe-b": {
             "result": "NA",
             "measurement": {
               "value": "3.75",
@@ -593,32 +995,164 @@
             },
             "severity": "major"
           }
-        },
-        "submission_projection": [
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "pipe-b",
+          "for_slot_id": "photo",
+          "receipt_id": "receipt-0032",
+          "evidence_id": "evidence-0033",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "pipeline-visit",
+          "assignment_id": "pipeline-assignment",
+          "generation": 1,
+          "document_instance_id": "pipeline-document",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "pipe-b"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "answers": {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "required"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "inactive"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
               "result": "PASS",
               "measurement": {
                 "value": "2.50",
                 "scale": 2,
                 "unit": "mm"
-              }
-            }
-          },
-          {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
-            "answers": {
-              "result": "NA"
+              },
+              "severity": "minor"
+            },
+            "pipe-b": {
+              "result": "NA",
+              "measurement": {
+                "value": "3.75",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "major"
             }
           }
+        },
+        "retained_receipts": [
+          {
+            "for_repeat_item_id": "pipe-b",
+            "for_slot_id": "photo",
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
+          }
         ],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS",
+                "measurement": {
+                  "value": "2.50",
+                  "scale": 2,
+                  "unit": "mm"
+                }
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "NA"
+              }
+            }
+          ]
+        },
         "evidence_bindings": [],
         "errors": [
           {
             "code": "ANSWER_REQUIRED",
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
-            "target_id": "explanation"
+            "document_instance_id": "pipeline-document",
+            "repeat_item_id": "pipe-b",
+            "field_id": "explanation",
+            "slot_id": null,
+            "receipt_id": null
           }
         ],
         "can_submit": false
@@ -626,68 +1160,19 @@
     },
     {
       "id": "wrong_fraction",
-      "mode": "submit",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
+      ],
       "display_order": [
-        "00000000-0000-4000-8000-000000000023",
-        "00000000-0000-4000-8000-000000000024"
+        "pipe-a",
+        "pipe-b"
       ],
-      "document_answers": {},
       "answers": {
-        "00000000-0000-4000-8000-000000000023": {
-          "result": "PASS",
-          "measurement": {
-            "value": "2.5",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "minor"
-        },
-        "00000000-0000-4000-8000-000000000024": {
-          "result": "FAIL",
-          "measurement": {
-            "value": "3.75",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "major"
-        }
-      },
-      "receipts": [
-        {
-          "for_item": "00000000-0000-4000-8000-000000000024",
-          "for_slot": "photo",
-          "receipt_id": "00000000-0000-4000-8000-000000000032",
-          "evidence_id": "00000000-0000-4000-8000-000000000033",
-          "eligible": true,
-          "visit_id": "00000000-0000-4000-8000-00000000001f",
-          "assignment_id": "00000000-0000-4000-8000-000000000020",
-          "generation": 1,
-          "document_instance_id": "00000000-0000-4000-8000-000000000021",
-          "field_id": "result",
-          "slot_id": "photo",
-          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
-        }
-      ],
-      "expected": {
-        "configuration_errors": [],
-        "applicability": {
-          "00000000-0000-4000-8000-000000000023": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "inactive",
-            "explanation": "inactive",
-            "photo": "inactive"
-          },
-          "00000000-0000-4000-8000-000000000024": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "required",
-            "explanation": "inactive",
-            "photo": "required"
-          }
-        },
-        "retained_answers": {
-          "00000000-0000-4000-8000-000000000023": {
+        "document": {},
+        "items": {
+          "pipe-a": {
             "result": "PASS",
             "measurement": {
               "value": "2.5",
@@ -696,7 +1181,7 @@
             },
             "severity": "minor"
           },
-          "00000000-0000-4000-8000-000000000024": {
+          "pipe-b": {
             "result": "FAIL",
             "measurement": {
               "value": "3.75",
@@ -705,17 +1190,104 @@
             },
             "severity": "major"
           }
-        },
-        "submission_projection": [
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "pipe-b",
+          "for_slot_id": "photo",
+          "receipt_id": "receipt-0032",
+          "evidence_id": "evidence-0033",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "pipeline-visit",
+          "assignment_id": "pipeline-assignment",
+          "generation": 1,
+          "document_instance_id": "pipeline-document",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "pipe-b"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "answers": {
-              "result": "PASS"
-            }
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
           },
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
-            "answers": {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "required"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
+              "result": "PASS",
+              "measurement": {
+                "value": "2.5",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "minor"
+            },
+            "pipe-b": {
               "result": "FAIL",
               "measurement": {
                 "value": "3.75",
@@ -725,20 +1297,73 @@
               "severity": "major"
             }
           }
-        ],
-        "evidence_bindings": [
+        },
+        "retained_receipts": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "for_repeat_item_id": "pipe-b",
+            "for_slot_id": "photo",
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
             "field_id": "result",
             "slot_id": "photo",
-            "evidence_id": "00000000-0000-4000-8000-000000000033"
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS"
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "FAIL",
+                "measurement": {
+                  "value": "3.75",
+                  "scale": 2,
+                  "unit": "mm"
+                },
+                "severity": "major"
+              }
+            }
+          ]
+        },
+        "evidence_bindings": [
+          {
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
           }
         ],
         "errors": [
           {
             "code": "DECIMAL_FORMAT",
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "target_id": "measurement"
+            "document_instance_id": "pipeline-document",
+            "repeat_item_id": "pipe-a",
+            "field_id": "measurement",
+            "slot_id": null,
+            "receipt_id": null
           }
         ],
         "can_submit": false
@@ -746,68 +1371,19 @@
     },
     {
       "id": "exponent",
-      "mode": "submit",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
+      ],
       "display_order": [
-        "00000000-0000-4000-8000-000000000023",
-        "00000000-0000-4000-8000-000000000024"
+        "pipe-a",
+        "pipe-b"
       ],
-      "document_answers": {},
       "answers": {
-        "00000000-0000-4000-8000-000000000023": {
-          "result": "PASS",
-          "measurement": {
-            "value": "2e0",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "minor"
-        },
-        "00000000-0000-4000-8000-000000000024": {
-          "result": "FAIL",
-          "measurement": {
-            "value": "3.75",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "major"
-        }
-      },
-      "receipts": [
-        {
-          "for_item": "00000000-0000-4000-8000-000000000024",
-          "for_slot": "photo",
-          "receipt_id": "00000000-0000-4000-8000-000000000032",
-          "evidence_id": "00000000-0000-4000-8000-000000000033",
-          "eligible": true,
-          "visit_id": "00000000-0000-4000-8000-00000000001f",
-          "assignment_id": "00000000-0000-4000-8000-000000000020",
-          "generation": 1,
-          "document_instance_id": "00000000-0000-4000-8000-000000000021",
-          "field_id": "result",
-          "slot_id": "photo",
-          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
-        }
-      ],
-      "expected": {
-        "configuration_errors": [],
-        "applicability": {
-          "00000000-0000-4000-8000-000000000023": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "inactive",
-            "explanation": "inactive",
-            "photo": "inactive"
-          },
-          "00000000-0000-4000-8000-000000000024": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "required",
-            "explanation": "inactive",
-            "photo": "required"
-          }
-        },
-        "retained_answers": {
-          "00000000-0000-4000-8000-000000000023": {
+        "document": {},
+        "items": {
+          "pipe-a": {
             "result": "PASS",
             "measurement": {
               "value": "2e0",
@@ -816,7 +1392,7 @@
             },
             "severity": "minor"
           },
-          "00000000-0000-4000-8000-000000000024": {
+          "pipe-b": {
             "result": "FAIL",
             "measurement": {
               "value": "3.75",
@@ -825,17 +1401,104 @@
             },
             "severity": "major"
           }
-        },
-        "submission_projection": [
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "pipe-b",
+          "for_slot_id": "photo",
+          "receipt_id": "receipt-0032",
+          "evidence_id": "evidence-0033",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "pipeline-visit",
+          "assignment_id": "pipeline-assignment",
+          "generation": 1,
+          "document_instance_id": "pipeline-document",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "pipe-b"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "answers": {
-              "result": "PASS"
-            }
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
           },
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
-            "answers": {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "required"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
+              "result": "PASS",
+              "measurement": {
+                "value": "2e0",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "minor"
+            },
+            "pipe-b": {
               "result": "FAIL",
               "measurement": {
                 "value": "3.75",
@@ -845,20 +1508,73 @@
               "severity": "major"
             }
           }
-        ],
-        "evidence_bindings": [
+        },
+        "retained_receipts": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "for_repeat_item_id": "pipe-b",
+            "for_slot_id": "photo",
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
             "field_id": "result",
             "slot_id": "photo",
-            "evidence_id": "00000000-0000-4000-8000-000000000033"
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS"
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "FAIL",
+                "measurement": {
+                  "value": "3.75",
+                  "scale": 2,
+                  "unit": "mm"
+                },
+                "severity": "major"
+              }
+            }
+          ]
+        },
+        "evidence_bindings": [
+          {
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
           }
         ],
         "errors": [
           {
             "code": "DECIMAL_FORMAT",
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "target_id": "measurement"
+            "document_instance_id": "pipeline-document",
+            "repeat_item_id": "pipe-a",
+            "field_id": "measurement",
+            "slot_id": null,
+            "receipt_id": null
           }
         ],
         "can_submit": false
@@ -866,68 +1582,19 @@
     },
     {
       "id": "negative_zero",
-      "mode": "submit",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
+      ],
       "display_order": [
-        "00000000-0000-4000-8000-000000000023",
-        "00000000-0000-4000-8000-000000000024"
+        "pipe-a",
+        "pipe-b"
       ],
-      "document_answers": {},
       "answers": {
-        "00000000-0000-4000-8000-000000000023": {
-          "result": "PASS",
-          "measurement": {
-            "value": "-0.00",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "minor"
-        },
-        "00000000-0000-4000-8000-000000000024": {
-          "result": "FAIL",
-          "measurement": {
-            "value": "3.75",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "major"
-        }
-      },
-      "receipts": [
-        {
-          "for_item": "00000000-0000-4000-8000-000000000024",
-          "for_slot": "photo",
-          "receipt_id": "00000000-0000-4000-8000-000000000032",
-          "evidence_id": "00000000-0000-4000-8000-000000000033",
-          "eligible": true,
-          "visit_id": "00000000-0000-4000-8000-00000000001f",
-          "assignment_id": "00000000-0000-4000-8000-000000000020",
-          "generation": 1,
-          "document_instance_id": "00000000-0000-4000-8000-000000000021",
-          "field_id": "result",
-          "slot_id": "photo",
-          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
-        }
-      ],
-      "expected": {
-        "configuration_errors": [],
-        "applicability": {
-          "00000000-0000-4000-8000-000000000023": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "inactive",
-            "explanation": "inactive",
-            "photo": "inactive"
-          },
-          "00000000-0000-4000-8000-000000000024": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "required",
-            "explanation": "inactive",
-            "photo": "required"
-          }
-        },
-        "retained_answers": {
-          "00000000-0000-4000-8000-000000000023": {
+        "document": {},
+        "items": {
+          "pipe-a": {
             "result": "PASS",
             "measurement": {
               "value": "-0.00",
@@ -936,7 +1603,7 @@
             },
             "severity": "minor"
           },
-          "00000000-0000-4000-8000-000000000024": {
+          "pipe-b": {
             "result": "FAIL",
             "measurement": {
               "value": "3.75",
@@ -945,17 +1612,104 @@
             },
             "severity": "major"
           }
-        },
-        "submission_projection": [
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "pipe-b",
+          "for_slot_id": "photo",
+          "receipt_id": "receipt-0032",
+          "evidence_id": "evidence-0033",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "pipeline-visit",
+          "assignment_id": "pipeline-assignment",
+          "generation": 1,
+          "document_instance_id": "pipeline-document",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "pipe-b"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "answers": {
-              "result": "PASS"
-            }
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
           },
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
-            "answers": {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "required"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
+              "result": "PASS",
+              "measurement": {
+                "value": "-0.00",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "minor"
+            },
+            "pipe-b": {
               "result": "FAIL",
               "measurement": {
                 "value": "3.75",
@@ -965,20 +1719,73 @@
               "severity": "major"
             }
           }
-        ],
-        "evidence_bindings": [
+        },
+        "retained_receipts": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "for_repeat_item_id": "pipe-b",
+            "for_slot_id": "photo",
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
             "field_id": "result",
             "slot_id": "photo",
-            "evidence_id": "00000000-0000-4000-8000-000000000033"
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS"
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "FAIL",
+                "measurement": {
+                  "value": "3.75",
+                  "scale": 2,
+                  "unit": "mm"
+                },
+                "severity": "major"
+              }
+            }
+          ]
+        },
+        "evidence_bindings": [
+          {
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
           }
         ],
         "errors": [
           {
             "code": "DECIMAL_FORMAT",
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "target_id": "measurement"
+            "document_instance_id": "pipeline-document",
+            "repeat_item_id": "pipe-a",
+            "field_id": "measurement",
+            "slot_id": null,
+            "receipt_id": null
           }
         ],
         "can_submit": false
@@ -986,68 +1793,19 @@
     },
     {
       "id": "leading_zero",
-      "mode": "submit",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
+      ],
       "display_order": [
-        "00000000-0000-4000-8000-000000000023",
-        "00000000-0000-4000-8000-000000000024"
+        "pipe-a",
+        "pipe-b"
       ],
-      "document_answers": {},
       "answers": {
-        "00000000-0000-4000-8000-000000000023": {
-          "result": "PASS",
-          "measurement": {
-            "value": "02.50",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "minor"
-        },
-        "00000000-0000-4000-8000-000000000024": {
-          "result": "FAIL",
-          "measurement": {
-            "value": "3.75",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "major"
-        }
-      },
-      "receipts": [
-        {
-          "for_item": "00000000-0000-4000-8000-000000000024",
-          "for_slot": "photo",
-          "receipt_id": "00000000-0000-4000-8000-000000000032",
-          "evidence_id": "00000000-0000-4000-8000-000000000033",
-          "eligible": true,
-          "visit_id": "00000000-0000-4000-8000-00000000001f",
-          "assignment_id": "00000000-0000-4000-8000-000000000020",
-          "generation": 1,
-          "document_instance_id": "00000000-0000-4000-8000-000000000021",
-          "field_id": "result",
-          "slot_id": "photo",
-          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
-        }
-      ],
-      "expected": {
-        "configuration_errors": [],
-        "applicability": {
-          "00000000-0000-4000-8000-000000000023": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "inactive",
-            "explanation": "inactive",
-            "photo": "inactive"
-          },
-          "00000000-0000-4000-8000-000000000024": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "required",
-            "explanation": "inactive",
-            "photo": "required"
-          }
-        },
-        "retained_answers": {
-          "00000000-0000-4000-8000-000000000023": {
+        "document": {},
+        "items": {
+          "pipe-a": {
             "result": "PASS",
             "measurement": {
               "value": "02.50",
@@ -1056,7 +1814,7 @@
             },
             "severity": "minor"
           },
-          "00000000-0000-4000-8000-000000000024": {
+          "pipe-b": {
             "result": "FAIL",
             "measurement": {
               "value": "3.75",
@@ -1065,17 +1823,104 @@
             },
             "severity": "major"
           }
-        },
-        "submission_projection": [
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "pipe-b",
+          "for_slot_id": "photo",
+          "receipt_id": "receipt-0032",
+          "evidence_id": "evidence-0033",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "pipeline-visit",
+          "assignment_id": "pipeline-assignment",
+          "generation": 1,
+          "document_instance_id": "pipeline-document",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "pipe-b"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "answers": {
-              "result": "PASS"
-            }
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
           },
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
-            "answers": {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "required"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
+              "result": "PASS",
+              "measurement": {
+                "value": "02.50",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "minor"
+            },
+            "pipe-b": {
               "result": "FAIL",
               "measurement": {
                 "value": "3.75",
@@ -1085,20 +1930,73 @@
               "severity": "major"
             }
           }
-        ],
-        "evidence_bindings": [
+        },
+        "retained_receipts": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "for_repeat_item_id": "pipe-b",
+            "for_slot_id": "photo",
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
             "field_id": "result",
             "slot_id": "photo",
-            "evidence_id": "00000000-0000-4000-8000-000000000033"
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS"
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "FAIL",
+                "measurement": {
+                  "value": "3.75",
+                  "scale": 2,
+                  "unit": "mm"
+                },
+                "severity": "major"
+              }
+            }
+          ]
+        },
+        "evidence_bindings": [
+          {
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
           }
         ],
         "errors": [
           {
             "code": "DECIMAL_FORMAT",
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "target_id": "measurement"
+            "document_instance_id": "pipeline-document",
+            "repeat_item_id": "pipe-a",
+            "field_id": "measurement",
+            "slot_id": null,
+            "receipt_id": null
           }
         ],
         "can_submit": false
@@ -1106,69 +2004,24 @@
     },
     {
       "id": "json_number",
-      "mode": "submit",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
+      ],
       "display_order": [
-        "00000000-0000-4000-8000-000000000023",
-        "00000000-0000-4000-8000-000000000024"
+        "pipe-a",
+        "pipe-b"
       ],
-      "document_answers": {},
       "answers": {
-        "00000000-0000-4000-8000-000000000023": {
-          "result": "PASS",
-          "measurement": 2.5,
-          "severity": "minor"
-        },
-        "00000000-0000-4000-8000-000000000024": {
-          "result": "FAIL",
-          "measurement": {
-            "value": "3.75",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "major"
-        }
-      },
-      "receipts": [
-        {
-          "for_item": "00000000-0000-4000-8000-000000000024",
-          "for_slot": "photo",
-          "receipt_id": "00000000-0000-4000-8000-000000000032",
-          "evidence_id": "00000000-0000-4000-8000-000000000033",
-          "eligible": true,
-          "visit_id": "00000000-0000-4000-8000-00000000001f",
-          "assignment_id": "00000000-0000-4000-8000-000000000020",
-          "generation": 1,
-          "document_instance_id": "00000000-0000-4000-8000-000000000021",
-          "field_id": "result",
-          "slot_id": "photo",
-          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
-        }
-      ],
-      "expected": {
-        "configuration_errors": [],
-        "applicability": {
-          "00000000-0000-4000-8000-000000000023": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "inactive",
-            "explanation": "inactive",
-            "photo": "inactive"
-          },
-          "00000000-0000-4000-8000-000000000024": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "required",
-            "explanation": "inactive",
-            "photo": "required"
-          }
-        },
-        "retained_answers": {
-          "00000000-0000-4000-8000-000000000023": {
+        "document": {},
+        "items": {
+          "pipe-a": {
             "result": "PASS",
             "measurement": 2.5,
             "severity": "minor"
           },
-          "00000000-0000-4000-8000-000000000024": {
+          "pipe-b": {
             "result": "FAIL",
             "measurement": {
               "value": "3.75",
@@ -1177,17 +2030,100 @@
             },
             "severity": "major"
           }
-        },
-        "submission_projection": [
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "pipe-b",
+          "for_slot_id": "photo",
+          "receipt_id": "receipt-0032",
+          "evidence_id": "evidence-0033",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "pipeline-visit",
+          "assignment_id": "pipeline-assignment",
+          "generation": 1,
+          "document_instance_id": "pipeline-document",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "pipe-b"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "answers": {
-              "result": "PASS"
-            }
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
           },
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
-            "answers": {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "required"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
+              "result": "PASS",
+              "measurement": 2.5,
+              "severity": "minor"
+            },
+            "pipe-b": {
               "result": "FAIL",
               "measurement": {
                 "value": "3.75",
@@ -1197,20 +2133,73 @@
               "severity": "major"
             }
           }
-        ],
-        "evidence_bindings": [
+        },
+        "retained_receipts": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "for_repeat_item_id": "pipe-b",
+            "for_slot_id": "photo",
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
             "field_id": "result",
             "slot_id": "photo",
-            "evidence_id": "00000000-0000-4000-8000-000000000033"
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS"
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "FAIL",
+                "measurement": {
+                  "value": "3.75",
+                  "scale": 2,
+                  "unit": "mm"
+                },
+                "severity": "major"
+              }
+            }
+          ]
+        },
+        "evidence_bindings": [
+          {
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
           }
         ],
         "errors": [
           {
             "code": "ANSWER_TYPE",
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "target_id": "measurement"
+            "document_instance_id": "pipeline-document",
+            "repeat_item_id": "pipe-a",
+            "field_id": "measurement",
+            "slot_id": null,
+            "receipt_id": null
           }
         ],
         "can_submit": false
@@ -1218,68 +2207,19 @@
     },
     {
       "id": "wrong_scale",
-      "mode": "submit",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
+      ],
       "display_order": [
-        "00000000-0000-4000-8000-000000000023",
-        "00000000-0000-4000-8000-000000000024"
+        "pipe-a",
+        "pipe-b"
       ],
-      "document_answers": {},
       "answers": {
-        "00000000-0000-4000-8000-000000000023": {
-          "result": "PASS",
-          "measurement": {
-            "value": "2.5",
-            "scale": 1,
-            "unit": "mm"
-          },
-          "severity": "minor"
-        },
-        "00000000-0000-4000-8000-000000000024": {
-          "result": "FAIL",
-          "measurement": {
-            "value": "3.75",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "major"
-        }
-      },
-      "receipts": [
-        {
-          "for_item": "00000000-0000-4000-8000-000000000024",
-          "for_slot": "photo",
-          "receipt_id": "00000000-0000-4000-8000-000000000032",
-          "evidence_id": "00000000-0000-4000-8000-000000000033",
-          "eligible": true,
-          "visit_id": "00000000-0000-4000-8000-00000000001f",
-          "assignment_id": "00000000-0000-4000-8000-000000000020",
-          "generation": 1,
-          "document_instance_id": "00000000-0000-4000-8000-000000000021",
-          "field_id": "result",
-          "slot_id": "photo",
-          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
-        }
-      ],
-      "expected": {
-        "configuration_errors": [],
-        "applicability": {
-          "00000000-0000-4000-8000-000000000023": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "inactive",
-            "explanation": "inactive",
-            "photo": "inactive"
-          },
-          "00000000-0000-4000-8000-000000000024": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "required",
-            "explanation": "inactive",
-            "photo": "required"
-          }
-        },
-        "retained_answers": {
-          "00000000-0000-4000-8000-000000000023": {
+        "document": {},
+        "items": {
+          "pipe-a": {
             "result": "PASS",
             "measurement": {
               "value": "2.5",
@@ -1288,7 +2228,7 @@
             },
             "severity": "minor"
           },
-          "00000000-0000-4000-8000-000000000024": {
+          "pipe-b": {
             "result": "FAIL",
             "measurement": {
               "value": "3.75",
@@ -1297,17 +2237,104 @@
             },
             "severity": "major"
           }
-        },
-        "submission_projection": [
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "pipe-b",
+          "for_slot_id": "photo",
+          "receipt_id": "receipt-0032",
+          "evidence_id": "evidence-0033",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "pipeline-visit",
+          "assignment_id": "pipeline-assignment",
+          "generation": 1,
+          "document_instance_id": "pipeline-document",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "pipe-b"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "answers": {
-              "result": "PASS"
-            }
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
           },
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
-            "answers": {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "required"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
+              "result": "PASS",
+              "measurement": {
+                "value": "2.5",
+                "scale": 1,
+                "unit": "mm"
+              },
+              "severity": "minor"
+            },
+            "pipe-b": {
               "result": "FAIL",
               "measurement": {
                 "value": "3.75",
@@ -1317,20 +2344,73 @@
               "severity": "major"
             }
           }
-        ],
-        "evidence_bindings": [
+        },
+        "retained_receipts": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "for_repeat_item_id": "pipe-b",
+            "for_slot_id": "photo",
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
             "field_id": "result",
             "slot_id": "photo",
-            "evidence_id": "00000000-0000-4000-8000-000000000033"
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS"
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "FAIL",
+                "measurement": {
+                  "value": "3.75",
+                  "scale": 2,
+                  "unit": "mm"
+                },
+                "severity": "major"
+              }
+            }
+          ]
+        },
+        "evidence_bindings": [
+          {
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
           }
         ],
         "errors": [
           {
-            "code": "DECIMAL_SHAPE_OR_SCALE",
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "target_id": "measurement"
+            "code": "DECIMAL_SCALE",
+            "document_instance_id": "pipeline-document",
+            "repeat_item_id": "pipe-a",
+            "field_id": "measurement",
+            "slot_id": null,
+            "receipt_id": null
           }
         ],
         "can_submit": false
@@ -1338,68 +2418,19 @@
     },
     {
       "id": "wrong_unit",
-      "mode": "submit",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
+      ],
       "display_order": [
-        "00000000-0000-4000-8000-000000000023",
-        "00000000-0000-4000-8000-000000000024"
+        "pipe-a",
+        "pipe-b"
       ],
-      "document_answers": {},
       "answers": {
-        "00000000-0000-4000-8000-000000000023": {
-          "result": "PASS",
-          "measurement": {
-            "value": "2.50",
-            "scale": 2,
-            "unit": "cm"
-          },
-          "severity": "minor"
-        },
-        "00000000-0000-4000-8000-000000000024": {
-          "result": "FAIL",
-          "measurement": {
-            "value": "3.75",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "major"
-        }
-      },
-      "receipts": [
-        {
-          "for_item": "00000000-0000-4000-8000-000000000024",
-          "for_slot": "photo",
-          "receipt_id": "00000000-0000-4000-8000-000000000032",
-          "evidence_id": "00000000-0000-4000-8000-000000000033",
-          "eligible": true,
-          "visit_id": "00000000-0000-4000-8000-00000000001f",
-          "assignment_id": "00000000-0000-4000-8000-000000000020",
-          "generation": 1,
-          "document_instance_id": "00000000-0000-4000-8000-000000000021",
-          "field_id": "result",
-          "slot_id": "photo",
-          "repeat_item_id": "00000000-0000-4000-8000-000000000024"
-        }
-      ],
-      "expected": {
-        "configuration_errors": [],
-        "applicability": {
-          "00000000-0000-4000-8000-000000000023": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "inactive",
-            "explanation": "inactive",
-            "photo": "inactive"
-          },
-          "00000000-0000-4000-8000-000000000024": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "required",
-            "explanation": "inactive",
-            "photo": "required"
-          }
-        },
-        "retained_answers": {
-          "00000000-0000-4000-8000-000000000023": {
+        "document": {},
+        "items": {
+          "pipe-a": {
             "result": "PASS",
             "measurement": {
               "value": "2.50",
@@ -1408,7 +2439,7 @@
             },
             "severity": "minor"
           },
-          "00000000-0000-4000-8000-000000000024": {
+          "pipe-b": {
             "result": "FAIL",
             "measurement": {
               "value": "3.75",
@@ -1417,17 +2448,104 @@
             },
             "severity": "major"
           }
-        },
-        "submission_projection": [
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "pipe-b",
+          "for_slot_id": "photo",
+          "receipt_id": "receipt-0032",
+          "evidence_id": "evidence-0033",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "pipeline-visit",
+          "assignment_id": "pipeline-assignment",
+          "generation": 1,
+          "document_instance_id": "pipeline-document",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "pipe-b"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "answers": {
-              "result": "PASS"
-            }
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
           },
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
-            "answers": {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "required"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
+              "result": "PASS",
+              "measurement": {
+                "value": "2.50",
+                "scale": 2,
+                "unit": "cm"
+              },
+              "severity": "minor"
+            },
+            "pipe-b": {
               "result": "FAIL",
               "measurement": {
                 "value": "3.75",
@@ -1437,20 +2555,73 @@
               "severity": "major"
             }
           }
-        ],
-        "evidence_bindings": [
+        },
+        "retained_receipts": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
+            "for_repeat_item_id": "pipe-b",
+            "for_slot_id": "photo",
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
             "field_id": "result",
             "slot_id": "photo",
-            "evidence_id": "00000000-0000-4000-8000-000000000033"
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS"
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "FAIL",
+                "measurement": {
+                  "value": "3.75",
+                  "scale": 2,
+                  "unit": "mm"
+                },
+                "severity": "major"
+              }
+            }
+          ]
+        },
+        "evidence_bindings": [
+          {
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
           }
         ],
         "errors": [
           {
-            "code": "UNIT_MISMATCH",
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "target_id": "measurement"
+            "code": "DECIMAL_UNIT",
+            "document_instance_id": "pipeline-document",
+            "repeat_item_id": "pipe-a",
+            "field_id": "measurement",
+            "slot_id": null,
+            "receipt_id": null
           }
         ],
         "can_submit": false
@@ -1458,47 +2629,19 @@
     },
     {
       "id": "partial_draft_without_photo",
-      "mode": "draft",
-      "display_order": [
-        "00000000-0000-4000-8000-000000000023",
-        "00000000-0000-4000-8000-000000000024"
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
       ],
-      "document_answers": {},
+      "display_order": [
+        "pipe-a",
+        "pipe-b"
+      ],
       "answers": {
-        "00000000-0000-4000-8000-000000000023": {
-          "result": "PASS",
-          "measurement": {
-            "value": "2.50",
-            "scale": 2,
-            "unit": "mm"
-          },
-          "severity": "minor"
-        },
-        "00000000-0000-4000-8000-000000000024": {
-          "result": "FAIL"
-        }
-      },
-      "receipts": [],
-      "expected": {
-        "configuration_errors": [],
-        "applicability": {
-          "00000000-0000-4000-8000-000000000023": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "inactive",
-            "explanation": "inactive",
-            "photo": "inactive"
-          },
-          "00000000-0000-4000-8000-000000000024": {
-            "result": "required",
-            "measurement": "required",
-            "severity": "required",
-            "explanation": "inactive",
-            "photo": "required"
-          }
-        },
-        "retained_answers": {
-          "00000000-0000-4000-8000-000000000023": {
+        "document": {},
+        "items": {
+          "pipe-a": {
             "result": "PASS",
             "measurement": {
               "value": "2.50",
@@ -1507,32 +2650,1104 @@
             },
             "severity": "minor"
           },
-          "00000000-0000-4000-8000-000000000024": {
+          "pipe-b": {
             "result": "FAIL"
           }
-        },
-        "submission_projection": [
+        }
+      },
+      "receipts": [],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
           {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000023",
-            "answers": {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "required"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
               "result": "PASS",
               "measurement": {
                 "value": "2.50",
                 "scale": 2,
                 "unit": "mm"
-              }
-            }
-          },
-          {
-            "repeat_item_id": "00000000-0000-4000-8000-000000000024",
-            "answers": {
+              },
+              "severity": "minor"
+            },
+            "pipe-b": {
               "result": "FAIL"
             }
           }
-        ],
+        },
+        "retained_receipts": [],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS",
+                "measurement": {
+                  "value": "2.50",
+                  "scale": 2,
+                  "unit": "mm"
+                }
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "FAIL"
+              }
+            }
+          ]
+        },
         "evidence_bindings": [],
-        "errors": [],
+        "errors": [
+          {
+            "code": "ANSWER_REQUIRED",
+            "document_instance_id": "pipeline-document",
+            "repeat_item_id": "pipe-b",
+            "field_id": "measurement",
+            "slot_id": null,
+            "receipt_id": null
+          },
+          {
+            "code": "ANSWER_REQUIRED",
+            "document_instance_id": "pipeline-document",
+            "repeat_item_id": "pipe-b",
+            "field_id": "severity",
+            "slot_id": null,
+            "receipt_id": null
+          },
+          {
+            "code": "REQUIRED_EVIDENCE_MISSING",
+            "document_instance_id": "pipeline-document",
+            "repeat_item_id": "pipe-b",
+            "field_id": null,
+            "slot_id": "photo",
+            "receipt_id": null
+          }
+        ],
         "can_submit": false
+      }
+    },
+    {
+      "id": "unit_precedes_invalid_lexical",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
+      ],
+      "display_order": [
+        "pipe-b",
+        "pipe-a"
+      ],
+      "answers": {
+        "document": {},
+        "items": {
+          "pipe-a": {
+            "result": "PASS",
+            "measurement": {
+              "value": "2.5",
+              "scale": 2,
+              "unit": "cm"
+            },
+            "severity": "minor"
+          },
+          "pipe-b": {
+            "result": "FAIL",
+            "measurement": {
+              "value": "3.75",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "major"
+          }
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "pipe-b",
+          "for_slot_id": "photo",
+          "receipt_id": "receipt-0032",
+          "evidence_id": "evidence-0033",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "pipeline-visit",
+          "assignment_id": "pipeline-assignment",
+          "generation": 1,
+          "document_instance_id": "pipeline-document",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "pipe-b"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "required"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
+              "result": "PASS",
+              "measurement": {
+                "value": "2.5",
+                "scale": 2,
+                "unit": "cm"
+              },
+              "severity": "minor"
+            },
+            "pipe-b": {
+              "result": "FAIL",
+              "measurement": {
+                "value": "3.75",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "major"
+            }
+          }
+        },
+        "retained_receipts": [
+          {
+            "for_repeat_item_id": "pipe-b",
+            "for_slot_id": "photo",
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS"
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "FAIL",
+                "measurement": {
+                  "value": "3.75",
+                  "scale": 2,
+                  "unit": "mm"
+                },
+                "severity": "major"
+              }
+            }
+          ]
+        },
+        "evidence_bindings": [
+          {
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "errors": [
+          {
+            "code": "DECIMAL_UNIT",
+            "document_instance_id": "pipeline-document",
+            "repeat_item_id": "pipe-a",
+            "field_id": "measurement",
+            "slot_id": null,
+            "receipt_id": null
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "valid_12_digit_boundary",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
+      ],
+      "display_order": [
+        "pipe-b",
+        "pipe-a"
+      ],
+      "answers": {
+        "document": {},
+        "items": {
+          "pipe-a": {
+            "result": "PASS",
+            "measurement": {
+              "value": "123456789012.50",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "minor"
+          },
+          "pipe-b": {
+            "result": "FAIL",
+            "measurement": {
+              "value": "3.75",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "major"
+          }
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "pipe-b",
+          "for_slot_id": "photo",
+          "receipt_id": "receipt-0032",
+          "evidence_id": "evidence-0033",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "pipeline-visit",
+          "assignment_id": "pipeline-assignment",
+          "generation": 1,
+          "document_instance_id": "pipeline-document",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "pipe-b"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "required"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
+              "result": "PASS",
+              "measurement": {
+                "value": "123456789012.50",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "minor"
+            },
+            "pipe-b": {
+              "result": "FAIL",
+              "measurement": {
+                "value": "3.75",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "major"
+            }
+          }
+        },
+        "retained_receipts": [
+          {
+            "for_repeat_item_id": "pipe-b",
+            "for_slot_id": "photo",
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS",
+                "measurement": {
+                  "value": "123456789012.50",
+                  "scale": 2,
+                  "unit": "mm"
+                }
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "FAIL",
+                "measurement": {
+                  "value": "3.75",
+                  "scale": 2,
+                  "unit": "mm"
+                },
+                "severity": "major"
+              }
+            }
+          ]
+        },
+        "evidence_bindings": [
+          {
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "errors": [],
+        "can_submit": true
+      }
+    },
+    {
+      "id": "invalid_13_digit_boundary",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
+      ],
+      "display_order": [
+        "pipe-b",
+        "pipe-a"
+      ],
+      "answers": {
+        "document": {},
+        "items": {
+          "pipe-a": {
+            "result": "PASS",
+            "measurement": {
+              "value": "1234567890123.50",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "minor"
+          },
+          "pipe-b": {
+            "result": "FAIL",
+            "measurement": {
+              "value": "3.75",
+              "scale": 2,
+              "unit": "mm"
+            },
+            "severity": "major"
+          }
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "pipe-b",
+          "for_slot_id": "photo",
+          "receipt_id": "receipt-0032",
+          "evidence_id": "evidence-0033",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "pipeline-visit",
+          "assignment_id": "pipeline-assignment",
+          "generation": 1,
+          "document_instance_id": "pipeline-document",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "pipe-b"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "required"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
+              "result": "PASS",
+              "measurement": {
+                "value": "1234567890123.50",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "minor"
+            },
+            "pipe-b": {
+              "result": "FAIL",
+              "measurement": {
+                "value": "3.75",
+                "scale": 2,
+                "unit": "mm"
+              },
+              "severity": "major"
+            }
+          }
+        },
+        "retained_receipts": [
+          {
+            "for_repeat_item_id": "pipe-b",
+            "for_slot_id": "photo",
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS"
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "FAIL",
+                "measurement": {
+                  "value": "3.75",
+                  "scale": 2,
+                  "unit": "mm"
+                },
+                "severity": "major"
+              }
+            }
+          ]
+        },
+        "evidence_bindings": [
+          {
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "errors": [
+          {
+            "code": "DECIMAL_FORMAT",
+            "document_instance_id": "pipeline-document",
+            "repeat_item_id": "pipe-a",
+            "field_id": "measurement",
+            "slot_id": null,
+            "receipt_id": null
+          }
+        ],
+        "can_submit": false
+      }
+    },
+    {
+      "id": "valid_scale_zero",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo",
+        "fixed-scale-decimal"
+      ],
+      "display_order": [
+        "pipe-b",
+        "pipe-a"
+      ],
+      "answers": {
+        "document": {},
+        "items": {
+          "pipe-a": {
+            "result": "PASS",
+            "measurement": {
+              "value": "2",
+              "scale": 0,
+              "unit": "mm"
+            },
+            "severity": "minor"
+          },
+          "pipe-b": {
+            "result": "FAIL",
+            "measurement": {
+              "value": "3",
+              "scale": 0,
+              "unit": "mm"
+            },
+            "severity": "major"
+          }
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "pipe-b",
+          "for_slot_id": "photo",
+          "receipt_id": "receipt-0032",
+          "evidence_id": "evidence-0033",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "pipeline-visit",
+          "assignment_id": "pipeline-assignment",
+          "generation": 1,
+          "document_instance_id": "pipeline-document",
+          "field_id": "result",
+          "slot_id": "photo",
+          "repeat_item_id": "pipe-b"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "severity",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-a",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "result",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "measurement",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "severity",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "pipe-b",
+            "id": "explanation",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "pipe-b",
+            "id": "photo",
+            "state": "required"
+          }
+        ],
+        "retained_answers": {
+          "document": {},
+          "items": {
+            "pipe-a": {
+              "result": "PASS",
+              "measurement": {
+                "value": "2",
+                "scale": 0,
+                "unit": "mm"
+              },
+              "severity": "minor"
+            },
+            "pipe-b": {
+              "result": "FAIL",
+              "measurement": {
+                "value": "3",
+                "scale": 0,
+                "unit": "mm"
+              },
+              "severity": "major"
+            }
+          }
+        },
+        "retained_receipts": [
+          {
+            "for_repeat_item_id": "pipe-b",
+            "for_slot_id": "photo",
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "submission_projection": {
+          "document": {},
+          "items": [
+            {
+              "repeat_item_id": "pipe-a",
+              "answers": {
+                "result": "PASS",
+                "measurement": {
+                  "value": "2",
+                  "scale": 0,
+                  "unit": "mm"
+                }
+              }
+            },
+            {
+              "repeat_item_id": "pipe-b",
+              "answers": {
+                "result": "FAIL",
+                "measurement": {
+                  "value": "3",
+                  "scale": 0,
+                  "unit": "mm"
+                },
+                "severity": "major"
+              }
+            }
+          ]
+        },
+        "evidence_bindings": [
+          {
+            "receipt_id": "receipt-0032",
+            "evidence_id": "evidence-0033",
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "pipeline-visit",
+            "assignment_id": "pipeline-assignment",
+            "generation": 1,
+            "document_instance_id": "pipeline-document",
+            "field_id": "result",
+            "slot_id": "photo",
+            "repeat_item_id": "pipe-b"
+          }
+        ],
+        "errors": [],
+        "can_submit": true
+      },
+      "package_override": {
+        "fields": [
+          {
+            "id": "result",
+            "type": "enum",
+            "options": [
+              "PASS",
+              "FAIL",
+              "NA"
+            ],
+            "required": true,
+            "scope": "item"
+          },
+          {
+            "id": "measurement",
+            "type": "decimal",
+            "scale": 0,
+            "unit": "mm",
+            "visible_if": {
+              "not": {
+                "eq": [
+                  {
+                    "scope": "item",
+                    "field": "result"
+                  },
+                  "NA"
+                ]
+              }
+            },
+            "required_if": {
+              "not": {
+                "eq": [
+                  {
+                    "scope": "item",
+                    "field": "result"
+                  },
+                  "NA"
+                ]
+              }
+            },
+            "scope": "item"
+          },
+          {
+            "id": "severity",
+            "type": "enum",
+            "options": [
+              "minor",
+              "major"
+            ],
+            "visible_if": {
+              "all": [
+                {
+                  "eq": [
+                    {
+                      "scope": "item",
+                      "field": "result"
+                    },
+                    "FAIL"
+                  ]
+                },
+                {
+                  "not": {
+                    "eq": [
+                      {
+                        "scope": "item",
+                        "field": "result"
+                      },
+                      "NA"
+                    ]
+                  }
+                }
+              ]
+            },
+            "required_if": {
+              "all": [
+                {
+                  "eq": [
+                    {
+                      "scope": "item",
+                      "field": "result"
+                    },
+                    "FAIL"
+                  ]
+                },
+                {
+                  "not": {
+                    "eq": [
+                      {
+                        "scope": "item",
+                        "field": "result"
+                      },
+                      "NA"
+                    ]
+                  }
+                }
+              ]
+            },
+            "scope": "item"
+          },
+          {
+            "id": "explanation",
+            "type": "text",
+            "visible_if": {
+              "eq": [
+                {
+                  "scope": "item",
+                  "field": "result"
+                },
+                "NA"
+              ]
+            },
+            "required_if": {
+              "eq": [
+                {
+                  "scope": "item",
+                  "field": "result"
+                },
+                "NA"
+              ]
+            },
+            "scope": "item"
+          }
+        ]
       }
     }
   ]

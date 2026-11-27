@@ -1,0 +1,873 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:trustcapture:gate2:fixture:v1",
+  "title": "TrustCapture Gate 2 workflow golden fixture",
+  "type": "object",
+  "properties": {
+    "fixture_version": {
+      "const": 1
+    },
+    "profile": {
+      "const": "tc-inspection-semantics-v1"
+    },
+    "fixture_id": {
+      "$ref": "#/$defs/id"
+    },
+    "package": {
+      "$ref": "#/$defs/package"
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/case"
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "fixture_version",
+    "profile",
+    "fixture_id",
+    "package",
+    "cases"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+    },
+    "reference": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "enum": [
+            "document",
+            "item"
+          ]
+        },
+        "field": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "scope",
+        "field"
+      ],
+      "additionalProperties": false
+    },
+    "decimalValue": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "scale": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "unit": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "value",
+        "scale",
+        "unit"
+      ],
+      "additionalProperties": false
+    },
+    "predicate": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "all": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/predicate"
+              },
+              "minItems": 1,
+              "maxItems": 8
+            }
+          },
+          "required": [
+            "all"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "any": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/predicate"
+              },
+              "minItems": 1,
+              "maxItems": 8
+            }
+          },
+          "required": [
+            "any"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "not": {
+              "$ref": "#/$defs/predicate"
+            }
+          },
+          "required": [
+            "not"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "eq": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "$ref": "#/$defs/reference"
+                },
+                {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/decimalValue"
+                    }
+                  ]
+                }
+              ],
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "eq"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "present": {
+              "$ref": "#/$defs/reference"
+            }
+          },
+          "required": [
+            "present"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "is_null": {
+              "$ref": "#/$defs/reference"
+            }
+          },
+          "required": [
+            "is_null"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "field": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "scope": {
+          "enum": [
+            "document",
+            "item"
+          ]
+        },
+        "type": {
+          "enum": [
+            "boolean",
+            "text",
+            "enum",
+            "decimal"
+          ]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "visible_if": {
+          "$ref": "#/$defs/predicate"
+        },
+        "required_if": {
+          "$ref": "#/$defs/predicate"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "scale": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "unit": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "id",
+        "scope",
+        "type"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "enum"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "options"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "options"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "decimal"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "scale",
+              "unit"
+            ]
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "scale"
+                  ]
+                },
+                {
+                  "required": [
+                    "unit"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "slot": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "field_id": {
+          "$ref": "#/$defs/id"
+        },
+        "is_required": {
+          "type": "boolean"
+        },
+        "visible_if": {
+          "$ref": "#/$defs/predicate"
+        },
+        "required_if": {
+          "$ref": "#/$defs/predicate"
+        }
+      },
+      "required": [
+        "id",
+        "field_id"
+      ],
+      "additionalProperties": false
+    },
+    "package": {
+      "type": "object",
+      "properties": {
+        "tenant_id": {
+          "$ref": "#/$defs/id"
+        },
+        "owner_client_id": {
+          "$ref": "#/$defs/id"
+        },
+        "vendor_id": {
+          "$ref": "#/$defs/id"
+        },
+        "visit_id": {
+          "$ref": "#/$defs/id"
+        },
+        "assignment_id": {
+          "$ref": "#/$defs/id"
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "document_instance_id": {
+          "$ref": "#/$defs/id"
+        },
+        "form_version_id": {
+          "$ref": "#/$defs/id"
+        },
+        "rule_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "required_capabilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "repeat_items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true,
+          "maxItems": 16
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/field"
+          },
+          "maxItems": 32
+        },
+        "slots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/slot"
+          },
+          "maxItems": 16
+        }
+      },
+      "required": [
+        "tenant_id",
+        "owner_client_id",
+        "vendor_id",
+        "visit_id",
+        "assignment_id",
+        "generation",
+        "document_instance_id",
+        "form_version_id",
+        "rule_version",
+        "required_capabilities",
+        "repeat_items",
+        "fields",
+        "slots"
+      ],
+      "additionalProperties": false
+    },
+    "answers": {
+      "type": "object",
+      "properties": {
+        "document": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/id"
+          },
+          "additionalProperties": true
+        },
+        "items": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/id"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "$ref": "#/$defs/id"
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": [
+        "document",
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "receipt": {
+      "type": "object",
+      "properties": {
+        "for_repeat_item_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "for_slot_id": {
+          "$ref": "#/$defs/id"
+        },
+        "tenant_id": {
+          "$ref": "#/$defs/id"
+        },
+        "owner_client_id": {
+          "$ref": "#/$defs/id"
+        },
+        "vendor_id": {
+          "$ref": "#/$defs/id"
+        },
+        "visit_id": {
+          "$ref": "#/$defs/id"
+        },
+        "assignment_id": {
+          "$ref": "#/$defs/id"
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "document_instance_id": {
+          "$ref": "#/$defs/id"
+        },
+        "field_id": {
+          "$ref": "#/$defs/id"
+        },
+        "slot_id": {
+          "$ref": "#/$defs/id"
+        },
+        "repeat_item_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "receipt_id": {
+          "$ref": "#/$defs/id"
+        },
+        "evidence_id": {
+          "$ref": "#/$defs/id"
+        },
+        "eligible": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "for_repeat_item_id",
+        "for_slot_id",
+        "tenant_id",
+        "owner_client_id",
+        "vendor_id",
+        "visit_id",
+        "assignment_id",
+        "generation",
+        "document_instance_id",
+        "field_id",
+        "slot_id",
+        "repeat_item_id",
+        "receipt_id",
+        "evidence_id",
+        "eligible"
+      ],
+      "additionalProperties": false
+    },
+    "binding": {
+      "type": "object",
+      "properties": {
+        "tenant_id": {
+          "$ref": "#/$defs/id"
+        },
+        "owner_client_id": {
+          "$ref": "#/$defs/id"
+        },
+        "vendor_id": {
+          "$ref": "#/$defs/id"
+        },
+        "visit_id": {
+          "$ref": "#/$defs/id"
+        },
+        "assignment_id": {
+          "$ref": "#/$defs/id"
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "document_instance_id": {
+          "$ref": "#/$defs/id"
+        },
+        "field_id": {
+          "$ref": "#/$defs/id"
+        },
+        "slot_id": {
+          "$ref": "#/$defs/id"
+        },
+        "repeat_item_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "receipt_id": {
+          "$ref": "#/$defs/id"
+        },
+        "evidence_id": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "tenant_id",
+        "owner_client_id",
+        "vendor_id",
+        "visit_id",
+        "assignment_id",
+        "generation",
+        "document_instance_id",
+        "field_id",
+        "slot_id",
+        "repeat_item_id",
+        "receipt_id",
+        "evidence_id"
+      ],
+      "additionalProperties": false
+    },
+    "configError": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "enum": [
+            "UNSUPPORTED_VERSION",
+            "UNSUPPORTED_CAPABILITY",
+            "INVALID_PACKAGE",
+            "INVALID_FIELD_REFERENCE",
+            "INVALID_RULE",
+            "RULE_CYCLE",
+            "RULE_LIMIT",
+            "PUBLISHED_VERSION_CHANGED",
+            "EXTERNAL_REFERENCE_FORBIDDEN"
+          ]
+        },
+        "subject_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "subject_id"
+      ],
+      "additionalProperties": false
+    },
+    "dataError": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "enum": [
+            "ANSWER_REQUIRED",
+            "ANSWER_NULL",
+            "ANSWER_EMPTY",
+            "ANSWER_TYPE",
+            "ANSWER_ENUM",
+            "DECIMAL_SCALE",
+            "DECIMAL_UNIT",
+            "DECIMAL_FORMAT",
+            "UNRESOLVED_CONDITION",
+            "EVIDENCE_TARGET_MISMATCH",
+            "EVIDENCE_INELIGIBLE",
+            "EVIDENCE_CONFLICT",
+            "REQUIRED_EVIDENCE_MISSING"
+          ]
+        },
+        "document_instance_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "repeat_item_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "field_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "slot_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "receipt_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "document_instance_id",
+        "repeat_item_id",
+        "field_id",
+        "slot_id",
+        "receipt_id"
+      ],
+      "additionalProperties": false
+    },
+    "expected": {
+      "type": "object",
+      "properties": {
+        "configuration_errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/configError"
+          }
+        },
+        "applicability": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "field",
+                  "slot"
+                ]
+              },
+              "repeat_item_id": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/id"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "state": {
+                "enum": [
+                  "inactive",
+                  "unresolved",
+                  "optional",
+                  "required"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "repeat_item_id",
+              "id",
+              "state"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "retained_answers": {
+          "$ref": "#/$defs/answers"
+        },
+        "retained_receipts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/receipt"
+          },
+          "maxItems": 64
+        },
+        "submission_projection": {
+          "type": "object",
+          "properties": {
+            "document": {
+              "type": "object",
+              "propertyNames": {
+                "$ref": "#/$defs/id"
+              },
+              "additionalProperties": true
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "repeat_item_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "answers": {
+                    "type": "object",
+                    "propertyNames": {
+                      "$ref": "#/$defs/id"
+                    },
+                    "additionalProperties": true
+                  }
+                },
+                "required": [
+                  "repeat_item_id",
+                  "answers"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "document",
+            "items"
+          ],
+          "additionalProperties": false
+        },
+        "evidence_bindings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/binding"
+          }
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dataError"
+          }
+        },
+        "can_submit": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "configuration_errors",
+        "applicability",
+        "retained_answers",
+        "retained_receipts",
+        "submission_projection",
+        "evidence_bindings",
+        "errors",
+        "can_submit"
+      ],
+      "additionalProperties": false
+    },
+    "case": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "client_capabilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "display_order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "answers": {
+          "$ref": "#/$defs/answers"
+        },
+        "receipts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/receipt"
+          },
+          "maxItems": 64
+        },
+        "expected": {
+          "$ref": "#/$defs/expected"
+        },
+        "package_override": {
+          "type": "object"
+        },
+        "published_replacement": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "client_capabilities",
+        "display_order",
+        "answers",
+        "receipts",
+        "expected"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
