@@ -6171,6 +6171,214 @@
           }
         ]
       }
+    },
+    {
+      "id": "conflicting_receipt_id",
+      "client_capabilities": [
+        "repeat-same-item",
+        "conditional-photo"
+      ],
+      "display_order": [
+        "brake-b",
+        "brake-a"
+      ],
+      "answers": {
+        "document": {
+          "inspection-enabled": true
+        },
+        "items": {
+          "brake-a": {
+            "defect": false,
+            "notes": "retained"
+          },
+          "brake-b": {
+            "defect": true,
+            "notes": "inspect again"
+          }
+        }
+      },
+      "receipts": [
+        {
+          "for_repeat_item_id": "brake-b",
+          "for_slot_id": "photo",
+          "receipt_id": "shared-receipt",
+          "evidence_id": "evidence-active",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "brakes-visit",
+          "assignment_id": "brakes-assignment",
+          "generation": 1,
+          "document_instance_id": "brakes-document",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "brake-b"
+        },
+        {
+          "for_repeat_item_id": "brake-a",
+          "for_slot_id": "photo",
+          "receipt_id": "shared-receipt",
+          "evidence_id": "evidence-inactive",
+          "eligible": true,
+          "tenant_id": "synthetic-tenant",
+          "owner_client_id": "synthetic-owner",
+          "vendor_id": "synthetic-vendor",
+          "visit_id": "brakes-visit",
+          "assignment_id": "brakes-assignment",
+          "generation": 1,
+          "document_instance_id": "brakes-document",
+          "field_id": "defect",
+          "slot_id": "photo",
+          "repeat_item_id": "brake-a"
+        }
+      ],
+      "expected": {
+        "configuration_errors": [],
+        "applicability": [
+          {
+            "kind": "field",
+            "repeat_item_id": null,
+            "id": "inspection-enabled",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "brake-a",
+            "id": "defect",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "brake-a",
+            "id": "notes",
+            "state": "inactive"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "brake-a",
+            "id": "photo",
+            "state": "inactive"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "brake-b",
+            "id": "defect",
+            "state": "required"
+          },
+          {
+            "kind": "field",
+            "repeat_item_id": "brake-b",
+            "id": "notes",
+            "state": "required"
+          },
+          {
+            "kind": "slot",
+            "repeat_item_id": "brake-b",
+            "id": "photo",
+            "state": "required"
+          }
+        ],
+        "retained_answers": {
+          "document": {
+            "inspection-enabled": true
+          },
+          "items": {
+            "brake-a": {
+              "defect": false,
+              "notes": "retained"
+            },
+            "brake-b": {
+              "defect": true,
+              "notes": "inspect again"
+            }
+          }
+        },
+        "retained_receipts": [
+          {
+            "for_repeat_item_id": "brake-b",
+            "for_slot_id": "photo",
+            "receipt_id": "shared-receipt",
+            "evidence_id": "evidence-active",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "brakes-visit",
+            "assignment_id": "brakes-assignment",
+            "generation": 1,
+            "document_instance_id": "brakes-document",
+            "field_id": "defect",
+            "slot_id": "photo",
+            "repeat_item_id": "brake-b"
+          },
+          {
+            "for_repeat_item_id": "brake-a",
+            "for_slot_id": "photo",
+            "receipt_id": "shared-receipt",
+            "evidence_id": "evidence-inactive",
+            "eligible": true,
+            "tenant_id": "synthetic-tenant",
+            "owner_client_id": "synthetic-owner",
+            "vendor_id": "synthetic-vendor",
+            "visit_id": "brakes-visit",
+            "assignment_id": "brakes-assignment",
+            "generation": 1,
+            "document_instance_id": "brakes-document",
+            "field_id": "defect",
+            "slot_id": "photo",
+            "repeat_item_id": "brake-a"
+          }
+        ],
+        "submission_projection": {
+          "document": {
+            "inspection-enabled": true
+          },
+          "items": [
+            {
+              "repeat_item_id": "brake-a",
+              "answers": {
+                "defect": false
+              }
+            },
+            {
+              "repeat_item_id": "brake-b",
+              "answers": {
+                "defect": true,
+                "notes": "inspect again"
+              }
+            }
+          ]
+        },
+        "evidence_bindings": [],
+        "errors": [
+          {
+            "code": "EVIDENCE_CONFLICT",
+            "document_instance_id": "brakes-document",
+            "repeat_item_id": "brake-a",
+            "field_id": null,
+            "slot_id": "photo",
+            "receipt_id": "shared-receipt"
+          },
+          {
+            "code": "EVIDENCE_CONFLICT",
+            "document_instance_id": "brakes-document",
+            "repeat_item_id": "brake-b",
+            "field_id": null,
+            "slot_id": "photo",
+            "receipt_id": "shared-receipt"
+          },
+          {
+            "code": "REQUIRED_EVIDENCE_MISSING",
+            "document_instance_id": "brakes-document",
+            "repeat_item_id": "brake-b",
+            "field_id": null,
+            "slot_id": "photo",
+            "receipt_id": null
+          }
+        ],
+        "can_submit": false
+      }
     }
   ]
 }

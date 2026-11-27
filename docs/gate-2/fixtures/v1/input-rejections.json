@@ -35,13 +35,13 @@
     {
       "id": "unknown_version",
       "check": "fixture_header",
-      "input": "{\"fixture_version\":2,\"profile\":\"trustcapture-gate2-v1\"}",
+      "input": "{\"fixture_version\":2,\"profile\":\"tc-inspection-semantics-v1\"}",
       "expected_code": "UNSUPPORTED_VERSION"
     },
     {
       "id": "non_integer_version",
       "check": "fixture_header",
-      "input": "{\"fixture_version\":1.0,\"profile\":\"trustcapture-gate2-v1\"}",
+      "input": "{\"fixture_version\":1.0,\"profile\":\"tc-inspection-semantics-v1\"}",
       "expected_code": "INVALID_INTEGER"
     },
     {
