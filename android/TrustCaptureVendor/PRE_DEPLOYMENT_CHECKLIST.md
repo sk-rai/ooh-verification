@@ -141,6 +141,7 @@ The owner can run the routine GPS smoke test on their own phone using their own 
 
 **Status:** Play v15 baseline verified. The signed staging upgrade test is deferred to the combined Gate 1 and Gate 2 Play Internal testing window. The customer device inventory remains open. Production rollout remains on hold.
 
+- Reviewed Android Room schema is **v13**, with registered migrations **10 → 11 → 12 → 13**. See [Gate 1 replay evidence](gate1-android-replay-evidence.md) for the reservation-specific client trace and WSL read-back.
 - Staging emulator checks passed for OTP sign-in, device enrollment, package decode and rendering, and synthetic capture on Observation 2. Server read-back confirmed one receipt and evidence record for the normal sync and one for the controlled lost-response capture.
 - The lost-response run force-stopped and reopened the app, then retried evidence alone after sign-in. The photo hash survived restart, and the replay acknowledgement was stored before local cleanup. The staging harness uses manual evidence sync.
 - The offline cold-reopen run used airplane mode and Wi-Fi off after force-stop. It restored both measurements and the required photo slot on Observation 2 from the local cache without OTP. The offline view is read-only until sign-in.
